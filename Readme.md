@@ -46,11 +46,11 @@ A comprehensive, hands-on tutorial course for learning to work with Claude's API
 ##  Course Overview
 
 This course is structured in five progressive levels:
-- **Fundamentals Level 1**: Basic API interactions and response handling
-- **Fundamentals Level 2**: Example business solutions
-- **Fundamentals Level 3**: Chat applications with context management
-- **Fundamentals Level 4**: Advanced agent implementations (Shopify support, RAG, Blog automation)
-- **Fundamentals Level 5**: Complex AI workflows (Lead scoring, Product management, Blog automation)
+- **Fundamentals Level 1**: Basic API interactions and response handling (Session 1) 
+- **Fundamentals Level 2**: Example business solutions  (Session 1)
+- **Fundamentals Level 3**: Chat applications with context management (Session 2)
+- **Fundamentals Level 4**: Advanced agent implementations (Blog automation, Presentation Builder) (Session 2)
+- **Fundamentals Level 5**: Complex AI workflows (Lead scoring, Product management, Blog automation) (Session 3)
 
 ##  Quick Start
 
@@ -254,7 +254,7 @@ python3 -m step_5
 - **Learns**: Building an AI agent for business analysis
 - **Use Case**: Analyzing skills for technical assessment feasibility
 
-#### Step 6: Enhanced Agent with Web Search
+#### Step 6: Enhanced too luse with Web Search
 
 **Windows:**
 ```bash
@@ -271,7 +271,7 @@ python3 -m step_6
 - **Learns**: Integrating web search for research-backed analysis
 - **Features**: Adds citations from web sources, research-based decisions
 
-### Level 3: Bulding A chat that maintains Context
+### Level 3: Bulding A chat that maintains Context ( Session 2 )
 Build interactive chat script with context management.
 
 #### Basic Chat with Context
@@ -294,7 +294,7 @@ python3 -m chat
   - Context preservation across messages
   - Clear command to reset conversation
 
-#### Persistent Chat with Save/Resume
+#### Persistent Chat with Save/Resume ( Session 2 )
 
 **Windows:**
 ```bash
