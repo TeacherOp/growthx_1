@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Page Title - can be overridden by child templates -->
+    <title>{% block title %}AI Presentation Builder{% endblock %}</title>
+
+    <!-- Tailwind CSS - Utility-first CSS framework -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts - Inter font family -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons - Modern, lightweight icon library -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Custom CSS - our animations and special styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Additional head content from child templates -->
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50">
+    <!-- Main container - full screen height, flex column -->
+    <div class="min-h-screen flex flex-col">
+
+        <!-- Fixed Header - stays visible when scrolling -->
+        <header class="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+            <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+                <!-- Logo and Title -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <i data-lucide="presentation" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-900">AI Presentation Builder</h1>
+                        <p class="text-xs text-gray-500">Powered by Claude AI</p>
+                    </div>
+                </div>
+
+                <!-- Header actions - can be customized per page -->
+                <div>
+                    {% block header_actions %}
+                    <button
+                        onclick="resetChat()"
+                        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        <span>New Chat</span>
+                    </button>
+                    {% endblock %}
+                </div>
+            </div>
+        </header>
+
+        <!-- Spacer to prevent content from hiding under fixed header -->
+        <div class="h-16"></div>
+
+        <!-- Main content area - filled by child templates -->
+        <main class="flex-1 max-w-6xl w-full mx-auto px-4 py-4 flex flex-col">
+            {% block content %}
+            <!-- Page content goes here -->
+            {% endblock %}
+        </main>
+
+        <!-- Footer (optional) - can be added in child templates -->
+        {% block footer %}{% endblock %}
+    </div>
+
+    <!-- JavaScript files -->
+    <!-- Our custom JavaScript for chat functionality -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <!-- Initialize Lucide icons -->
+    <script>
+        lucide.createIcons();
+    </script>
+
+    <!-- Additional scripts from child templates -->
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

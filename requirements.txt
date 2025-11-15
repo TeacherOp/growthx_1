@@ -1,2 +1,14 @@
 anthropic
 python-dotenv
+playwright
+python-pptx
+Pillow
+flask
+supabase
+python-slugify
+beautifulsoup4
+markdownify
+requests
+google-genai
+boto3
+Pillow

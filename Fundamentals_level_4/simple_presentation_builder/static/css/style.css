@@ -1,0 +1,188 @@
+/*
+ * Custom Styles for AI Presentation Builder
+ *
+ * Modern, clean design with professional color scheme.
+ * We use Tailwind CSS for most styling, but these custom styles
+ * handle animations, scrolling, and special effects.
+ */
+
+/* Base font family */
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Smooth scrolling for the entire page */
+html {
+    scroll-behavior: smooth;
+}
+
+/*
+ * CHAT MESSAGE ANIMATIONS
+ * Messages fade in and slide up when they appear
+ */
+.chat-message {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Generic fade-in for other elements */
+.fade-in {
+    animation: fadeIn 0.2s ease-out;
+}
+
+/*
+ * LOADING DOTS ANIMATION
+ * Creates a smooth blinking effect for the AI thinking indicator
+ */
+.loading-dots span {
+    animation: blink 1.4s infinite;
+    animation-fill-mode: both;
+}
+
+/* Stagger the animation for each dot */
+.loading-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.loading-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes blink {
+    0%, 80%, 100% {
+        opacity: 0.3;
+    }
+    40% {
+        opacity: 1;
+    }
+}
+
+/*
+ * FILE UPLOAD AREA
+ * Smooth transitions for drag and drop interactions
+ */
+.file-upload-area {
+    transition: all 0.2s ease;
+}
+
+/* Visual feedback when user drags files over the upload area */
+.file-upload-area.drag-over {
+    border-color: #6366f1;
+    background-color: #eef2ff;
+    transform: scale(1.02);
+}
+
+/*
+ * CUSTOM SCROLLBAR
+ * Modern, minimal scrollbar design
+ */
+.messages-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 3px;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+}
+
+.messages-container::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/*
+ * PROGRESS LOG SCROLLBAR
+ * Same style for progress updates container
+ */
+#progress-log::-webkit-scrollbar {
+    width: 4px;
+}
+
+#progress-log::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#progress-log::-webkit-scrollbar-thumb {
+    background: #c7d2fe;
+    border-radius: 2px;
+}
+
+#progress-log::-webkit-scrollbar-thumb:hover {
+    background: #a5b4fc;
+}
+
+/*
+ * TEXTAREA AUTO-RESIZE
+ * Makes the textarea feel more responsive
+ */
+textarea {
+    resize: none;
+    transition: border-color 0.2s ease;
+}
+
+textarea:focus {
+    outline: none;
+}
+
+/*
+ * BUTTON HOVER EFFECTS
+ * Subtle scale effect for better interaction feedback
+ */
+button {
+    transition: all 0.2s ease;
+}
+
+button:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+/*
+ * CARD HOVER EFFECTS
+ * For feature cards and download sections
+ */
+.hover-lift {
+    transition: all 0.2s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/*
+ * GRADIENT TEXT
+ * For special headings
+ */
+.gradient-text {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/*
+ * FOCUS RING
+ * Custom focus styles for better accessibility
+ */
+*:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
+}

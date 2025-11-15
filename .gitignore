@@ -5,7 +5,6 @@ venv/
 .idea/
 .vscode/
 *.log
-*__pypcache__/
-Fundamentals_level_4/
-Fundamentals_level_5/
+*__pycache__/
 .claude
+CLAUDE.md
