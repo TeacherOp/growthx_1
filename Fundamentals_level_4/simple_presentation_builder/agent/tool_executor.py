@@ -56,7 +56,7 @@ class PPTToolExecutor:
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
 
-            return f"Successfully created file: {file_path} ({len(content)} characters)"
+            return f"Successfully created file: ({len(content)} characters)"
         except Exception as e:
             return f"Error creating file: {str(e)}"
 

@@ -98,13 +98,13 @@ CREATE_FILE_TOOL = {
             },
             "content": {
                 "type": "string",
-                "description": "Complete HTML file content including DOCTYPE, head, and body, cdn imports of tailwind css, google fonts, icon packs etc when needed, or complete valid css content for css files"
+                "description": "Complete HTML file content including DOCTYPE, head, and body, cdn imports of tailwind css, google fonts, icon packs etc when needed, or complete valid css content for css files, based on the instructions provided in the messages"
             }
         },
         "required": ["file_path", "content"]
     }
 }
-
+# Tool available - never used, for practice, try to build logic where the agent can chat and update files based on feedback
 READ_FILE_TOOL = {
     "name": "read_file",
     "description": """Read the contents of an existing file.
@@ -121,7 +121,7 @@ READ_FILE_TOOL = {
         "required": ["file_path"]
     }
 }
-
+# Tool available - never used, for practice, try to build logic where the agent can chat and update files based on feedback
 UPDATE_FILE_TOOL = {
     "name": "update_file",
     "description": """Update an existing HTML slide file with corrected or modified content.
@@ -142,7 +142,7 @@ UPDATE_FILE_TOOL = {
         "required": ["file_path", "content"]
     }
 }
-
+# Tool available - never used, for practice, try to build logic where the agent can chat and update files based on feedback
 LIST_FILES_TOOL = {
     "name": "list_files",
     "description": """List all files in a directory.

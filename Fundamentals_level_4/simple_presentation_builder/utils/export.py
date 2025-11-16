@@ -73,7 +73,7 @@ def create_pptx_from_screenshots(screenshots: list, output_file: str = "exports/
     # Save presentation
     prs.save(str(output_path))
 
-    print(f"\n✅ PPTX created: {output_path}")
+    print(f"\n✅ PPTX created")
     print(f"   Total slides: {len(prs.slides)}")
     print(f"   File size: {output_path.stat().st_size / 1024:.1f} KB\n")
 

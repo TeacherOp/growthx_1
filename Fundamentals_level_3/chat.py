@@ -17,6 +17,7 @@ client = anthropic.Anthropic(
 # Model to use
 MODEL = "claude-sonnet-4-5-20250929"
 
+# Just for printing better logs in terminal
 def print_separator():
     """Print a visual separator"""
     print("-" * 50)
@@ -40,7 +41,7 @@ def main():
         # Get user input
         user_input = input("You: ").strip()
 
-        # Check for exit commands
+        # Check for exit commands, this is just checking if you want to quit the chat
         if user_input.lower() in ['exit', 'quit']:
             print("\nGoodbye! Thanks for chatting!")
             break

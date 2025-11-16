@@ -20,7 +20,7 @@ load_dotenv()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-NANO_BANANA = os.getenv("NANO_BANANA")  # Google Gemini API key
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")  # Google Gemini/Imagen API key
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 BUCKET_ENDPOINT = os.getenv("BUCKET_ENDPOINT")
 BUCKET_REGION = os.getenv("BUCKET_REGION")
@@ -99,104 +99,86 @@ def optimize_image_for_blog(image_path: str, target_width: int = 1920, target_he
         return image_path  # Return original if optimization fails
 
 def image_generator(prompt: str) -> Dict[str, Any]:
-    """Tool: Generate image using Google Gemini with optimized prompting"""
+    """Tool: Generate image using Google Imagen 4.0 Ultra with optimized prompting"""
     try:
-        if not NANO_BANANA:
+        if not GEMINI_API_KEY:
             return {
                 "status": "error",
-                "message": "NANO_BANANA (Gemini API key) not configured"
+                "message": "GEMINI_API_KEY not configured"
             }
 
-        client = genai.Client(api_key=NANO_BANANA)
-        model = "gemini-2.5-flash-image-preview"
+        client = genai.Client(api_key=GEMINI_API_KEY)
 
-        # Enhance prompt for better blog headers
-        # Gemini generates 1024x1024, but we'll request 16:9 aspect ratio
-        enhanced_prompt = f"""Create a photorealistic, professional blog header image:
+        # Use the new Imagen 4.0 Ultra model
+        model = "models/imagen-4.0-ultra-generate-001"
 
-        {prompt}
+        # Enhance prompt for better blog headers following Imagen best practices
+        # Imagen 4.0 Ultra supports various aspect ratios and high quality generation
+        enhanced_prompt = f"""Professional blog header image: {prompt}
 
-        Style requirements:
-        - Wide-angle shot suitable for a blog header (16:9 aspect ratio preferred)
-        - Professional, modern, and clean aesthetic
-        - High contrast and vibrant colors that work well on web
-        - Corporate/tech style appropriate for a SaaS blog
-        - Include subtle abstract elements or patterns if relevant
-        - Well-lit with soft, even lighting
-        - Minimalist composition with clear focal point
+        Photorealistic capture with cinematic composition. Wide-angle perspective suitable for web banner. Modern corporate aesthetic with vibrant yet professional color palette. Soft, even lighting with clear focal point. Clean minimalist design with subtle depth. High resolution detail optimized for digital displays."""
 
-        Technical: Create as a wide banner image suitable for responsive web design.
-        """
+        print(f"Generating image with Imagen 4.0 Ultra...")
+        print(f"Prompt: {enhanced_prompt[:200]}...")
 
-        contents = [
-            types.Content(
-                role="user",
-                parts=[
-                    types.Part.from_text(text=enhanced_prompt),
-                ],
-            ),
-        ]
-
-        generate_content_config = types.GenerateContentConfig(
-            response_modalities=["IMAGE", "TEXT"],
-        )
-        
-        # Generate image
-        for chunk in client.models.generate_content_stream(
+        # Generate image using the new API format
+        result = client.models.generate_images(
             model=model,
-            contents=contents,
-            config=generate_content_config,
-        ):
-            if (
-                chunk.candidates is None
-                or chunk.candidates[0].content is None
-                or chunk.candidates[0].content.parts is None
-            ):
-                continue
-            
-            if chunk.candidates[0].content.parts[0].inline_data and chunk.candidates[0].content.parts[0].inline_data.data:
-                inline_data = chunk.candidates[0].content.parts[0].inline_data
-                data_buffer = inline_data.data
-                file_extension = mimetypes.guess_extension(inline_data.mime_type) or '.png'
-                
-                # Save locally
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                local_filename = f"generated_images/blog_header_{timestamp}{file_extension}"
-                os.makedirs('generated_images', exist_ok=True)
+            prompt=enhanced_prompt,
+            config=dict(
+                number_of_images=1,
+                output_mime_type="image/jpeg",  # JPEG for blog headers
+                aspect_ratio="16:9",             # Wide format for blog headers
+                image_size="1K",                 # 1024x768 for 16:9 aspect ratio
+            ),
+        )
 
-                with open(local_filename, "wb") as f:
-                    f.write(data_buffer)
+        # Check if image was generated
+        if not result.generated_images:
+            return {
+                "status": "error",
+                "message": "No images generated"
+            }
 
-                # Optimize image for blog header (resize to 1920x1080)
-                try:
-                    optimized_path = optimize_image_for_blog(local_filename)
-                    if optimized_path != local_filename:
-                        # Delete original if optimization succeeded
-                        os.remove(local_filename)
-                        local_filename = optimized_path
-                        dimensions = "1920x1080"
-                        message = "Image generated and optimized for blog header"
-                    else:
-                        dimensions = "1024x1024"
-                        message = "Image generated successfully (original size)"
-                except Exception as e:
-                    dimensions = "1024x1024"
-                    message = f"Image generated (optimization skipped: {e})"
+        # Get the first (and only) generated image
+        generated_image = result.generated_images[0]
 
-                return {
-                    "status": "success",
-                    "message": message,
-                    "local_path": local_filename,
-                    "mime_type": inline_data.mime_type,
-                    "dimensions": dimensions
-                }
-        
+        # Save locally
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        local_filename = f"generated_images/blog_header_{timestamp}.jpg"
+        os.makedirs('generated_images', exist_ok=True)
+
+        # Save the image using the built-in save method
+        generated_image.image.save(local_filename)
+        print(f"Image saved to: {local_filename}")
+
+        # Optimize image for blog header (resize to 1920x1080)
+        try:
+            optimized_path = optimize_image_for_blog(local_filename)
+            if optimized_path != local_filename:
+                # Delete original if optimization succeeded
+                os.remove(local_filename)
+                local_filename = optimized_path
+                dimensions = "1920x1080"
+                message = "Image generated with Imagen 4.0 Ultra and optimized for blog header"
+            else:
+                dimensions = "1024x768 (16:9)"
+                message = "Image generated successfully with Imagen 4.0 Ultra"
+        except Exception as e:
+            dimensions = "1024x768 (16:9)"
+            message = f"Image generated (optimization skipped: {e})"
+
         return {
-            "status": "error",
-            "message": "No image generated"
+            "status": "success",
+            "message": message,
+            "local_path": local_filename,
+            "mime_type": "image/jpeg",
+            "dimensions": dimensions,
+            "model": "Imagen 4.0 Ultra"
         }
-        
+
     except Exception as e:
+        print(f"Image generation error: {str(e)}")
         return {
             "status": "error",
             "message": f"Failed to generate image: {str(e)}"
@@ -442,22 +424,37 @@ def blog_inserter(csv_file_path: str) -> Dict[str, Any]:
 
 TOOLS = [
     {
-        "type": "custom",
         "name": "image_generator",
-        "description": "Generate a blog header image using AI based on the blog topic",
+        "description": "Generate a blog header image using Google Imagen 4.0 Ultra AI model",
         "input_schema": {
             "type": "object",
             "properties": {
                 "prompt": {
                     "type": "string",
-                    "description": "Describe the scene narratively for the blog header. Focus on: subject, environment, lighting, mood. Avoid keyword lists."
+                    "description": """Describe the image in natural language following these guidelines for best results with Imagen 4.0 Ultra:
+
+                    DO:
+                    • Be specific and descriptive (e.g., "a golden retriever sitting on a beach at sunset" not just "dog")
+                    • Specify artistic style (e.g., "photorealistic", "watercolor painting", "3D render", "flat illustration")
+                    • Include composition details (e.g., "wide-angle shot", "close-up", "aerial view")
+                    • Describe lighting and atmosphere (e.g., "soft morning light", "dramatic shadows", "bright and airy")
+                    • Mention colors and mood (e.g., "warm tones", "vibrant colors", "muted palette")
+                    • For people, describe appearance naturally (e.g., "woman in her 30s with curly hair wearing a blue dress")
+
+                    DON'T:
+                    • Use keyword lists or tags - write in complete sentences
+                    • Include text/words to appear in the image (Imagen doesn't render text well)
+                    • Request specific brands, logos, or copyrighted characters
+                    • Ask for multiple unrelated objects in one scene - keep it cohesive
+
+                    Example: "Photorealistic wide-angle shot of a modern office space with large windows overlooking a city skyline. Soft afternoon sunlight streaming through the windows creating warm shadows. Professional atmosphere with plants and minimalist furniture."
+                    """
                 }
             },
             "required": ["prompt"]
         }
     },
     {
-        "type": "custom",
         "name": "image_uploader",
         "description": "Upload a local image to Supabase bucket and get public URL",
         "input_schema": {
@@ -476,7 +473,6 @@ TOOLS = [
         }
     },
     {
-        "type": "custom",
         "name": "blog_creator",
         "description": "Create a blog post and save it to CSV file",
         "input_schema": {
@@ -531,7 +527,6 @@ TOOLS = [
         }
     },
     {
-        "type": "custom",
         "name": "blog_inserter",
         "description": "Insert a blog from CSV file into Supabase database",
         "input_schema": {
@@ -718,8 +713,8 @@ Your content HTML must follow this exact structure:
             
             # Make API call
             response = anthropic.messages.create(
-                model="claude-opus-4-1-20250805",
-                max_tokens=8000,
+                model="claude-sonnet-4-5-20250929",
+                max_tokens=16000,
                 temperature=0,
                 system=system_prompt,
                 messages=messages,
