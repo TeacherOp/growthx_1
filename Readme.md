@@ -361,6 +361,72 @@ python3 -m chat_2
    - Implement persistence with `chat_2.py`
    - Create your own chat variations
 
+4. **Master Simple tools and workflows** ( Week 4)
+   - Use the simple blog script, modify for your own use case, or just save output locally dont publish anywhere
+   - Use the blog app, see the difference between a script vs app, use cases where a UI is needef for user input
+   - Use Presentation builder app, understand how simple apps work, modify configure, your own tools and executions
+
+
+## Session 2 - Chat Applications and Advanced Agent Implementations ✅
+
+### What We Covered in Session 2
+
+We successfully completed teaching **Level 3** and **Level 4** fundamentals, moving from basic chat applications to advanced multi-agent systems.
+
+#### Session 2 Goal
+- Click on the image link
+![Session 2 Plan](<Notes_session_2/sesion_2_plan.jpeg>)
+
+### Topics Covered:
+
+#### 📝 **Level 3 - Chat Applications with Context Management**
+- Building interactive chat applications that maintain conversation context
+- Message sequencing and role management (user/assistant/tool messages)
+- Implementing conversation persistence with save/resume functionality
+- Tool integration for real-time data access (weather API example)
+- Understanding the critical user→assistant→user message flow
+
+#### 🚀 **Level 4 - Advanced Agent Implementations**
+- **Simple Blog Automation Agent**:
+  - Automated SEO-optimized blog generation
+  - Web research integration with citations
+  - Image generation and uploading
+  - Publishing to live websites
+  - Flask web UI with Server-Sent Events (SSE)
+
+- **Simple Presentation Builder**:
+  - Multi-agent architecture (main chat agent + PPT agent)
+  - Web research for data gathering
+  - HTML to PowerPoint conversion
+  - Brand guideline integration
+  - Screenshot capture and stitching
+
+### Key Technical Concepts Learned:
+1. **Tool Use Evolution**: From single API calls to complex tool chains
+2. **Agent Architecture**: Collection of tools + execution sequence = Agent
+3. **Context Management**: Maintaining conversation history across API calls
+4. **Multi-Agent Systems**: Agents calling sub-agents for specialized tasks
+5. **Production Considerations**: UI development, SSE for real-time updates, error handling
+
+### Session 2 Resources:
+- **Meeting Notes**: https://docs.google.com/document/d/11MJJAiMngitY8xa-XQByBPdLlZRcOwRKZ0npubJTqbI/edit?usp=sharing
+- **Session Recording**: https://drive.google.com/file/d/1zlsIMINlm-yqfnsNwunaIspO_fRl5K-7/view?usp=sharing
+- **Detailed Transcript**: Available in `Notes_session_2/session_2.md`
+- **Feedback Link**: https://growthx.club/events/690d38c2c2df6fe0a0e32c64?feedback=true
+
+### Practice Files:
+After watching the session, practice with these implementations:
+- `Fundamentals_level_3/chat_3.py` - Chat with weather tool integration
+- `Fundamentals_level_4/simple_blog_automation/` - Full blog automation system with UI
+- `Fundamentals_level_4/simple_presentation_builder/` - Multi-agent presentation builder
+
+### Important Takeaways:
+- One API call is the foundation for solving 90% of problems
+- Tools can be as simple as a function or as complex as another AI agent
+- Understanding the basics allows you to work with any platform (no-code or code)
+- Focus on learning the fundamentals rather than specific platforms
+
+
 ## =� Troubleshooting
 
 ### Common Issues
@@ -386,12 +452,6 @@ python3 -m chat_2
    - Add delays between API calls if processing many items
    - Check your API tier limits
 
-## 📚 Additional Resources
-
-- [Anthropic Documentation](https://docs.anthropic.com/)
-- [Claude Model Information](https://docs.anthropic.com/claude/docs/models-overview)
-- [API Reference](https://docs.anthropic.com/claude/reference/messages-api)
-- [Tool Use Guide](https://docs.anthropic.com/claude/docs/tool-use)
 
 ## > Contributing
 
@@ -421,14 +481,17 @@ For questions or issues:
 - Consult Anthropic's documentation
 - Open an issue in this repository
 
+
+
 ---
 
 **Happy Learning!** 🚀
 
 Remember: The best way to learn is by doing. Start with step_1 and work your way through each example, experimenting and modifying the code as you go.
 
+## 📚 Additional Resources
 
-## Session 2 TBD.
-
-
-Feedback Link: https://growthx.club/events/690d38c2c2df6fe0a0e32c64?feedback=true
+- [Anthropic Documentation](https://docs.anthropic.com/)
+- [Claude Model Information](https://docs.anthropic.com/claude/docs/models-overview)
+- [API Reference](https://docs.anthropic.com/claude/reference/messages-api)
+- [Tool Use Guide](https://docs.anthropic.com/claude/docs/tool-use)
