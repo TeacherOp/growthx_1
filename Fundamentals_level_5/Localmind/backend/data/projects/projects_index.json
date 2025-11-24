@@ -1,0 +1,21 @@
+{
+  "projects": [
+    {
+      "id": "a83b4d00-1d9e-4535-a7db-a6954390ab23",
+      "name": "Test Project 1",
+      "description": "Sample Description",
+      "created_at": "2025-11-24T18:31:44.478559",
+      "updated_at": "2025-11-24T18:31:44.478559",
+      "last_accessed": "2025-11-24T18:31:44.478559"
+    },
+    {
+      "id": "63c2be8b-a79e-46bc-ae3d-3b1bddf3b24c",
+      "name": "Test project 2",
+      "description": "data analytics tool",
+      "created_at": "2025-11-24T18:43:10.146348",
+      "updated_at": "2025-11-24T18:43:10.146348",
+      "last_accessed": "2025-11-24T18:43:10.146348"
+    }
+  ],
+  "last_updated": "2025-11-24T18:43:10.146976"
+}

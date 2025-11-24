@@ -481,8 +481,6 @@ For questions or issues:
 - Consult Anthropic's documentation
 - Open an issue in this repository
 
-
-
 ---
 
 **Happy Learning!** 🚀

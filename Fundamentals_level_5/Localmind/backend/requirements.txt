@@ -1,0 +1,24 @@
+# Core Flask dependencies
+Flask
+Flask-CORS
+Flask-SocketIO
+python-socketio
+python-dotenv
+
+# Utilities
+python-dateutil
+uuid
+
+# For file handling
+werkzeug
+
+# For JSON operations
+jsonschema
+
+# Development tools
+black
+flake8
+
+# Testing (optional for now)
+pytest
+pytest-flask

@@ -1,0 +1,16 @@
+{
+  "id": "a83b4d00-1d9e-4535-a7db-a6954390ab23",
+  "name": "Test Project 1",
+  "description": "Sample Description",
+  "created_at": "2025-11-24T18:31:44.478559",
+  "updated_at": "2025-11-24T18:31:44.478559",
+  "last_accessed": "2025-11-24T18:31:44.478559",
+  "documents": [],
+  "notes": [],
+  "meetings": [],
+  "settings": {
+    "theme": "light",
+    "ai_model": "claude-3-sonnet",
+    "auto_save": true
+  }
+}

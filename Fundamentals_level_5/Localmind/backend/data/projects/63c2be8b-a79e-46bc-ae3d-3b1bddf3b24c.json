@@ -1,0 +1,16 @@
+{
+  "id": "63c2be8b-a79e-46bc-ae3d-3b1bddf3b24c",
+  "name": "Test project 2",
+  "description": "data analytics tool",
+  "created_at": "2025-11-24T18:43:10.146348",
+  "updated_at": "2025-11-24T18:43:10.146348",
+  "last_accessed": "2025-11-24T19:26:08.812736",
+  "documents": [],
+  "notes": [],
+  "meetings": [],
+  "settings": {
+    "theme": "light",
+    "ai_model": "claude-3-sonnet",
+    "auto_save": true
+  }
+}
