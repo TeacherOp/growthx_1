@@ -40,7 +40,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex items-center gap-3">
               <Brain className="h-8 w-8 text-primary" />
               <div>
-                <h1 className="text-2xl font-bold">LocalMind</h1>
+                <h1 className="text-2xl font-bold">LocalLm</h1>
                 <p className="text-xs text-muted-foreground">Your private AI knowledge hub</p>
               </div>
             </div>
