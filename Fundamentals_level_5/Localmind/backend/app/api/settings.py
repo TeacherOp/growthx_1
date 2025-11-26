@@ -274,3 +274,103 @@ def validate_api_key():
             'success': False,
             'error': str(e)
         }), 500
+
+
+# ============================================================================
+# Processing Settings Endpoints
+# ============================================================================
+
+from app.utils.tier_config import (
+    get_tier,
+    get_tier_config,
+    get_all_tiers,
+    APIProvider,
+    ANTHROPIC_TIERS,
+)
+
+
+@api_bp.route('/settings/processing', methods=['GET'])
+def get_processing_settings():
+    """
+    Get processing settings including Anthropic tier configuration.
+
+    Educational Note: Processing settings control how parallel operations
+    (like PDF page extraction) are performed. The tier determines how
+    many concurrent API calls can be made based on rate limits.
+    Uses centralized tier_config utility for all API providers.
+    """
+    try:
+        # Get current tier using the centralized utility
+        current_tier = get_tier(APIProvider.ANTHROPIC.value)
+        tier_config = get_tier_config(APIProvider.ANTHROPIC.value, current_tier)
+
+        return jsonify({
+            'success': True,
+            'settings': {
+                'anthropic_tier': current_tier,
+                'tier_config': tier_config,
+            },
+            'available_tiers': [
+                {'tier': tier, **config}
+                for tier, config in ANTHROPIC_TIERS.items()
+            ]
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error getting processing settings: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@api_bp.route('/settings/processing', methods=['POST'])
+def update_processing_settings():
+    """
+    Update processing settings.
+
+    Educational Note: This endpoint saves the selected tier to .env file,
+    which affects how parallel PDF processing operates.
+    Uses centralized tier_config utility for validation.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+
+        # Update Anthropic tier if provided
+        if 'anthropic_tier' in data:
+            tier = int(data['anthropic_tier'])
+            if tier not in ANTHROPIC_TIERS:
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid tier. Must be one of: {list(ANTHROPIC_TIERS.keys())}'
+                }), 400
+
+            env_service.set_key('ANTHROPIC_TIER', str(tier))
+            current_app.logger.info(f"Updated ANTHROPIC_TIER to {tier}")
+
+        env_service.reload_env()
+
+        # Return updated settings using centralized utility
+        current_tier = get_tier(APIProvider.ANTHROPIC.value)
+        tier_config = get_tier_config(APIProvider.ANTHROPIC.value, current_tier)
+
+        return jsonify({
+            'success': True,
+            'message': 'Processing settings updated successfully',
+            'settings': {
+                'anthropic_tier': current_tier,
+                'tier_config': tier_config,
+            }
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error updating processing settings: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500

@@ -10,6 +10,11 @@ const API_BASE_URL = 'http://localhost:5000/api/v1';
 
 /**
  * Source metadata returned from the API
+ * Educational Note: Status transitions for sources:
+ * - uploaded: File received, waiting for processing
+ * - processing: Currently being processed (e.g., PDF text extraction)
+ * - ready: Successfully processed, available for chat context
+ * - error: Processing failed (no partial states - clean failure)
  */
 export interface Source {
   id: string;
@@ -23,6 +28,7 @@ export interface Source {
   file_size: number;
   stored_filename: string;
   status: 'uploaded' | 'processing' | 'ready' | 'error';
+  active: boolean; // Whether source is included in chat context
   processing_info: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
@@ -118,7 +124,7 @@ class SourcesAPI {
   async updateSource(
     projectId: string,
     sourceId: string,
-    data: { name?: string; description?: string }
+    data: { name?: string; description?: string; active?: boolean }
   ): Promise<Source> {
     try {
       const response = await axios.put(
@@ -226,6 +232,37 @@ class SourcesAPI {
       return response.data.source;
     } catch (error) {
       console.error('Error adding text source:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel processing for a source
+   * Educational Note: This stops any running tasks and sets status back to "uploaded"
+   * so user can retry later. Raw file is preserved, only processed data is deleted.
+   */
+  async cancelProcessing(projectId: string, sourceId: string): Promise<void> {
+    try {
+      await axios.post(
+        `${API_BASE_URL}/projects/${projectId}/sources/${sourceId}/cancel`
+      );
+    } catch (error) {
+      console.error('Error cancelling source processing:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Retry processing for a failed or uploaded source
+   * Educational Note: This restarts processing from the raw file.
+   */
+  async retryProcessing(projectId: string, sourceId: string): Promise<void> {
+    try {
+      await axios.post(
+        `${API_BASE_URL}/projects/${projectId}/sources/${sourceId}/retry`
+      );
+    } catch (error) {
+      console.error('Error retrying source processing:', error);
       throw error;
     }
   }

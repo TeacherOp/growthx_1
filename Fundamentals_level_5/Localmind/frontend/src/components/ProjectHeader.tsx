@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
 import { Button } from './ui/button';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -255,17 +257,17 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
               <>
                 {/* System Prompt Section */}
                 <div className="space-y-2">
-                  <label htmlFor="system-prompt" className="text-sm font-medium">
+                  <Label htmlFor="system-prompt">
                     System Prompt (AI Chat)
-                  </label>
+                  </Label>
                   <p className="text-xs text-muted-foreground">
                     This prompt defines how the AI assistant behaves when responding to queries about this project.
                   </p>
-                  <textarea
+                  <Textarea
                     id="system-prompt"
                     value={tempSystemPrompt}
                     onChange={(e) => setTempSystemPrompt(e.target.value)}
-                    className="w-full h-48 p-3 border rounded-md text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="h-48 font-mono resize-none"
                     placeholder="Enter system prompt..."
                     disabled={saving}
                   />

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { projectsAPI } from '@/lib/api';
 
@@ -83,9 +84,9 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
 
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium">
+              <Label htmlFor="name">
                 Project Name *
-              </label>
+              </Label>
               <Input
                 id="name"
                 placeholder="e.g., Q4 Research, Personal Notes"
@@ -97,9 +98,9 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="description" className="text-sm font-medium">
+              <Label htmlFor="description">
                 Description (optional)
-              </label>
+              </Label>
               <Input
                 id="description"
                 placeholder="Brief description of your project"

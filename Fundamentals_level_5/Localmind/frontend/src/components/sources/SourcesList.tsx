@@ -16,6 +16,10 @@ interface SourcesListProps {
   searchQuery: string;
   onDownload: (sourceId: string) => void;
   onDelete: (sourceId: string, sourceName: string) => void;
+  onRename: (sourceId: string, currentName: string) => void;
+  onToggleActive: (sourceId: string, active: boolean) => void;
+  onCancelProcessing: (sourceId: string) => void;
+  onRetryProcessing: (sourceId: string) => void;
 }
 
 export const SourcesList: React.FC<SourcesListProps> = ({
@@ -24,6 +28,10 @@ export const SourcesList: React.FC<SourcesListProps> = ({
   searchQuery,
   onDownload,
   onDelete,
+  onRename,
+  onToggleActive,
+  onCancelProcessing,
+  onRetryProcessing,
 }) => {
   // Filter sources based on search
   const filteredSources = sources.filter((source) =>
@@ -58,6 +66,10 @@ export const SourcesList: React.FC<SourcesListProps> = ({
                 source={source}
                 onDownload={onDownload}
                 onDelete={onDelete}
+                onRename={onRename}
+                onToggleActive={onToggleActive}
+                onCancelProcessing={onCancelProcessing}
+                onRetryProcessing={onRetryProcessing}
               />
             ))}
           </div>

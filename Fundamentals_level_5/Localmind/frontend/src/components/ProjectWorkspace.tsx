@@ -5,6 +5,11 @@ import { ChatPanel } from './ChatPanel';
 import { StudioPanel } from './StudioPanel';
 import { ProjectHeader } from './ProjectHeader';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from './ui/resizable';
 
 /**
  * ProjectWorkspace Component
@@ -41,16 +46,21 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
         onDelete={() => onDeleteProject(project.id)}
       />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Sources */}
-        <div
-          className={`transition-all duration-300 ${
-            leftPanelOpen ? 'w-80' : 'w-12'
-          } border-r flex flex-col relative bg-muted/30`}
+      {/* Main Content Area - Resizable Panels */}
+      <ResizablePanelGroup direction="horizontal" className="flex-1">
+        {/* Left Panel - Sources (Resizable) */}
+        <ResizablePanel
+          defaultSize={20}
+          minSize={15}
+          maxSize={40}
+          collapsible
+          collapsedSize={3}
+          onCollapse={() => setLeftPanelOpen(false)}
+          onExpand={() => setLeftPanelOpen(true)}
+          className="bg-muted/30"
         >
           {leftPanelOpen ? (
-            <>
+            <div className="h-full flex flex-col relative">
               <SourcesPanel projectId={project.id} />
               <Button
                 variant="ghost"
@@ -60,9 +70,9 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
               >
                 <CaretLeft size={16} />
               </Button>
-            </>
+            </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="h-full flex items-center justify-center">
               <Button
                 variant="ghost"
                 size="icon"
@@ -73,21 +83,32 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
               </Button>
             </div>
           )}
-        </div>
+        </ResizablePanel>
+
+        <ResizableHandle withHandle />
 
         {/* Center Panel - Chat */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <ChatPanel projectId={project.id} projectName={project.name} />
-        </div>
+        <ResizablePanel defaultSize={60} minSize={30}>
+          <div className="h-full flex flex-col">
+            <ChatPanel projectId={project.id} projectName={project.name} />
+          </div>
+        </ResizablePanel>
 
-        {/* Right Panel - Studio */}
-        <div
-          className={`transition-all duration-300 ${
-            rightPanelOpen ? 'w-80' : 'w-12'
-          } border-l flex flex-col relative bg-muted/30`}
+        <ResizableHandle withHandle />
+
+        {/* Right Panel - Studio (Resizable) */}
+        <ResizablePanel
+          defaultSize={20}
+          minSize={15}
+          maxSize={40}
+          collapsible
+          collapsedSize={3}
+          onCollapse={() => setRightPanelOpen(false)}
+          onExpand={() => setRightPanelOpen(true)}
+          className="bg-muted/30"
         >
           {rightPanelOpen ? (
-            <>
+            <div className="h-full flex flex-col relative">
               <StudioPanel projectId={project.id} />
               <Button
                 variant="ghost"
@@ -97,9 +118,9 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
               >
                 <CaretRight size={16} />
               </Button>
-            </>
+            </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="h-full flex items-center justify-center">
               <Button
                 variant="ghost"
                 size="icon"
@@ -110,8 +131,8 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
               </Button>
             </div>
           )}
-        </div>
-      </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 };

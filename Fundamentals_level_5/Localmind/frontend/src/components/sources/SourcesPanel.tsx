@@ -15,6 +15,17 @@ import { SourcesHeader } from './SourcesHeader';
 import { SourcesList } from './SourcesList';
 import { SourcesFooter } from './SourcesFooter';
 import { AddSourcesSheet } from './AddSourcesSheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 
 interface SourcesPanelProps {
   projectId: string;
@@ -30,6 +41,11 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [uploading, setUploading] = useState(false);
 
+  // Rename dialog state
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renameSourceId, setRenameSourceId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
   /**
    * Ref for error function to avoid infinite loop in useCallback
    * Educational Note: Toast functions are recreated each render, causing
@@ -40,7 +56,7 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId }) => {
   errorRef.current = error;
 
   /**
-   * Load sources from API
+   * Load sources from API (with loading state for initial load)
    */
   const loadSources = useCallback(async () => {
     try {
@@ -55,10 +71,48 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId }) => {
     }
   }, [projectId]);
 
+  /**
+   * Silent refresh for polling (no loading state to avoid flicker)
+   * Educational Note: This is used for background polling so the UI
+   * doesn't flicker on each refresh.
+   */
+  const refreshSources = useCallback(async () => {
+    try {
+      const data = await sourcesAPI.listSources(projectId);
+      setSources(data);
+    } catch (err) {
+      console.error('Error refreshing sources:', err);
+      // Don't show toast on polling errors to avoid spam
+    }
+  }, [projectId]);
+
   // Load sources on mount and when projectId changes
   useEffect(() => {
     loadSources();
   }, [loadSources]);
+
+  /**
+   * Polling for source status updates
+   * Educational Note: When sources are actively processing, we poll every 3 seconds
+   * to update the UI. Polling stops when no sources are in "processing" state.
+   * Note: We only check for "processing", not "uploaded" because "uploaded" is also
+   * the state after cancellation (waiting for user to retry).
+   */
+  useEffect(() => {
+    // Only poll when sources are actively being processed
+    const hasProcessingSources = sources.some(s => s.status === 'processing');
+
+    if (!hasProcessingSources) {
+      return; // No polling needed
+    }
+
+    // Set up polling interval with silent refresh (no flicker)
+    const pollInterval = setInterval(() => {
+      refreshSources();
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [sources, refreshSources]);
 
   /**
    * Handle file upload
@@ -172,6 +226,85 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId }) => {
     window.open(url, '_blank');
   };
 
+  /**
+   * Open rename dialog for a source
+   */
+  const handleRenameSource = (sourceId: string, currentName: string) => {
+    setRenameSourceId(sourceId);
+    setRenameValue(currentName);
+    setRenameDialogOpen(true);
+  };
+
+  /**
+   * Submit rename
+   */
+  const handleRenameSubmit = async () => {
+    if (!renameSourceId || !renameValue.trim()) return;
+
+    try {
+      await sourcesAPI.updateSource(projectId, renameSourceId, {
+        name: renameValue.trim(),
+      });
+      success('Source renamed successfully');
+      setRenameDialogOpen(false);
+      await loadSources();
+    } catch (err) {
+      console.error('Error renaming source:', err);
+      error('Failed to rename source');
+    }
+  };
+
+  /**
+   * Toggle source active state
+   * Educational Note: Active sources are included in chat context.
+   * When a source becomes "ready", it's active by default.
+   * Users can deactivate to exclude from chat without deleting.
+   */
+  const handleToggleActive = async (sourceId: string, active: boolean) => {
+    try {
+      await sourcesAPI.updateSource(projectId, sourceId, { active });
+      // Update local state immediately for responsive UI
+      setSources(prev =>
+        prev.map(s => s.id === sourceId ? { ...s, active } : s)
+      );
+    } catch (err) {
+      console.error('Error toggling source active state:', err);
+      error('Failed to update source');
+      // Reload to get correct state
+      await loadSources();
+    }
+  };
+
+  /**
+   * Cancel processing for a source
+   * Educational Note: Stops any running tasks, cleans up processed data,
+   * but keeps raw file so user can retry later.
+   */
+  const handleCancelProcessing = async (sourceId: string) => {
+    try {
+      await sourcesAPI.cancelProcessing(projectId, sourceId);
+      success('Processing cancelled');
+      await loadSources();
+    } catch (err) {
+      console.error('Error cancelling processing:', err);
+      error('Failed to cancel processing');
+    }
+  };
+
+  /**
+   * Retry processing for a failed or uploaded source
+   */
+  const handleRetryProcessing = async (sourceId: string) => {
+    try {
+      await sourcesAPI.retryProcessing(projectId, sourceId);
+      success('Processing restarted');
+      await loadSources();
+    } catch (err) {
+      console.error('Error retrying processing:', err);
+      error('Failed to retry processing');
+    }
+  };
+
   // Calculate totals
   const totalSize = sources.reduce((sum, s) => sum + s.file_size, 0);
   const sourcesCount = sources.length;
@@ -193,6 +326,10 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId }) => {
           searchQuery={searchQuery}
           onDownload={handleDownloadSource}
           onDelete={handleDeleteSource}
+          onRename={handleRenameSource}
+          onToggleActive={handleToggleActive}
+          onCancelProcessing={handleCancelProcessing}
+          onRetryProcessing={handleRetryProcessing}
         />
 
         <SourcesFooter sourcesCount={sourcesCount} totalSize={totalSize} />
@@ -207,6 +344,42 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId }) => {
         onAddText={handleAddText}
         uploading={uploading}
       />
+
+      {/* Rename Dialog */}
+      <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Rename Source</DialogTitle>
+            <DialogDescription>
+              Enter a new name for this source.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                placeholder="Source name"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleRenameSubmit();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRenameSubmit} disabled={!renameValue.trim()}>
+              Rename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Toast notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />

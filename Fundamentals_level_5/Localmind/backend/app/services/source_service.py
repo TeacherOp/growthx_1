@@ -2,27 +2,39 @@
 Source Service - Business logic for managing project sources.
 
 Educational Note: This service handles uploading, storing, and managing
-raw source files for projects. Sources are the documents, images, audio,
+source files for projects. Sources are the documents, images, audio,
 and data files that users upload to be used as context for AI conversations.
 
 Storage Structure:
     data/projects/{project_id}/
     ├── sources/
     │   ├── sources_index.json    # Metadata index for all sources
-    │   └── raw/                  # Raw uploaded files
-    │       ├── {source_id}.pdf
-    │       ├── {source_id}.txt
+    │   ├── raw/                  # Raw uploaded files
+    │   │   ├── {source_id}.pdf
+    │   │   ├── {source_id}.txt
+    │   │   └── ...
+    │   └── processed/            # Extracted/processed text content
+    │       ├── {source_id}.txt   # Extracted text from PDFs, images, etc.
     │       └── ...
+
+Processing Flow:
+    1. User uploads file → saved to raw/
+    2. Auto-processing triggered based on file type:
+       - PDF → text extraction via Claude (pdf_service)
+       - TXT/MD → already text, copy to processed/
+       - Images → OCR via Claude (future)
+       - URLs → content fetching (future)
+    3. Status updated: uploaded → processing → ready | error
 """
 import json
 import uuid
-import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List, Any, Tuple
 from werkzeug.datastructures import FileStorage
 
 from config import Config
+from app.services.task_service import task_service
 
 
 # Allowed file extensions and their categories
@@ -100,6 +112,16 @@ class SourceService:
         """Get the raw files directory for a project."""
         return self._get_sources_dir(project_id) / "raw"
 
+    def _get_processed_dir(self, project_id: str) -> Path:
+        """
+        Get the processed files directory for a project.
+
+        Educational Note: Processed files contain extracted text content
+        from PDFs, images (OCR), etc. This is the content that will be
+        used by the AI for context.
+        """
+        return self._get_sources_dir(project_id) / "processed"
+
     def _get_index_path(self, project_id: str) -> Path:
         """Get the sources index file path for a project."""
         return self._get_sources_dir(project_id) / "sources_index.json"
@@ -113,9 +135,11 @@ class SourceService:
         """
         sources_dir = self._get_sources_dir(project_id)
         raw_dir = self._get_raw_dir(project_id)
+        processed_dir = self._get_processed_dir(project_id)
 
         sources_dir.mkdir(parents=True, exist_ok=True)
         raw_dir.mkdir(parents=True, exist_ok=True)
+        processed_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_index(self, project_id: str) -> Dict[str, Any]:
         """
@@ -234,6 +258,7 @@ class SourceService:
             "file_size": file_size,
             "stored_filename": stored_filename,
             "status": "uploaded",  # uploaded -> processing -> ready | error
+            "active": False,  # Whether source is included in chat context (set to True when ready)
             "processing_info": None,  # Will hold processing details later
             "created_at": timestamp,
             "updated_at": timestamp
@@ -246,7 +271,159 @@ class SourceService:
 
         print(f"Uploaded source: {source_metadata['name']} ({source_id})")
 
+        # Submit processing as a background task
+        # Educational Note: Using ThreadPoolExecutor allows the upload to return
+        # immediately while processing happens in the background. The user can
+        # continue chatting or uploading more files while PDFs are being processed.
+        task_service.submit_task(
+            "source_processing",  # task_type
+            source_id,            # target_id
+            self.process_source,  # callable_func
+            project_id,           # *args passed to callable
+            source_id
+        )
+
         return source_metadata
+
+    def process_source(self, project_id: str, source_id: str) -> Dict[str, Any]:
+        """
+        Process a source file to extract text content.
+
+        Educational Note: This method handles different file types:
+        - PDF: Uses Claude API (via pdf_service) to extract text
+        - TXT/MD: Already text, just copy to processed folder
+        - Images: Future - OCR via Claude
+        - URLs: Future - Content fetching
+
+        The extracted text is saved to the processed/ folder and the
+        source status is updated accordingly.
+
+        Args:
+            project_id: The project UUID
+            source_id: The source UUID
+
+        Returns:
+            Updated source metadata with processing info
+        """
+        source = self.get_source(project_id, source_id)
+        if not source:
+            return {"success": False, "error": "Source not found"}
+
+        file_ext = source.get("file_extension", "").lower()
+        raw_file_path = self._get_raw_dir(project_id) / source["stored_filename"]
+
+        # Update status to processing
+        self.update_source(project_id, source_id, status="processing")
+
+        try:
+            if file_ext == ".pdf":
+                # Use pdf_service to extract text from PDF
+                # Educational Note: pdf_service processes PDFs in PARALLEL using ThreadPoolExecutor
+                # Result is either "ready" (all pages succeeded) or "error" (any page failed)
+                # No partial status - we either succeed completely or fail completely
+                from app.services.pdf_service import pdf_service
+
+                result = pdf_service.extract_text_from_pdf(
+                    project_id=project_id,
+                    source_id=source_id,
+                    pdf_path=raw_file_path
+                )
+
+                if result.get("success"):
+                    # All pages extracted successfully
+                    self.update_source(
+                        project_id,
+                        source_id,
+                        status="ready",
+                        processing_info={
+                            "processor": "pdf_service_parallel",
+                            "model_used": result.get("model_used"),
+                            "total_pages": result.get("total_pages"),
+                            "pages_processed": result.get("pages_processed"),
+                            "character_count": result.get("character_count"),
+                            "token_usage": result.get("token_usage"),
+                            "extracted_at": result.get("extracted_at"),
+                            "parallel_workers": result.get("parallel_workers")
+                        }
+                    )
+                    return {"success": True, "status": "ready"}
+                elif result.get("status") == "cancelled":
+                    # Processing was cancelled by user
+                    # Educational Note: Cancelled processing sets status back to "uploaded"
+                    # so user can retry later. Raw file is preserved.
+                    self.update_source(
+                        project_id,
+                        source_id,
+                        status="uploaded",
+                        processing_info={
+                            "cancelled": True,
+                            "cancelled_at": datetime.now().isoformat(),
+                            "total_pages": result.get("total_pages")
+                        }
+                    )
+                    return {"success": False, "status": "cancelled", "error": "Processing cancelled"}
+                else:
+                    # Extraction failed - no partial content kept
+                    # Educational Note: On failure, pdf_service already cleaned up
+                    # any partial output files. We update status to "error" so user
+                    # can see it failed and retry.
+                    self.update_source(
+                        project_id,
+                        source_id,
+                        status="error",
+                        processing_info={
+                            "error": result.get("error"),
+                            "failed_pages": result.get("failed_pages"),
+                            "total_pages": result.get("total_pages")
+                        }
+                    )
+                    return {"success": False, "error": result.get("error")}
+
+            elif file_ext in [".txt", ".md"]:
+                # Text files are already processed - copy to processed folder
+                processed_dir = self._get_processed_dir(project_id)
+                processed_path = processed_dir / f"{source_id}.txt"
+
+                # Read and copy content
+                with open(raw_file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+
+                with open(processed_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+
+                self.update_source(
+                    project_id,
+                    source_id,
+                    status="ready",
+                    active=True,  # Auto-activate when ready
+                    processing_info={
+                        "processor": "direct_copy",
+                        "character_count": len(content),
+                        "extracted_at": datetime.now().isoformat()
+                    }
+                )
+                return {"success": True, "status": "ready"}
+
+            else:
+                # Unsupported file type for processing (images, audio, etc.)
+                # Mark as uploaded but not processed
+                self.update_source(
+                    project_id,
+                    source_id,
+                    status="uploaded",
+                    processing_info={"note": "Processing not yet supported for this file type"}
+                )
+                return {"success": True, "status": "uploaded", "note": "No processing needed"}
+
+        except Exception as e:
+            print(f"Error processing source {source_id}: {e}")
+            self.update_source(
+                project_id,
+                source_id,
+                status="error",
+                processing_info={"error": str(e)}
+            )
+            return {"success": False, "error": str(e)}
 
     def list_sources(self, project_id: str) -> List[Dict[str, Any]]:
         """
@@ -314,6 +491,7 @@ class SourceService:
         name: Optional[str] = None,
         description: Optional[str] = None,
         status: Optional[str] = None,
+        active: Optional[bool] = None,
         processing_info: Optional[Dict[str, Any]] = None
     ) -> Optional[Dict[str, Any]]:
         """
@@ -325,6 +503,7 @@ class SourceService:
             name: New display name (optional)
             description: New description (optional)
             status: New status (optional)
+            active: Whether source is included in chat context (optional)
             processing_info: Processing details (optional)
 
         Returns:
@@ -341,6 +520,13 @@ class SourceService:
                     source["description"] = description
                 if status is not None:
                     source["status"] = status
+                    # Auto-activate when status becomes ready
+                    # Educational Note: We no longer use "partial" status - it's either
+                    # "ready" (all pages extracted) or "error" (any failure)
+                    if status == "ready":
+                        source["active"] = True
+                if active is not None:
+                    source["active"] = active
                 if processing_info is not None:
                     source["processing_info"] = processing_info
 
@@ -356,7 +542,7 @@ class SourceService:
 
     def delete_source(self, project_id: str, source_id: str) -> bool:
         """
-        Delete a source and its raw file.
+        Delete a source, its raw file, and any processed content.
 
         Args:
             project_id: The project UUID
@@ -373,6 +559,11 @@ class SourceService:
         file_path = self._get_raw_dir(project_id) / source["stored_filename"]
         if file_path.exists():
             file_path.unlink()
+
+        # Delete the processed file (if exists)
+        processed_path = self._get_processed_dir(project_id) / f"{source_id}.txt"
+        if processed_path.exists():
+            processed_path.unlink()
 
         # Remove from index
         index = self._load_index(project_id)
@@ -475,6 +666,7 @@ class SourceService:
             "file_size": file_size,
             "stored_filename": stored_filename,
             "status": "uploaded",
+            "active": False,  # Set to True when processed
             "processing_info": {"link_type": link_type},
             "created_at": timestamp,
             "updated_at": timestamp
@@ -550,6 +742,7 @@ class SourceService:
             "file_size": file_size,
             "stored_filename": stored_filename,
             "status": "uploaded",
+            "active": False,  # Set to True when processed
             "processing_info": {"source_type": "pasted_text"},
             "created_at": timestamp,
             "updated_at": timestamp
@@ -562,7 +755,112 @@ class SourceService:
 
         print(f"Added text source: {name} ({source_id})")
 
+        # Submit processing as background task (copies to processed folder)
+        task_service.submit_task(
+            "source_processing",  # task_type
+            source_id,            # target_id
+            self.process_source,  # callable_func
+            project_id,           # *args passed to callable
+            source_id
+        )
+
         return source_metadata
+
+    def cancel_processing(self, project_id: str, source_id: str) -> bool:
+        """
+        Cancel processing for a source.
+
+        Educational Note: This cancels any running tasks for the source and
+        cleans up processed data, but keeps the raw file so user can retry.
+
+        Args:
+            project_id: The project UUID
+            source_id: The source UUID
+
+        Returns:
+            True if cancellation was initiated, False otherwise
+        """
+        source = self.get_source(project_id, source_id)
+        if not source:
+            return False
+
+        # Only cancel if currently processing
+        if source["status"] not in ["uploaded", "processing"]:
+            return False
+
+        # Cancel any running tasks for this source
+        cancelled_count = task_service.cancel_tasks_for_target(source_id)
+        print(f"Cancelled {cancelled_count} tasks for source {source_id}")
+
+        # Delete processed file if it exists (keep raw file!)
+        processed_path = self._get_processed_dir(project_id) / f"{source_id}.txt"
+        if processed_path.exists():
+            processed_path.unlink()
+            print(f"Deleted partial processed file: {processed_path}")
+
+        # Update source status to uploaded (ready to retry)
+        self.update_source(
+            project_id,
+            source_id,
+            status="uploaded",
+            processing_info={"cancelled": True, "cancelled_at": datetime.now().isoformat()}
+        )
+
+        return True
+
+    def retry_processing(self, project_id: str, source_id: str) -> Dict[str, Any]:
+        """
+        Retry processing for a source that failed or was cancelled.
+
+        Educational Note: This submits a new processing task for the source.
+        Only works for sources that have a raw file but are not currently processing.
+
+        Args:
+            project_id: The project UUID
+            source_id: The source UUID
+
+        Returns:
+            Dict with success status and message
+        """
+        source = self.get_source(project_id, source_id)
+        if not source:
+            return {"success": False, "error": "Source not found"}
+
+        # Can only retry if status is uploaded or error (not processing)
+        if source["status"] == "processing":
+            return {"success": False, "error": "Source is already processing"}
+
+        if source["status"] == "ready":
+            return {"success": False, "error": "Source is already processed"}
+
+        # Verify raw file exists
+        raw_file_path = self._get_raw_dir(project_id) / source["stored_filename"]
+        if not raw_file_path.exists():
+            return {"success": False, "error": "Raw file not found"}
+
+        # Delete any existing processed file
+        processed_path = self._get_processed_dir(project_id) / f"{source_id}.txt"
+        if processed_path.exists():
+            processed_path.unlink()
+
+        # Update status to uploaded (processing will be done by background task)
+        self.update_source(
+            project_id,
+            source_id,
+            status="uploaded",
+            processing_info={"retry": True, "retry_at": datetime.now().isoformat()}
+        )
+
+        # Submit new processing task
+        task_service.submit_task(
+            "source_processing",
+            source_id,
+            self.process_source,
+            project_id,
+            source_id
+        )
+
+        return {"success": True, "message": "Processing restarted"}
 
     def get_sources_summary(self, project_id: str) -> Dict[str, Any]:
         """

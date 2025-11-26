@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import {
@@ -20,9 +21,16 @@ import {
   XCircle,
   CircleNotch,
 } from '@phosphor-icons/react';
-import { settingsAPI } from '@/lib/api/settings';
-import type { ApiKey } from '@/lib/api/settings';
+import { settingsAPI, processingSettingsAPI } from '@/lib/api/settings';
+import type { ApiKey, AvailableTier } from '@/lib/api/settings';
 import { useToast } from './ui/toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 
 /**
  * AppSettings Component
@@ -60,15 +68,55 @@ export const AppSettings: React.FC<AppSettingsProps> = ({ open, onOpenChange }) 
   const [saving, setSaving] = useState(false);
   const [validationState, setValidationState] = useState<ValidationState>({});
 
+  // Processing Settings State
+  const [availableTiers, setAvailableTiers] = useState<AvailableTier[]>([]);
+  const [selectedTier, setSelectedTier] = useState<number>(1);
+  const [tierSaving, setTierSaving] = useState(false);
+
   // Toast notifications
   const { success, error, info } = useToast();
 
-  // Load API keys when dialog opens
+  // Load API keys and processing settings when dialog opens
   useEffect(() => {
     if (open) {
       loadApiKeys();
+      loadProcessingSettings();
     }
   }, [open]);
+
+  /**
+   * Load processing settings from backend
+   * Educational Note: Fetches tier configuration for parallel processing
+   */
+  const loadProcessingSettings = async () => {
+    try {
+      const { settings, available_tiers } = await processingSettingsAPI.getSettings();
+      setAvailableTiers(available_tiers);
+      setSelectedTier(settings.anthropic_tier);
+    } catch (err) {
+      console.error('Failed to load processing settings:', err);
+      // Don't show error toast - processing settings are optional
+    }
+  };
+
+  /**
+   * Handle tier change
+   * Educational Note: Saves the selected tier immediately
+   */
+  const handleTierChange = async (tierValue: string) => {
+    const tier = parseInt(tierValue, 10);
+    setTierSaving(true);
+    try {
+      await processingSettingsAPI.updateSettings({ anthropic_tier: tier });
+      setSelectedTier(tier);
+      success('Processing tier updated');
+    } catch (err) {
+      console.error('Failed to update tier:', err);
+      error('Failed to update processing tier');
+    } finally {
+      setTierSaving(false);
+    }
+  };
 
   /**
    * Load API keys from backend
@@ -270,12 +318,12 @@ export const AppSettings: React.FC<AppSettingsProps> = ({ open, onOpenChange }) 
   const renderApiKeyField = (apiKey: ApiKey) => (
     <div key={apiKey.id} className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium flex items-center gap-2">
+        <Label className="flex items-center gap-2">
           {apiKey.name}
           {apiKey.required && (
             <span className="text-xs text-destructive">*Required</span>
           )}
-        </label>
+        </Label>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -403,6 +451,49 @@ export const AppSettings: React.FC<AppSettingsProps> = ({ open, onOpenChange }) 
 
                 {/* Utility Services Section */}
                 {renderCategorySection('Utility Services', 'utility')}
+
+                <Separator />
+
+                {/* Processing Settings Section */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-3">Processing Settings</h3>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>
+                          Anthropic Usage Tier
+                        </Label>
+                        {tierSaving && (
+                          <CircleNotch size={16} className="animate-spin text-muted-foreground" />
+                        )}
+                      </div>
+                      <Select
+                        value={selectedTier.toString()}
+                        onValueChange={handleTierChange}
+                        disabled={tierSaving}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select tier" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableTiers.map((tier) => (
+                            <SelectItem key={tier.tier} value={tier.tier.toString()}>
+                              {tier.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        {availableTiers.find(t => t.tier === selectedTier)?.description ||
+                          'Controls parallel processing speed for PDF extraction'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Workers: {availableTiers.find(t => t.tier === selectedTier)?.max_workers || 4} |
+                        Rate: {availableTiers.find(t => t.tier === selectedTier)?.pages_per_minute || 10} pages/min
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

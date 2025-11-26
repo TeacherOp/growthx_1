@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, FolderOpen, PencilSimple, Trash, Clock } from '@phosphor-icons/react';
+import { Plus, FolderOpen, Trash, Clock } from '@phosphor-icons/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from './ui/empty';
 import { projectsAPI } from '@/lib/api';
 
 /**
@@ -130,19 +131,23 @@ export const ProjectList: React.FC<ProjectListProps> = ({
 
       {/* Projects Grid */}
       {projects.length === 0 ? (
-        <Card className="text-center py-12">
-          <CardContent>
-            <FolderOpen size={48} className="mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
-            <p className="text-muted-foreground mb-4">
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FolderOpen size={24} />
+            </EmptyMedia>
+            <EmptyTitle>No projects yet</EmptyTitle>
+            <EmptyDescription>
               Create your first project to get started
-            </p>
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
             <Button onClick={onCreateNew}>
               <Plus size={16} className="mr-2" />
               Create First Project
             </Button>
-          </CardContent>
-        </Card>
+          </EmptyContent>
+        </Empty>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map((project) => (

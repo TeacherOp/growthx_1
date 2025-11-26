@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { ProjectList } from './ProjectList';
 import { AppSettings } from './AppSettings';
 import { Button } from './ui/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/card';
+import { Badge } from './ui/badge';
 import { Gear, Brain, Sparkle, GithubLogo, YoutubeLogo, BookOpen } from '@phosphor-icons/react';
 import { ToastContainer, useToast } from './ui/toast';
 
@@ -69,36 +71,39 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Bottom Section: Learning Info Cards */}
         <div className="flex-shrink-0 grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
           {/* Card 1: Session 3 - What We're Building */}
-          <div className="border rounded-lg p-5 bg-card">
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkle size={20} className="text-primary" />
-              <h3 className="font-semibold">Session 3: The Complete AI Tool</h3>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Build a production-ready AI application combining everything from the course into one powerful tool.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {['AI Chat', 'RAG', 'Image Gen', 'Video Gen', 'Realtime Transcription', 'Memories', 'Subagents', 'Deep Research', 'Web Search'].map((feature) => (
-                <span
-                  key={feature}
-                  className="px-2 py-1 text-xs bg-accent text-accent-foreground rounded-md"
-                >
-                  {feature}
-                </span>
-              ))}
-            </div>
-          </div>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Sparkle size={20} className="text-primary" />
+                Session 3: The Complete AI Tool
+              </CardTitle>
+              <CardDescription>
+                Build a production-ready AI application combining everything from the course into one powerful tool.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {['AI Chat', 'RAG', 'Image Gen', 'Video Gen', 'Realtime Transcription', 'Memories', 'Subagents', 'Deep Research', 'Web Search'].map((feature) => (
+                  <Badge key={feature} variant="secondary" className="rounded-md">
+                    {feature}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Card 2: Previous Sessions & Resources */}
-          <div className="border rounded-lg p-5 bg-card">
-            <div className="flex items-center gap-2 mb-3">
-              <BookOpen size={20} className="text-primary" />
-              <h3 className="font-semibold">Previous Sessions & Resources</h3>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Catch up on the fundamentals from Sessions 1 & 2, and access all course materials on GitHub.
-            </p>
-            <div className="space-y-2">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <BookOpen size={20} className="text-primary" />
+                Previous Sessions & Resources
+              </CardTitle>
+              <CardDescription>
+                Catch up on the fundamentals from Sessions 1 & 2, and access all course materials on GitHub.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
               <a
                 href="https://www.youtube.com/watch?v=jsdKgmU3DJA"
                 target="_blank"
@@ -126,8 +131,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <GithubLogo size={18} />
                 <span>Course Code & Notes Repository</span>
               </a>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
 

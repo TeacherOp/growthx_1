@@ -109,7 +109,6 @@ class ClaudeService:
 
         # Make API call
         response = client.messages.create(**api_params)
-
         # Extract and return structured response
         return {
             "content": self._extract_content(response),
@@ -122,6 +121,7 @@ class ClaudeService:
             "stop_reason": response.stop_reason,
             "raw_response": response,
         }
+    
 
     def _extract_content(self, response: anthropic.types.Message) -> str:
         """

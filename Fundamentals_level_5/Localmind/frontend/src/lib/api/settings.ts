@@ -96,3 +96,58 @@ class SettingsAPI {
 }
 
 export const settingsAPI = new SettingsAPI();
+
+// ============================================================================
+// Processing Settings Types and API
+// ============================================================================
+
+export interface TierConfig {
+  name: string;
+  description: string;
+  max_workers: number;
+  pages_per_minute: number;
+}
+
+export interface AvailableTier extends TierConfig {
+  tier: number;
+}
+
+export interface ProcessingSettings {
+  anthropic_tier: number;
+  tier_config: TierConfig;
+}
+
+class ProcessingSettingsAPI {
+  /**
+   * Get current processing settings
+   * Educational Note: Returns the current tier configuration for parallel processing
+   */
+  async getSettings(): Promise<{ settings: ProcessingSettings; available_tiers: AvailableTier[] }> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/settings/processing`);
+      return {
+        settings: response.data.settings,
+        available_tiers: response.data.available_tiers,
+      };
+    } catch (error) {
+      console.error('Error fetching processing settings:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update processing settings
+   * Educational Note: Saves the selected tier to .env file
+   */
+  async updateSettings(settings: { anthropic_tier: number }): Promise<ProcessingSettings> {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/settings/processing`, settings);
+      return response.data.settings;
+    } catch (error) {
+      console.error('Error updating processing settings:', error);
+      throw error;
+    }
+  }
+}
+
+export const processingSettingsAPI = new ProcessingSettingsAPI();

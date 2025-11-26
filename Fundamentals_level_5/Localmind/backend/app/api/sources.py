@@ -150,7 +150,8 @@ def update_source(project_id: str, source_id: str):
             project_id=project_id,
             source_id=source_id,
             name=data.get('name'),
-            description=data.get('description')
+            description=data.get('description'),
+            active=data.get('active')
         )
 
         if not source:
@@ -350,6 +351,66 @@ def add_url_source(project_id: str):
 
     except Exception as e:
         current_app.logger.error(f"Error adding URL source: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@api_bp.route('/projects/<project_id>/sources/<source_id>/cancel', methods=['POST'])
+def cancel_source_processing(project_id: str, source_id: str):
+    """
+    Cancel processing for a source.
+
+    Educational Note: This stops any running tasks and cleans up processed
+    data, but keeps the raw file so user can retry later.
+    """
+    try:
+        cancelled = source_service.cancel_processing(project_id, source_id)
+
+        if not cancelled:
+            return jsonify({
+                'success': False,
+                'error': 'Cannot cancel - source not found or not processing'
+            }), 400
+
+        return jsonify({
+            'success': True,
+            'message': 'Processing cancelled'
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error cancelling source processing: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@api_bp.route('/projects/<project_id>/sources/<source_id>/retry', methods=['POST'])
+def retry_source_processing(project_id: str, source_id: str):
+    """
+    Retry processing for a failed or cancelled source.
+
+    Educational Note: This restarts processing from the raw file.
+    Only works for sources in uploaded or error status.
+    """
+    try:
+        result = source_service.retry_processing(project_id, source_id)
+
+        if not result.get('success'):
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Retry failed')
+            }), 400
+
+        return jsonify({
+            'success': True,
+            'message': result.get('message', 'Processing restarted')
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error retrying source processing: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
