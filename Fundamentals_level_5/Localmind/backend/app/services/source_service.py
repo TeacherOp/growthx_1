@@ -122,6 +122,16 @@ class SourceService:
         """
         return self._get_sources_dir(project_id) / "processed"
 
+    def _get_chunks_dir(self, project_id: str) -> Path:
+        """
+        Get the chunks directory for a project.
+
+        Educational Note: Chunks are individual .txt files created when
+        a source is embedded. Each chunk represents one page of a document.
+        When Pinecone returns search results, we load text from these files.
+        """
+        return self._get_sources_dir(project_id) / "chunks"
+
     def _get_index_path(self, project_id: str) -> Path:
         """Get the sources index file path for a project."""
         return self._get_sources_dir(project_id) / "sources_index.json"
@@ -136,10 +146,12 @@ class SourceService:
         sources_dir = self._get_sources_dir(project_id)
         raw_dir = self._get_raw_dir(project_id)
         processed_dir = self._get_processed_dir(project_id)
+        chunks_dir = self._get_chunks_dir(project_id)
 
         sources_dir.mkdir(parents=True, exist_ok=True)
         raw_dir.mkdir(parents=True, exist_ok=True)
         processed_dir.mkdir(parents=True, exist_ok=True)
+        chunks_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_index(self, project_id: str) -> Dict[str, Any]:
         """
@@ -194,6 +206,97 @@ class SourceService:
         category = ALLOWED_EXTENSIONS.get(ext, 'unknown')
         mime_type = MIME_TYPES.get(ext, 'application/octet-stream')
         return ext, category, mime_type
+
+    def _process_embeddings_for_source(
+        self,
+        project_id: str,
+        source_id: str,
+        source_name: str
+    ) -> Dict[str, Any]:
+        """
+        Process embeddings for a source after text extraction.
+
+        Educational Note: This method is called after successful text extraction.
+        It reads the processed text, checks if embeddings are needed (based on
+        token count), and if so:
+        1. Updates status to "embedding" (so frontend shows embedding in progress)
+        2. Creates chunks, embeddings, and upserts to Pinecone
+        3. Returns embedding_info (caller will then set status to "ready")
+
+        Status flow:
+        - If embeddings needed: processing → embedding → ready
+        - If not needed: processing → ready (embedding status skipped)
+
+        Args:
+            project_id: The project UUID
+            source_id: The source UUID
+            source_name: Display name of the source
+
+        Returns:
+            Dict with embedding_info to store in source metadata
+        """
+        # Read the processed text
+        processed_path = self._get_processed_dir(project_id) / f"{source_id}.txt"
+
+        if not processed_path.exists():
+            return {
+                "is_embedded": False,
+                "embedded_at": None,
+                "token_count": 0,
+                "chunk_count": 0,
+                "reason": "Processed text file not found"
+            }
+
+        try:
+            with open(processed_path, "r", encoding="utf-8") as f:
+                processed_text = f.read()
+
+            # Import here to avoid circular imports
+            from app.services.embedding_check_service import embedding_check_service
+            from app.services.embedding_workflow_service import embedding_workflow_service
+
+            # First check if embeddings are needed
+            needs_embedding, token_count, reason = embedding_check_service.needs_embedding(
+                text=processed_text
+            )
+
+            if not needs_embedding:
+                # No embedding needed - return immediately
+                # Status will go directly to "ready"
+                return {
+                    "is_embedded": False,
+                    "embedded_at": None,
+                    "token_count": token_count,
+                    "chunk_count": 0,
+                    "reason": reason
+                }
+
+            # Embeddings needed - update status to "embedding" before starting
+            # Educational Note: This lets the frontend show "Embedding..." status
+            self.update_source(project_id, source_id, status="embedding")
+            print(f"Starting embedding for {source_name} (token count: {token_count})")
+
+            # Process embeddings using the workflow service
+            chunks_dir = self._get_chunks_dir(project_id)
+            embedding_info = embedding_workflow_service.process_embeddings(
+                project_id=project_id,
+                source_id=source_id,
+                source_name=source_name,
+                processed_text=processed_text,
+                chunks_dir=chunks_dir
+            )
+
+            return embedding_info
+
+        except Exception as e:
+            print(f"Error processing embeddings for {source_id}: {e}")
+            return {
+                "is_embedded": False,
+                "embedded_at": None,
+                "token_count": 0,
+                "chunk_count": 0,
+                "reason": f"Embedding error: {str(e)}"
+            }
 
     def upload_source(
         self,
@@ -331,20 +434,33 @@ class SourceService:
 
                 if result.get("success"):
                     # All pages extracted successfully
+                    processing_info = {
+                        "processor": "pdf_service_parallel",
+                        "model_used": result.get("model_used"),
+                        "total_pages": result.get("total_pages"),
+                        "pages_processed": result.get("pages_processed"),
+                        "character_count": result.get("character_count"),
+                        "token_usage": result.get("token_usage"),
+                        "extracted_at": result.get("extracted_at"),
+                        "parallel_workers": result.get("parallel_workers")
+                    }
+
+                    # Process embeddings if needed
+                    # Educational Note: After text extraction, we check if the source
+                    # needs embeddings (based on token count). If so, we create chunks,
+                    # generate embeddings, and upsert to Pinecone.
+                    embedding_info = self._process_embeddings_for_source(
+                        project_id=project_id,
+                        source_id=source_id,
+                        source_name=source.get("name", "")
+                    )
+
                     self.update_source(
                         project_id,
                         source_id,
                         status="ready",
-                        processing_info={
-                            "processor": "pdf_service_parallel",
-                            "model_used": result.get("model_used"),
-                            "total_pages": result.get("total_pages"),
-                            "pages_processed": result.get("pages_processed"),
-                            "character_count": result.get("character_count"),
-                            "token_usage": result.get("token_usage"),
-                            "extracted_at": result.get("extracted_at"),
-                            "parallel_workers": result.get("parallel_workers")
-                        }
+                        processing_info=processing_info,
+                        embedding_info=embedding_info
                     )
                     return {"success": True, "status": "ready"}
                 elif result.get("status") == "cancelled":
@@ -391,16 +507,26 @@ class SourceService:
                 with open(processed_path, "w", encoding="utf-8") as f:
                     f.write(content)
 
+                processing_info = {
+                    "processor": "direct_copy",
+                    "character_count": len(content),
+                    "extracted_at": datetime.now().isoformat()
+                }
+
+                # Process embeddings if needed
+                embedding_info = self._process_embeddings_for_source(
+                    project_id=project_id,
+                    source_id=source_id,
+                    source_name=source.get("name", "")
+                )
+
                 self.update_source(
                     project_id,
                     source_id,
                     status="ready",
                     active=True,  # Auto-activate when ready
-                    processing_info={
-                        "processor": "direct_copy",
-                        "character_count": len(content),
-                        "extracted_at": datetime.now().isoformat()
-                    }
+                    processing_info=processing_info,
+                    embedding_info=embedding_info
                 )
                 return {"success": True, "status": "ready"}
 
@@ -492,7 +618,8 @@ class SourceService:
         description: Optional[str] = None,
         status: Optional[str] = None,
         active: Optional[bool] = None,
-        processing_info: Optional[Dict[str, Any]] = None
+        processing_info: Optional[Dict[str, Any]] = None,
+        embedding_info: Optional[Dict[str, Any]] = None
     ) -> Optional[Dict[str, Any]]:
         """
         Update a source's metadata.
@@ -505,6 +632,12 @@ class SourceService:
             status: New status (optional)
             active: Whether source is included in chat context (optional)
             processing_info: Processing details (optional)
+            embedding_info: Embedding details (optional) - contains:
+                - is_embedded: bool
+                - embedded_at: timestamp
+                - token_count: int
+                - chunk_count: int
+                - reason: str
 
         Returns:
             Updated source metadata or None if not found
@@ -529,6 +662,8 @@ class SourceService:
                     source["active"] = active
                 if processing_info is not None:
                     source["processing_info"] = processing_info
+                if embedding_info is not None:
+                    source["embedding_info"] = embedding_info
 
                 source["updated_at"] = datetime.now().isoformat()
                 index["sources"][i] = source
@@ -542,7 +677,13 @@ class SourceService:
 
     def delete_source(self, project_id: str, source_id: str) -> bool:
         """
-        Delete a source, its raw file, and any processed content.
+        Delete a source, its raw file, processed content, and embeddings.
+
+        Educational Note: When deleting a source, we clean up:
+        1. Raw file (original upload)
+        2. Processed file (extracted text)
+        3. Chunk files (individual page files)
+        4. Pinecone vectors (via embedding_workflow_service)
 
         Args:
             project_id: The project UUID
@@ -554,6 +695,20 @@ class SourceService:
         source = self.get_source(project_id, source_id)
         if not source:
             return False
+
+        # Delete embeddings and chunk files (if any)
+        # Educational Note: This handles Pinecone deletion and chunk file cleanup
+        if source.get("embedding_info", {}).get("is_embedded"):
+            try:
+                from app.services.embedding_workflow_service import embedding_workflow_service
+                chunks_dir = self._get_chunks_dir(project_id)
+                embedding_workflow_service.delete_embeddings(
+                    project_id=project_id,
+                    source_id=source_id,
+                    chunks_dir=chunks_dir
+                )
+            except Exception as e:
+                print(f"Error deleting embeddings for {source_id}: {e}")
 
         # Delete the raw file
         file_path = self._get_raw_dir(project_id) / source["stored_filename"]

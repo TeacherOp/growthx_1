@@ -93,16 +93,18 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId }) => {
 
   /**
    * Polling for source status updates
-   * Educational Note: When sources are actively processing, we poll every 3 seconds
-   * to update the UI. Polling stops when no sources are in "processing" state.
-   * Note: We only check for "processing", not "uploaded" because "uploaded" is also
-   * the state after cancellation (waiting for user to retry).
+   * Educational Note: When sources are actively processing or embedding, we poll
+   * every 3 seconds to update the UI. Polling stops when no sources are working.
+   * Note: We check for "processing" and "embedding", not "uploaded" because
+   * "uploaded" is also the state after cancellation (waiting for user to retry).
    */
   useEffect(() => {
-    // Only poll when sources are actively being processed
-    const hasProcessingSources = sources.some(s => s.status === 'processing');
+    // Only poll when sources are actively being processed or embedded
+    const hasActiveSources = sources.some(
+      s => s.status === 'processing' || s.status === 'embedding'
+    );
 
-    if (!hasProcessingSources) {
+    if (!hasActiveSources) {
       return; // No polling needed
     }
 

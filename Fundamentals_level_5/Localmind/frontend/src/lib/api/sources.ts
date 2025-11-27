@@ -12,7 +12,8 @@ const API_BASE_URL = 'http://localhost:5000/api/v1';
  * Source metadata returned from the API
  * Educational Note: Status transitions for sources:
  * - uploaded: File received, waiting for processing
- * - processing: Currently being processed (e.g., PDF text extraction)
+ * - processing: Currently extracting text from PDF
+ * - embedding: Creating vector embeddings for semantic search
  * - ready: Successfully processed, available for chat context
  * - error: Processing failed (no partial states - clean failure)
  */
@@ -27,9 +28,10 @@ export interface Source {
   file_extension: string;
   file_size: number;
   stored_filename: string;
-  status: 'uploaded' | 'processing' | 'ready' | 'error';
+  status: 'uploaded' | 'processing' | 'embedding' | 'ready' | 'error';
   active: boolean; // Whether source is included in chat context
   processing_info: Record<string, unknown> | null;
+  embedding_info?: Record<string, unknown> | null; // Embedding details
   created_at: string;
   updated_at: string;
 }

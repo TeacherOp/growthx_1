@@ -68,7 +68,8 @@ const getCategoryIconComponent = (category: string) => {
  * Get status display info (icon, color, text)
  * Educational Note: Different statuses indicate processing state:
  * - uploaded: Waiting to be processed (could be fresh upload or cancelled)
- * - processing: Currently being processed (show spinner)
+ * - processing: Currently extracting text from PDF
+ * - embedding: Creating vector embeddings for semantic search
  * - ready: Successfully processed, available for chat
  * - error: Processing failed completely (no partial states - clean failure)
  */
@@ -88,6 +89,14 @@ const getStatusDisplay = (status: Source['status']) => {
         color: 'text-amber-500',
         animate: true,
         tooltip: 'Processing...',
+      };
+    case 'embedding':
+      // Creating embeddings for semantic search
+      return {
+        icon: CircleNotch,
+        color: 'text-blue-500',
+        animate: true,
+        tooltip: 'Embedding...',
       };
     case 'ready':
       return {
@@ -119,8 +128,10 @@ export const SourceItem: React.FC<SourceItemProps> = ({
 }) => {
   const Icon = getCategoryIconComponent(source.category);
   const statusDisplay = getStatusDisplay(source.status);
-  // Only "processing" is actively processing - "uploaded" means waiting for retry
+  // "processing" or "embedding" are actively working - show spinner and allow cancel
   const isProcessing = source.status === 'processing';
+  const isEmbedding = source.status === 'embedding';
+  const isActivelyWorking = isProcessing || isEmbedding;
   // "uploaded" status means source is waiting for processing (fresh upload or cancelled)
   const isWaitingToProcess = source.status === 'uploaded';
   // Source can be toggled active/inactive only when it's ready
@@ -130,7 +141,7 @@ export const SourceItem: React.FC<SourceItemProps> = ({
   return (
     <div
       className={`grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 p-2 rounded-lg hover:bg-accent group transition-colors ${
-        isProcessing ? 'opacity-60' : ''
+        isActivelyWorking ? 'opacity-60' : ''
       }`}
     >
       {/* Icon Area - Shows category icon, transforms to menu on hover */}
@@ -159,27 +170,27 @@ export const SourceItem: React.FC<SourceItemProps> = ({
             </DropdownMenuItem>
           )}
 
-          {/* Stop option - only for actively processing state */}
-          {isProcessing && (
+          {/* Stop option - only for actively working state (processing or embedding) */}
+          {isActivelyWorking && (
             <DropdownMenuItem onClick={() => onCancelProcessing(source.id)}>
               <Stop size={14} className="mr-2" />
-              Stop Processing
+              {isEmbedding ? 'Stop Embedding' : 'Stop Processing'}
             </DropdownMenuItem>
           )}
 
-          {/* Rename option - disabled during processing */}
+          {/* Rename option - disabled during active work */}
           <DropdownMenuItem
             onClick={() => onRename(source.id, source.name)}
-            disabled={isProcessing}
+            disabled={isActivelyWorking}
           >
             <PencilSimple size={14} className="mr-2" />
             Rename
           </DropdownMenuItem>
 
-          {/* Download option - disabled during processing */}
+          {/* Download option - disabled during active work */}
           <DropdownMenuItem
             onClick={() => onDownload(source.id)}
-            disabled={isProcessing}
+            disabled={isActivelyWorking}
           >
             <DownloadSimple size={14} className="mr-2" />
             Download
@@ -228,17 +239,17 @@ export const SourceItem: React.FC<SourceItemProps> = ({
       {/* Status Icon for non-ready states */}
       {statusDisplay && source.status !== 'ready' && (
         <>
-          {isProcessing ? (
-            // Processing state: show spinner by default, stop icon on hover
+          {isActivelyWorking ? (
+            // Processing or Embedding state: show spinner by default, stop icon on hover
             <button
               onClick={() => onCancelProcessing(source.id)}
               className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-destructive/10 transition-colors"
-              title="Click to stop processing"
+              title={isEmbedding ? 'Click to stop embedding' : 'Click to stop processing'}
             >
               {/* Spinner - visible by default, hidden on hover */}
               <CircleNotch
                 size={16}
-                className="text-amber-500 animate-spin group-hover:hidden"
+                className={`${isEmbedding ? 'text-blue-500' : 'text-amber-500'} animate-spin group-hover:hidden`}
               />
               {/* Stop icon - hidden by default, visible on hover */}
               <Stop
