@@ -1,5 +1,5 @@
 """
-Message Service - Handles message persistence and context building.
+Message Service - Handles message persistence, context building, and tool response parsing.
 
 Educational Note: This service manages storing and retrieving messages
 for conversations. It handles building message contexts for API calls
@@ -10,6 +10,7 @@ Key Responsibilities:
 - Retrieve message history
 - Build message arrays for Claude API calls
 - Support different message types for tool use flows
+- Parse tool calls from Claude responses (reusable across services)
 """
 import json
 import uuid
@@ -331,6 +332,98 @@ class MessageService:
         chat_data["updated_at"] = datetime.now().isoformat()
 
         return self._save_chat_data(project_id, chat_id, chat_data)
+
+    # =========================================================================
+    # Tool Response Parsing Methods (reusable across services)
+    # =========================================================================
+
+    def parse_tool_calls(
+        self,
+        response: Dict[str, Any],
+        tool_name: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Parse tool calls from a Claude API response.
+
+        Educational Note: When Claude uses tools, the response contains
+        tool_use content blocks. This method extracts them in a reusable way
+        so multiple services (PDF extraction, search, etc.) can use it.
+
+        Args:
+            response: Response dict from claude_service.send_message()
+            tool_name: Optional - filter to only return calls for this tool
+
+        Returns:
+            List of tool call dicts with 'id', 'name', and 'input' keys
+        """
+        tool_calls = []
+
+        # Extract from content_blocks (raw response from Claude)
+        content_blocks = response.get("content_blocks", [])
+
+        for block in content_blocks:
+            # Check if this is a tool_use block
+            if hasattr(block, 'type') and block.type == "tool_use":
+                call_data = {
+                    "id": block.id,
+                    "name": block.name,
+                    "input": block.input,
+                }
+
+                # Filter by tool name if specified
+                if tool_name is None or block.name == tool_name:
+                    tool_calls.append(call_data)
+
+        return tool_calls
+
+    def extract_tool_inputs(
+        self,
+        response: Dict[str, Any],
+        tool_name: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Extract just the input parameters from tool calls for a specific tool.
+
+        Educational Note: Convenience method when you only need the inputs
+        (not the tool IDs). Useful for extraction tasks where you just want
+        the data Claude provided.
+
+        Args:
+            response: Response dict from claude_service.send_message()
+            tool_name: Name of the tool to extract inputs for
+
+        Returns:
+            List of input dicts from matching tool calls
+        """
+        tool_calls = self.parse_tool_calls(response, tool_name)
+        return [call["input"] for call in tool_calls]
+
+    def get_tool_calls_by_name(
+        self,
+        response: Dict[str, Any]
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Group tool calls by tool name.
+
+        Educational Note: Useful when a response might contain calls to
+        multiple different tools and you want to process each type separately.
+
+        Args:
+            response: Response dict from claude_service.send_message()
+
+        Returns:
+            Dict mapping tool_name -> list of tool calls for that tool
+        """
+        all_calls = self.parse_tool_calls(response)
+        grouped: Dict[str, List[Dict[str, Any]]] = {}
+
+        for call in all_calls:
+            name = call["name"]
+            if name not in grouped:
+                grouped[name] = []
+            grouped[name].append(call)
+
+        return grouped
 
 
 # Singleton instance for easy import

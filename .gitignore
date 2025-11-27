@@ -35,7 +35,7 @@ htmlcov/
 ############################
 # Logs
 ############################
-*.log
+
 
 ############################
 # OS / Editors
@@ -60,10 +60,9 @@ myvenv/
 .DS_Store
 .idea/
 .vscode/
-*.log
 *__pycache__/
 
-
+*.log
 
 Fundamentals_level_5/Localmind/backend/myvenv
 .claude

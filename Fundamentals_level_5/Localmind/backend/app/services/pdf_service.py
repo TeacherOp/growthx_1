@@ -1,48 +1,47 @@
 """
-PDF Service - Manages PDF processing and text extraction.
+PDF Service - Manages PDF processing and text extraction using tool-based approach.
 
-Educational Note: This service MANAGES the PDF processing workflow,
-but delegates the actual API calls to claude_service. This separation
-ensures:
-- pdf_service handles: pagination, page-by-page processing, file I/O, progress
-- claude_service handles: API calls, token counting, error handling
+Educational Note: This service uses a TOOL-BASED extraction approach where:
+- Multiple PDF pages are sent to Claude in a single API call (batch)
+- Claude sees all pages in the batch for context awareness
+- Claude uses the submit_page_extraction tool to return per-page extractions
+- This solves the "page boundary" problem (headings on page 1, content on page 2)
 
-Page-by-page processing:
-- Claude API has a 100-page limit per request
-- We process 1 page at a time to handle PDFs of any size
-- Each page's text is appended to the output file with a page marker
-- Progress is tracked and can be resumed (future enhancement)
+Batching Strategy:
+- PDFs ≤ 5 pages: Single API call with all pages
+- PDFs > 5 pages: Split into batches of 5, process batches in parallel
+
+Why Tools?
+- Sending multiple pages and getting a single response loses page boundaries
+- Tools let Claude return structured per-page data while having full context
+- We force tool use with tool_choice={"type": "any"}
 
 Parallel Processing:
-- Uses ThreadPoolExecutor for concurrent API calls
+- Uses ThreadPoolExecutor for concurrent batch processing
 - Number of workers determined by Anthropic tier setting
 - Rate limiting prevents hitting API limits
-- Results collected in-memory, written in order after all complete
-
-Citations:
-- Enabled on document blocks for accurate source references
-- Claude returns citations with exact locations in the source
-- Useful for later RAG and source verification
-
-Model: claude-haiku-4-5-20251001 (configured in prompt file)
-- Fastest and cheapest Claude model
-- Sufficient for text extraction tasks
 """
 import json
-import os
 import time
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Tuple
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 
 from app.services.claude_service import claude_service
 from app.services.task_service import task_service
+from app.services.tool_loader import tool_loader
+from app.services.message_service import message_service
 from app.utils.encoding import encode_bytes_to_base64
 from app.utils.pdf_utils import get_page_count, extract_single_page_bytes
-from app.utils.tier_config import get_anthropic_config, APIProvider
+from app.utils.tier_config import get_anthropic_config
 from config import Config
+
+
+# Maximum pages per batch - balances context awareness and output token limits
+# With document titles identifying each page, we can use larger batches
+MAX_PAGES_PER_BATCH = 5
 
 
 class CancelledException(Exception):
@@ -52,14 +51,14 @@ class CancelledException(Exception):
 
 class PDFService:
     """
-    Service class for managing PDF text extraction.
+    Service class for managing PDF text extraction using tool-based approach.
 
     Educational Note: This service orchestrates PDF processing:
-    1. Splits PDF into individual pages
-    2. Sends each page to Claude API (via claude_service) IN PARALLEL
-    3. Collects results in memory, writes to file in order
-    4. Tracks overall progress and token usage
-    5. Rate limits based on Anthropic tier setting
+    1. Splits PDF into batches of pages (max 5 per batch)
+    2. Sends each batch to Claude API with all pages visible
+    3. Claude uses submit_page_extraction tool for each page (with context!)
+    4. Collects results, writes to file in page order
+    5. For large PDFs, processes batches in parallel
     """
 
     def __init__(self):
@@ -67,6 +66,7 @@ class PDFService:
         self.projects_dir = Config.PROJECTS_DIR
         self.prompts_dir = Config.DATA_DIR / "prompts"
         self._prompt_config = None
+        self._tool_definition = None
         # Rate limiting state
         self._rate_limit_lock = threading.Lock()
         self._last_request_time = 0.0
@@ -78,22 +78,19 @@ class PDFService:
         Get tier configuration from centralized tier_config utility.
 
         Educational Note: The tier is set in .env via the AppSettings UI.
-        The tier_config utility manages configurations for all APIs
-        (Anthropic, OpenAI, Pinecone, etc.) in one place.
+        The tier_config utility manages configurations for all APIs.
         """
         return get_anthropic_config()
 
-    def _rate_limit(self, pages_per_minute: int) -> None:
+    def _rate_limit(self, requests_per_minute: int) -> None:
         """
         Rate limit API calls to stay within tier limits.
 
-        Educational Note: This implements a simple rate limiter that:
-        1. Tracks requests per minute
-        2. Pauses if we're about to exceed the limit
-        3. Thread-safe using a lock
+        Educational Note: With batching, we count batches (not pages) for rate limiting
+        since each batch = 1 API call.
 
         Args:
-            pages_per_minute: Maximum pages (API calls) allowed per minute
+            requests_per_minute: Maximum API calls allowed per minute
         """
         with self._rate_limit_lock:
             current_time = time.time()
@@ -104,13 +101,11 @@ class PDFService:
                 self._minute_start_time = current_time
 
             # Check if we need to wait
-            if self._requests_this_minute >= pages_per_minute:
-                # Wait until the next minute
+            if self._requests_this_minute >= requests_per_minute:
                 wait_time = 60 - (current_time - self._minute_start_time)
                 if wait_time > 0:
                     print(f"Rate limit reached. Waiting {wait_time:.1f}s...")
                     time.sleep(wait_time)
-                    # Reset after waiting
                     self._requests_this_minute = 0
                     self._minute_start_time = time.time()
 
@@ -120,10 +115,10 @@ class PDFService:
         """
         Load the PDF extraction prompt configuration.
 
-        Educational Note: Storing prompts in JSON files allows:
-        - Easy editing without code changes
-        - Version tracking of prompts
-        - Different prompts for different use cases
+        Educational Note: The prompt config includes:
+        - system_prompt: Instructions for extraction + parallel tool use hints
+        - user_message: Template for the extraction request
+        - model, max_tokens, temperature settings
         """
         if self._prompt_config is None:
             prompt_path = self.prompts_dir / "pdf_extraction_prompt.json"
@@ -136,97 +131,162 @@ class PDFService:
 
         return self._prompt_config
 
+    def _load_tool_definition(self) -> Dict[str, Any]:
+        """
+        Load the PDF extraction tool definition.
+
+        Educational Note: The tool definition tells Claude:
+        - What the tool does (extract text for a page)
+        - What parameters it accepts (page_number, extracted_text, etc.)
+        - That it should be called once per page
+        """
+        if self._tool_definition is None:
+            self._tool_definition = tool_loader.load_tool("pdf_tools", "pdf_extraction")
+        return self._tool_definition
+
     def _get_processed_dir(self, project_id: str) -> Path:
         """Get the processed files directory for a project."""
         processed_dir = self.projects_dir / project_id / "sources" / "processed"
         processed_dir.mkdir(parents=True, exist_ok=True)
         return processed_dir
 
-    def _extract_single_page(
+    def _create_batch_pages(
         self,
-        page_bytes: bytes,
-        page_number: int,
+        page_bytes_list: List[Tuple[int, bytes]],
+        batch_size: int = MAX_PAGES_PER_BATCH
+    ) -> List[List[Tuple[int, bytes]]]:
+        """
+        Split pages into batches for processing.
+
+        Educational Note: We batch pages to balance:
+        - Context window limits (too many pages = too much input)
+        - Context awareness (more pages per batch = better cross-page understanding)
+        - API costs (fewer calls = lower cost)
+
+        Args:
+            page_bytes_list: List of (page_number, page_bytes) tuples
+            batch_size: Maximum pages per batch
+
+        Returns:
+            List of batches, each batch is a list of (page_number, page_bytes)
+        """
+        batches = []
+        for i in range(0, len(page_bytes_list), batch_size):
+            batch = page_bytes_list[i:i + batch_size]
+            batches.append(batch)
+        return batches
+
+    def _extract_batch_with_tools(
+        self,
+        batch: List[Tuple[int, bytes]],
         total_pages: int,
+        pdf_name: str,
         prompt_config: Dict[str, Any],
-        pages_per_minute: int,
+        tool_def: Dict[str, Any],
+        requests_per_minute: int,
         max_retries: int = 3
     ) -> Tuple[int, Dict[str, Any]]:
         """
-        Extract text from a single PDF page using Claude API.
+        Extract text from a batch of PDF pages using tool-based approach.
 
-        Educational Note: Each page is sent as a separate API call with:
-        - Citations enabled for source tracking
-        - The page as a base64-encoded document block
-        - A prompt instructing exact text extraction
-        - Rate limiting to stay within tier limits
-        - Retry logic for transient failures
+        Educational Note: This is the core of the new extraction approach:
+        1. Build a message with ALL pages in the batch as document blocks
+        2. Each document has a title like "filename.pdf - Page 7" for identification
+        3. Claude can see all pages → understands cross-page context
+        4. Force tool use with tool_choice={"type": "tool", "name": "..."}
+        5. Claude calls submit_page_extraction once per page
+        6. We parse tool calls to get per-page extracted text
 
         Args:
-            page_bytes: PDF bytes for the single page
-            page_number: 1-indexed page number
-            total_pages: Total pages in the PDF (for context)
+            batch: List of (page_number, page_bytes) tuples
+            total_pages: Total pages in the entire PDF (for context)
+            pdf_name: Original PDF filename (e.g., "8page.pdf") for document titles
             prompt_config: Prompt configuration dict
-            pages_per_minute: Rate limit for this tier
+            tool_def: Tool definition for submit_page_extraction
+            requests_per_minute: Rate limit for this tier
             max_retries: Maximum retry attempts for failed requests
 
         Returns:
-            Tuple of (page_number, result_dict) for ordered collection
+            Tuple of (first_page_in_batch, results_dict)
         """
+        batch_start_page = batch[0][0]
+        batch_page_numbers = [p[0] for p in batch]
+
         model = prompt_config.get("model", "claude-haiku-4-5-20251001")
-        system_prompt = prompt_config.get("prompt", "")
-        max_tokens = prompt_config.get("max_tokens", 8000)
+        system_prompt = prompt_config.get("system_prompt", "")
+        user_message_template = prompt_config.get("user_message", "")
+        max_tokens = prompt_config.get("max_tokens", 16000)
         temperature = prompt_config.get("temperature", 0)
-        citations_enabled = prompt_config.get("citations_enabled", True)
 
-        # Encode page to base64
-        page_base64 = encode_bytes_to_base64(page_bytes)
+        # Build content blocks: one document block per page in batch
+        # Each document has a title field to identify which page it is
+        # This follows Anthropic's recommended pattern for multi-document messages
+        content_blocks = []
+        for page_num, page_bytes in batch:
+            page_base64 = encode_bytes_to_base64(page_bytes)
+            content_blocks.append({
+                "type": "document",
+                "source": {
+                    "type": "base64",
+                    "media_type": "application/pdf",
+                    "data": page_base64
+                },
+                # Title identifies which page this document represents
+                # Claude uses this to know which page_number to use in tool calls
+                "title": f"{pdf_name} - Page {page_num}",
+            })
 
-        # Build message with document block and citations enabled
-        # Educational Note: Citations are enabled per-document block
-        # This tells Claude to return citations with exact source locations
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "application/pdf",
-                            "data": page_base64
-                        },
-                        "citations": {"enabled": citations_enabled}
-                    },
-                    {
-                        "type": "text",
-                        "text": f"This is page {page_number} of {total_pages}. Extract all text from this page following the system instructions exactly."
-                    }
-                ]
-            }
-        ]
+        # Build user message describing what to extract
+        # IMPORTANT: Explicitly list the page numbers so Claude uses correct numbering
+        batch_page_nums = [p[0] for p in batch]
+        if len(batch) == 1:
+            extraction_desc = f"page {batch[0][0]}"
+            page_list = str(batch[0][0])
+        else:
+            extraction_desc = f"pages {batch[0][0]} to {batch[-1][0]}"
+            page_list = ", ".join(str(p) for p in batch_page_nums)
+
+        user_message = user_message_template.format(
+            total_pages=total_pages,
+            extraction_description=extraction_desc,
+            expected_tool_calls=len(batch),
+            page_numbers=page_list  # Add explicit page numbers
+        )
+
+        content_blocks.append({
+            "type": "text",
+            "text": user_message
+        })
+
+        messages = [{"role": "user", "content": content_blocks}]
 
         # Retry loop with rate limiting
         last_error = None
         for attempt in range(max_retries):
             try:
                 # Apply rate limiting before each API call
-                self._rate_limit(pages_per_minute)
+                self._rate_limit(requests_per_minute)
 
-                # Call Claude API via claude_service
+                # Call Claude API with tool and forced tool use
                 response = claude_service.send_message(
                     messages=messages,
                     system_prompt=system_prompt,
                     model=model,
                     max_tokens=max_tokens,
                     temperature=temperature,
+                    tools=[tool_def],
+                    # Force Claude to use this specific tool (not just "any" tool)
+                    tool_choice={"type": "tool", "name": "submit_page_extraction"}
                 )
 
-                return (page_number, {
+                # Parse tool calls from response
+                page_results = self._parse_tool_calls(response, batch_page_numbers)
+
+                return (batch_start_page, {
                     "success": True,
-                    "text": response["content"],
+                    "page_results": page_results,
                     "token_usage": response["usage"],
-                    "model": response["model"],
-                    "content_blocks": response.get("content_blocks", [])
+                    "model": response["model"]
                 })
 
             except Exception as e:
@@ -235,21 +295,73 @@ class PDFService:
 
                 # Check if it's a rate limit error (429)
                 if "rate" in error_str or "429" in error_str or "overloaded" in error_str:
-                    # Wait longer for rate limit errors
-                    wait_time = (attempt + 1) * 30  # 30s, 60s, 90s
-                    print(f"Page {page_number}: Rate limit hit, waiting {wait_time}s (attempt {attempt + 1}/{max_retries})")
+                    wait_time = (attempt + 1) * 30
+                    print(f"Batch starting page {batch_start_page}: Rate limit hit, waiting {wait_time}s (attempt {attempt + 1}/{max_retries})")
                     time.sleep(wait_time)
                 elif attempt < max_retries - 1:
-                    # Exponential backoff for other errors
-                    wait_time = (2 ** attempt) * 2  # 2s, 4s, 8s
-                    print(f"Page {page_number}: Error, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
+                    wait_time = (2 ** attempt) * 2
+                    print(f"Batch starting page {batch_start_page}: Error, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
                     time.sleep(wait_time)
 
         # All retries exhausted
-        return (page_number, {
+        return (batch_start_page, {
             "success": False,
-            "error": str(last_error)
+            "error": str(last_error),
+            "failed_pages": batch_page_numbers
         })
+
+    def _parse_tool_calls(
+        self,
+        response: Dict[str, Any],
+        expected_pages: List[int]
+    ) -> Dict[int, Dict[str, Any]]:
+        """
+        Parse PDF extraction tool calls from Claude's response.
+
+        Educational Note: Uses message_service.extract_tool_inputs() for generic
+        tool parsing, then processes the PDF-specific fields (page_number,
+        extracted_text, continuation flags).
+
+        Args:
+            response: Response dict from claude_service
+            expected_pages: List of page numbers we expected extractions for
+
+        Returns:
+            Dict mapping page_number -> extraction result
+        """
+        page_results = {}
+
+        # Use message_service for generic tool parsing
+        tool_inputs = message_service.extract_tool_inputs(response, "submit_page_extraction")
+
+        # Process PDF-specific fields from each tool call
+        for inputs in tool_inputs:
+            page_num = inputs.get("page_number")
+            extracted_text = inputs.get("extracted_text", "")
+            continues_from_previous = inputs.get("continues_from_previous", False)
+            continues_to_next = inputs.get("continues_to_next", False)
+
+            if page_num is not None:
+                page_results[page_num] = {
+                    "text": extracted_text,
+                    "continues_from_previous": continues_from_previous,
+                    "continues_to_next": continues_to_next
+                }
+
+        # Check for missing pages (Claude didn't call tool for some pages)
+        missing_pages = set(expected_pages) - set(page_results.keys())
+        if missing_pages:
+            print(f"WARNING: Missing extractions for pages: {sorted(missing_pages)}")
+            # Mark missing pages as errors so the whole extraction fails
+            for page_num in missing_pages:
+                page_results[page_num] = {
+                    "text": "[EXTRACTION FAILED - No tool call received]",
+                    "continues_from_previous": False,
+                    "continues_to_next": False,
+                    "error": "No tool call received for this page"
+                }
+
+        return page_results
 
     def extract_text_from_pdf(
         self,
@@ -258,21 +370,20 @@ class PDFService:
         pdf_path: Path
     ) -> Dict[str, Any]:
         """
-        Extract text from a PDF file using PARALLEL processing.
+        Extract text from a PDF file using BATCHED TOOL-BASED processing.
 
-        Educational Note: This method uses ThreadPoolExecutor for parallel processing:
+        Educational Note: This method implements the new extraction approach:
         1. Gets total page count and tier configuration
-        2. Extracts page bytes for all pages upfront
-        3. Submits all pages to thread pool for parallel API calls
-        4. Collects results as they complete (with progress updates)
-        5. IF ANY PAGE FAILS after retries → marks as FAILED and deletes partial content
-        6. On success, writes all text to file IN ORDER
+        2. Extracts page bytes for all pages
+        3. Splits into batches (max 5 pages per batch)
+        4. For each batch: sends all pages, Claude uses tools for per-page extraction
+        5. For large PDFs: processes batches in parallel
+        6. Collects all results, writes to file in page order
 
-        This approach ensures:
-        - No duplicate API calls (each page submitted exactly once)
-        - Results written in correct page order (sorted before writing)
-        - Clean failure handling (no partial files left behind)
-        - Rate limiting respected even with parallel workers
+        Benefits over page-by-page:
+        - Context awareness: Claude sees surrounding pages
+        - Better handling of content spanning page boundaries
+        - Fewer API calls (5 pages per call vs 1)
 
         Args:
             project_id: The project UUID
@@ -282,95 +393,125 @@ class PDFService:
         Returns:
             Dict with extraction results
         """
-        print(f"Starting PARALLEL PDF extraction for source: {source_id}")
+        print(f"Starting BATCHED TOOL-BASED PDF extraction for source: {source_id}")
 
-        # Get output path early so we can clean up on failure
+        # Get output path early for cleanup on failure
         processed_dir = self._get_processed_dir(project_id)
         output_path = processed_dir / f"{source_id}.txt"
 
         try:
-            # Step 1: Load prompt configuration and tier settings
+            # Step 1: Load configurations
             prompt_config = self._load_prompt_config()
+            tool_def = self._load_tool_definition()
             model = prompt_config.get("model", "claude-haiku-4-5-20251001")
             tier_config = self._get_tier_config()
             max_workers = tier_config["max_workers"]
+            # For batched approach, rate limit is per batch (API call), not per page
+            # Divide pages_per_minute by batch size to get batches_per_minute
             pages_per_minute = tier_config["pages_per_minute"]
+            batches_per_minute = max(1, pages_per_minute // MAX_PAGES_PER_BATCH)
 
             print(f"Using model: {model}")
-            print(f"Tier config: {max_workers} workers, {pages_per_minute} pages/min")
+            print(f"Tier config: {max_workers} workers, ~{batches_per_minute} batches/min")
 
             # Step 2: Get page count
             total_pages = get_page_count(pdf_path)
             print(f"PDF has {total_pages} pages")
 
             # Step 3: Extract all page bytes upfront
-            # Educational Note: We extract bytes before starting threads to avoid
-            # file I/O contention during parallel processing
             print("Extracting page bytes...")
             page_bytes_list: List[Tuple[int, bytes]] = []
             for page_num in range(1, total_pages + 1):
                 page_bytes = extract_single_page_bytes(pdf_path, page_num)
                 page_bytes_list.append((page_num, page_bytes))
 
-            # Step 4: Process pages in parallel
-            results: Dict[int, Dict[str, Any]] = {}
-            pages_completed = 0
+            # Step 4: Create batches
+            batches = self._create_batch_pages(page_bytes_list)
+            total_batches = len(batches)
+            print(f"Split into {total_batches} batch(es) of up to {MAX_PAGES_PER_BATCH} pages each")
 
-            print(f"Starting parallel processing with {max_workers} workers...")
+            # Step 5: Process batches
+            all_page_results: Dict[int, Dict[str, Any]] = {}
+            total_input_tokens = 0
+            total_output_tokens = 0
+            batches_completed = 0
 
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                # Submit all page extraction tasks
-                future_to_page = {
-                    executor.submit(
-                        self._extract_single_page,
-                        page_bytes,
-                        page_num,
-                        total_pages,
-                        prompt_config,
-                        pages_per_minute
-                    ): page_num
-                    for page_num, page_bytes in page_bytes_list
-                }
+            # Get PDF filename for document titles
+            pdf_name = pdf_path.name
 
-                # Collect results as they complete
-                for future in as_completed(future_to_page):
-                    # Check for cancellation periodically
-                    if task_service.is_target_cancelled(source_id):
-                        print(f"Processing cancelled for source {source_id}")
-                        # Cancel remaining futures
-                        for f in future_to_page:
-                            f.cancel()
-                        raise CancelledException("Processing cancelled by user")
+            if total_batches == 1:
+                # Single batch - no need for parallel processing
+                print("Processing single batch...")
+                _, batch_result = self._extract_batch_with_tools(
+                    batches[0],
+                    total_pages,
+                    pdf_name,
+                    prompt_config,
+                    tool_def,
+                    batches_per_minute
+                )
 
-                    page_num, result = future.result()
-                    results[page_num] = result
-                    pages_completed += 1
+                if not batch_result.get("success"):
+                    raise Exception(batch_result.get("error", "Batch extraction failed"))
 
-                    # Progress update
-                    if result.get("success"):
-                        print(f"Processing... {pages_completed}/{total_pages} pages complete")
-                    else:
-                        print(f"Page {page_num} FAILED: {result.get('error')}")
+                all_page_results.update(batch_result.get("page_results", {}))
+                total_input_tokens += batch_result.get("token_usage", {}).get("input_tokens", 0)
+                total_output_tokens += batch_result.get("token_usage", {}).get("output_tokens", 0)
 
-            # Step 5: Check for any failures
-            # Educational Note: If ANY page fails after all retries, we fail the entire
-            # extraction and clean up. This ensures no partial/corrupted files.
+            else:
+                # Multiple batches - process in parallel
+                print(f"Processing {total_batches} batches in parallel with {max_workers} workers...")
+
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    future_to_batch = {
+                        executor.submit(
+                            self._extract_batch_with_tools,
+                            batch,
+                            total_pages,
+                            pdf_name,
+                            prompt_config,
+                            tool_def,
+                            batches_per_minute
+                        ): batch[0][0]  # Track by first page number
+                        for batch in batches
+                    }
+
+                    for future in as_completed(future_to_batch):
+                        # Check for cancellation
+                        if task_service.is_target_cancelled(source_id):
+                            print(f"Processing cancelled for source {source_id}")
+                            for f in future_to_batch:
+                                f.cancel()
+                            raise CancelledException("Processing cancelled by user")
+
+                        batch_start, batch_result = future.result()
+                        batches_completed += 1
+
+                        if batch_result.get("success"):
+                            all_page_results.update(batch_result.get("page_results", {}))
+                            total_input_tokens += batch_result.get("token_usage", {}).get("input_tokens", 0)
+                            total_output_tokens += batch_result.get("token_usage", {}).get("output_tokens", 0)
+                            print(f"Batch {batches_completed}/{total_batches} complete (pages starting at {batch_start})")
+                        else:
+                            failed_pages = batch_result.get("failed_pages", [])
+                            error_msg = batch_result.get("error", "Unknown error")
+                            print(f"Batch starting at page {batch_start} FAILED: {error_msg}")
+                            # Mark failed pages
+                            for page_num in failed_pages:
+                                all_page_results[page_num] = {
+                                    "text": f"[EXTRACTION FAILED: {error_msg}]",
+                                    "error": error_msg
+                                }
+
+            # Step 6: Check for failures
             failed_pages = [
-                page_num for page_num, result in results.items()
-                if not result.get("success")
+                page_num for page_num, result in all_page_results.items()
+                if result.get("error")
             ]
 
             if failed_pages:
-                # Clean up any existing output file
-                if output_path.exists():
-                    output_path.unlink()
-                    print(f"Deleted partial output file: {output_path}")
-
-                error_details = [
-                    f"Page {p}: {results[p].get('error', 'Unknown error')}"
-                    for p in sorted(failed_pages)
-                ]
-                error_message = f"Failed to extract {len(failed_pages)} page(s): {'; '.join(error_details[:5])}"
+                # Don't save partial results - let user retry
+                error_message = f"Failed to extract {len(failed_pages)} page(s): {sorted(failed_pages)[:5]}"
                 if len(failed_pages) > 5:
                     error_message += f" (and {len(failed_pages) - 5} more)"
 
@@ -384,32 +525,34 @@ class PDFService:
                     "failed_pages": sorted(failed_pages)
                 }
 
-            # Step 6: Write results to file IN ORDER
+            # Step 7: Write results to file IN ORDER
             print("All pages extracted successfully. Writing to file...")
 
-            total_input_tokens = 0
-            total_output_tokens = 0
             total_characters = 0
 
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(f"# Extracted from PDF: {pdf_path.name}\n")
                 f.write(f"# Total pages: {total_pages}\n")
                 f.write(f"# Extracted at: {datetime.now().isoformat()}\n")
-                f.write(f"# Processing: Parallel ({max_workers} workers)\n\n")
+                f.write(f"# Method: Batched tool-based extraction ({MAX_PAGES_PER_BATCH} pages/batch)\n")
+                f.write(f"# Batches: {total_batches}, Workers: {max_workers}\n\n")
 
-                # Write pages in order
-                for page_num in sorted(results.keys()):
-                    result = results[page_num]
+                for page_num in sorted(all_page_results.keys()):
+                    result = all_page_results[page_num]
                     extracted_text = result.get("text", "")
-                    token_usage = result.get("token_usage", {})
 
-                    f.write(f"\n=== PDF PAGE {page_num} of {total_pages} ===\n\n")
+                    # Add continuation markers if present
+                    markers = []
+                    if result.get("continues_from_previous"):
+                        markers.append("(continues from previous page)")
+                    if result.get("continues_to_next"):
+                        markers.append("(continues to next page)")
+                    marker_str = " ".join(markers)
+
+                    f.write(f"\n=== PDF PAGE {page_num} of {total_pages} {marker_str}===\n\n")
                     f.write(extracted_text)
                     f.write("\n")
 
-                    # Accumulate totals
-                    total_input_tokens += token_usage.get("input_tokens", 0)
-                    total_output_tokens += token_usage.get("output_tokens", 0)
                     total_characters += len(extracted_text)
 
             print(f"Extraction complete. {total_pages}/{total_pages} pages processed.")
@@ -428,13 +571,15 @@ class PDFService:
                 },
                 "model_used": model,
                 "extracted_at": datetime.now().isoformat(),
+                "extraction_method": "batched_tool_based",
+                "batch_size": MAX_PAGES_PER_BATCH,
+                "total_batches": total_batches,
                 "parallel_workers": max_workers,
                 "errors": None
             }
 
         except CancelledException as e:
             print(f"PDF extraction cancelled: {e}")
-            # Clean up any partial output
             if output_path.exists():
                 output_path.unlink()
                 print(f"Deleted partial output file: {output_path}")
@@ -446,7 +591,6 @@ class PDFService:
 
         except FileNotFoundError as e:
             print(f"File not found: {e}")
-            # Clean up any partial output
             if output_path.exists():
                 output_path.unlink()
             return {
@@ -457,7 +601,6 @@ class PDFService:
 
         except Exception as e:
             print(f"PDF extraction failed: {e}")
-            # Clean up any partial output
             if output_path.exists():
                 output_path.unlink()
                 print(f"Deleted partial output file: {output_path}")

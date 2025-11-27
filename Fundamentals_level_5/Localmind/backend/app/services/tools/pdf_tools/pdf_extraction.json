@@ -1,0 +1,26 @@
+{
+    "name": "submit_page_extraction",
+    "description": "Submit extracted text for a single PDF page. Call this tool ONCE for EACH page you are given. You must use the exact page numbers provided in the user message. Each extraction should be self-contained - if content on this page continues from a previous page (like bullet points under a heading from an earlier page), include that heading/context at the start so the extraction makes sense on its own.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "page_number": {
+                "type": "integer",
+                "description": "The exact page number as specified in the user message. Use the page numbers provided, not 1, 2, 3."
+            },
+            "extracted_text": {
+                "type": "string",
+                "description": "The complete extracted text from this page. Make it self-contained: if this page has content that belongs under a heading/section from a previous page, prepend that heading. If a sentence starts on a previous page, include enough context. If no readable text exists, use [NO TEXT CONTENT]."
+            },
+            "continues_from_previous": {
+                "type": "boolean",
+                "description": "Set to true if this page continues content from the previous page (a sentence, paragraph, list, or section that started earlier). Set to false if this page starts fresh content."
+            },
+            "continues_to_next": {
+                "type": "boolean",
+                "description": "Set to true if content on this page continues onto the next page (incomplete sentence, ongoing section). Set to false if this page ends cleanly."
+            }
+        },
+        "required": ["page_number", "extracted_text", "continues_from_previous", "continues_to_next"]
+    }
+}
