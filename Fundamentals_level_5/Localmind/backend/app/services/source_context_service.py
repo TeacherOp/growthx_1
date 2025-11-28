@@ -7,6 +7,7 @@ that gets appended to the system prompt. This allows the AI to know:
 - Source IDs (needed for the search_sources tool)
 - Source types and names (to pick the right source for a question)
 - Whether a source is embedded (affects search behavior)
+- Source summaries (to understand content and pick the right source)
 
 The context is rebuilt on every message to reflect the current state
 of sources (active/inactive toggles, new uploads, deletions).
@@ -86,6 +87,10 @@ class SourceContextService:
             is_embedded = embedding_info.get("is_embedded", False)
             embedded_label = "Yes" if is_embedded else "No"
 
+            # Get summary if available
+            summary_info = source.get("summary_info", {})
+            summary_text = summary_info.get("summary", "")
+
             # Format source type from category and extension
             source_type = self._format_source_type(category, file_ext)
 
@@ -93,6 +98,8 @@ class SourceContextService:
             lines.append(f"  - ID: `{source_id}`")
             lines.append(f"  - Type: {source_type}")
             lines.append(f"  - Embedded: {embedded_label}")
+            if summary_text:
+                lines.append(f"  - Summary: {summary_text}")
             lines.append("")
 
         lines.append("When the user asks about content from these sources, use the search_sources tool with the appropriate source_id.")

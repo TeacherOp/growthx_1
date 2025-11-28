@@ -9,6 +9,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Sparkle, CircleNotch } from '@phosphor-icons/react';
 import { chatsAPI } from '@/lib/api/chats';
 import type { Chat, ChatMetadata } from '@/lib/api/chats';
+import { sourcesAPI, type Source } from '@/lib/api/sources';
 import { useToast, ToastContainer } from '../ui/toast';
 import { useVoiceRecording } from '../hooks/useVoiceRecording';
 import { ChatHeader } from './ChatHeader';
@@ -20,9 +21,11 @@ import { ChatEmptyState } from './ChatEmptyState';
 interface ChatPanelProps {
   projectId: string;
   projectName: string;
+  sourcesVersion?: number;
+  onCostsChange?: () => void; // Called after message sent to trigger cost refresh
 }
 
-export const ChatPanel: React.FC<ChatPanelProps> = ({ projectId, projectName }) => {
+export const ChatPanel: React.FC<ChatPanelProps> = ({ projectId, projectName, sourcesVersion, onCostsChange }) => {
   const { toasts, dismissToast, success, error } = useToast();
 
   // Chat state
@@ -32,6 +35,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ projectId, projectName }) 
   const [allChats, setAllChats] = useState<ChatMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+
+  // Sources state for header display
+  const [sources, setSources] = useState<Source[]>([]);
 
   // Voice recording hook
   const {
@@ -54,11 +60,35 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ projectId, projectName }) 
   });
 
   /**
-   * Load all chats when component mounts or projectId changes
+   * Load all chats and sources when component mounts or projectId changes
    */
   useEffect(() => {
     loadChats();
+    loadSources();
   }, [projectId]);
+
+  /**
+   * Refetch sources when sourcesVersion changes
+   * Educational Note: This triggers when SourcesPanel notifies us that sources
+   * have changed (toggle active, delete, processing complete, etc.)
+   */
+  useEffect(() => {
+    if (sourcesVersion !== undefined && sourcesVersion > 0) {
+      loadSources();
+    }
+  }, [sourcesVersion]);
+
+  /**
+   * Load sources for the project (for header display)
+   */
+  const loadSources = async () => {
+    try {
+      const data = await sourcesAPI.listSources(projectId);
+      setSources(data);
+    } catch (err) {
+      console.error('Error loading sources:', err);
+    }
+  };
 
   /**
    * Load all chats for the project
@@ -139,6 +169,27 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ projectId, projectName }) 
 
       // Update the chat metadata in the list
       await loadChats();
+
+      // Trigger cost refresh in header
+      onCostsChange?.();
+
+      // Fetch updated chat title after delay (background task may have renamed it)
+      const chatId = activeChat.id;
+      setTimeout(async () => {
+        try {
+          const updatedChat = await chatsAPI.getChat(projectId, chatId);
+          setActiveChat(prev => prev && prev.id === chatId
+            ? { ...prev, title: updatedChat.title }
+            : prev
+          );
+          // Also update in chat list
+          setAllChats(prev => prev.map(c =>
+            c.id === chatId ? { ...c, title: updatedChat.title } : c
+          ));
+        } catch (e) {
+          // Silently ignore - title update is non-critical
+        }
+      }, 4000);
     } catch (err) {
       console.error('Error sending message:', err);
       error('Failed to send message');
@@ -200,6 +251,26 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ projectId, projectName }) 
   };
 
   /**
+   * Rename a chat
+   */
+  const handleRenameChat = async (chatId: string, newTitle: string) => {
+    try {
+      await chatsAPI.updateChat(projectId, chatId, newTitle);
+      await loadChats();
+
+      // Update active chat if it was renamed
+      if (activeChat?.id === chatId) {
+        setActiveChat(prev => prev ? { ...prev, title: newTitle } : null);
+      }
+
+      success('Chat renamed');
+    } catch (err) {
+      console.error('Error renaming chat:', err);
+      error('Failed to rename chat');
+    }
+  };
+
+  /**
    * Toggle recording on/off
    */
   const handleMicClick = () => {
@@ -252,6 +323,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ projectId, projectName }) 
           chats={allChats}
           onSelectChat={handleSelectChat}
           onDeleteChat={handleDeleteChat}
+          onRenameChat={handleRenameChat}
           onNewChat={handleNewChat}
         />
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
@@ -261,10 +333,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ projectId, projectName }) 
 
   // Active chat view
   return (
-    <div className="flex flex-col h-full bg-card">
+    <div className="flex flex-col h-full min-h-0 min-w-0 w-full bg-card overflow-hidden">
       <ChatHeader
         activeChat={activeChat}
         allChats={allChats}
+        activeSources={sources.filter(s => s.status === 'ready' && s.active).length}
+        totalSources={sources.length}
         onSelectChat={handleSelectChat}
         onNewChat={handleNewChat}
         onShowChatList={() => setShowChatList(true)}

@@ -167,12 +167,17 @@ class SourceProcessingService:
                 source_service=source_service
             )
 
+            # Generate summary after embeddings
+            source_metadata = {**source, "processing_info": processing_info, "embedding_info": embedding_info}
+            summary_info = self._generate_summary_for_source(project_id, source_id, source_metadata)
+
             source_service.update_source(
                 project_id,
                 source_id,
                 status="ready",
                 processing_info=processing_info,
-                embedding_info=embedding_info
+                embedding_info=embedding_info,
+                summary_info=summary_info if summary_info else None
             )
             return {"success": True, "status": "ready"}
 
@@ -255,13 +260,18 @@ class SourceProcessingService:
             source_service=source_service
         )
 
+        # Generate summary after embeddings
+        source_metadata = {**source, "processing_info": processing_info, "embedding_info": embedding_info}
+        summary_info = self._generate_summary_for_source(project_id, source_id, source_metadata)
+
         source_service.update_source(
             project_id,
             source_id,
             status="ready",
             active=True,  # Auto-activate when ready
             processing_info=processing_info,
-            embedding_info=embedding_info
+            embedding_info=embedding_info,
+            summary_info=summary_info if summary_info else None
         )
         return {"success": True, "status": "ready"}
 
@@ -330,13 +340,18 @@ class SourceProcessingService:
             source_service=source_service
         )
 
+        # Generate summary after embeddings
+        source_metadata = {**source, "processing_info": processing_info, "embedding_info": embedding_info}
+        summary_info = self._generate_summary_for_source(project_id, source_id, source_metadata)
+
         source_service.update_source(
             project_id,
             source_id,
             status="ready",
             active=True,  # Auto-activate when ready
             processing_info=processing_info,
-            embedding_info=embedding_info
+            embedding_info=embedding_info,
+            summary_info=summary_info if summary_info else None
         )
         return {"success": True, "status": "ready"}
 
@@ -381,12 +396,17 @@ class SourceProcessingService:
                 source_service=source_service
             )
 
+            # Generate summary after embeddings
+            source_metadata = {**source, "processing_info": processing_info, "embedding_info": embedding_info}
+            summary_info = self._generate_summary_for_source(project_id, source_id, source_metadata)
+
             source_service.update_source(
                 project_id,
                 source_id,
                 status="ready",
                 processing_info=processing_info,
-                embedding_info=embedding_info
+                embedding_info=embedding_info,
+                summary_info=summary_info if summary_info else None
             )
             return {"success": True, "status": "ready"}
 
@@ -446,12 +466,17 @@ class SourceProcessingService:
                 source_service=source_service
             )
 
+            # Generate summary after embeddings
+            source_metadata = {**source, "processing_info": processing_info, "embedding_info": embedding_info}
+            summary_info = self._generate_summary_for_source(project_id, source_id, source_metadata)
+
             source_service.update_source(
                 project_id,
                 source_id,
                 status="ready",
                 processing_info=processing_info,
-                embedding_info=embedding_info
+                embedding_info=embedding_info,
+                summary_info=summary_info if summary_info else None
             )
             return {"success": True, "status": "ready"}
 
@@ -520,12 +545,17 @@ class SourceProcessingService:
                 source_service=source_service
             )
 
+            # Generate summary after embeddings
+            source_metadata = {**source, "processing_info": processing_info, "embedding_info": embedding_info}
+            summary_info = self._generate_summary_for_source(project_id, source_id, source_metadata)
+
             source_service.update_source(
                 project_id,
                 source_id,
                 status="ready",
                 processing_info=processing_info,
-                embedding_info=embedding_info
+                embedding_info=embedding_info,
+                summary_info=summary_info if summary_info else None
             )
             return {"success": True, "status": "ready"}
 
@@ -681,13 +711,18 @@ class SourceProcessingService:
             source_service=source_service
         )
 
+        # Generate summary after embeddings
+        source_metadata = {**source, "processing_info": processing_info, "embedding_info": embedding_info}
+        summary_info = self._generate_summary_for_source(project_id, source_id, source_metadata)
+
         source_service.update_source(
             project_id,
             source_id,
             status="ready",
             active=True,  # Auto-activate when ready
             processing_info=processing_info,
-            embedding_info=embedding_info
+            embedding_info=embedding_info,
+            summary_info=summary_info if summary_info else None
         )
         return {"success": True, "status": "ready"}
 
@@ -817,15 +852,64 @@ class SourceProcessingService:
             source_service=source_service
         )
 
+        # Generate summary after embeddings
+        source_metadata = {**source, "processing_info": processing_info, "embedding_info": embedding_info}
+        summary_info = self._generate_summary_for_source(project_id, source_id, source_metadata)
+
         source_service.update_source(
             project_id,
             source_id,
             status="ready",
             active=True,
             processing_info=processing_info,
-            embedding_info=embedding_info
+            embedding_info=embedding_info,
+            summary_info=summary_info if summary_info else None
         )
         return {"success": True, "status": "ready"}
+
+    def _generate_summary_for_source(
+        self,
+        project_id: str,
+        source_id: str,
+        source_metadata: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Generate a summary for a processed source.
+
+        Educational Note: This method is called after text extraction and embedding
+        to generate a concise summary of the source content. The summary uses:
+        - Full content for small sources (not chunked)
+        - Sampled chunks for large sources (evenly distributed selection)
+
+        Args:
+            project_id: The project UUID
+            source_id: The source UUID
+            source_metadata: Full source metadata from index
+
+        Returns:
+            Dict with summary_info or empty dict if summary generation failed
+        """
+        try:
+            from app.services.summary_service import summary_service
+
+            print(f"Generating summary for source: {source_id}")
+
+            result = summary_service.generate_summary(
+                project_id=project_id,
+                source_id=source_id,
+                source_metadata=source_metadata
+            )
+
+            if result:
+                print(f"Summary generated for {source_id}: {len(result.get('summary', ''))} chars")
+                return result
+            else:
+                print(f"Summary generation returned None for {source_id}")
+                return {}
+
+        except Exception as e:
+            print(f"Error generating summary for {source_id}: {e}")
+            return {}
 
     def _process_embeddings_for_source(
         self,

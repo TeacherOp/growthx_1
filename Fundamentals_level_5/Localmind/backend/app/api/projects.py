@@ -13,6 +13,7 @@ from pathlib import Path
 
 from app.api import api_bp
 from app.services.project_service import ProjectService
+from app.services.cost_tracking_service import cost_tracking_service
 
 # Initialize the project service
 project_service = ProjectService()
@@ -259,4 +260,47 @@ def open_project(project_id):
         return jsonify({
             "success": False,
             "error": f"Failed to open project: {str(e)}"
+        }), 500
+
+
+@api_bp.route('/projects/<project_id>/costs', methods=['GET'])
+def get_project_costs(project_id):
+    """
+    Get cost tracking data for a project.
+
+    URL Parameters:
+        - project_id: string - The project UUID
+
+    Returns:
+        JSON object with cost tracking data:
+        - total_cost: float - Total cost in USD
+        - by_model: dict - Breakdown by model (sonnet/haiku)
+            - input_tokens: int
+            - output_tokens: int
+            - cost: float
+
+    Educational Note: Cost tracking helps monitor API usage and
+    provides transparency about resource consumption per project.
+    """
+    try:
+        # Verify project exists
+        project = project_service.get_project(project_id)
+        if not project:
+            return jsonify({
+                "success": False,
+                "error": "Project not found"
+            }), 404
+
+        # Get cost tracking data
+        costs = cost_tracking_service.get_project_costs(project_id)
+
+        return jsonify({
+            "success": True,
+            "costs": costs
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to get project costs: {str(e)}"
         }), 500

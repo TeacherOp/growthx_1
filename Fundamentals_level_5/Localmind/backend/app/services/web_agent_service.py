@@ -193,7 +193,8 @@ class WebAgentService:
                 tools=all_tools,
                 max_tokens=8192,
                 temperature=0,
-                extra_headers=extra_headers
+                extra_headers=extra_headers,
+                project_id=project_id
             )
 
             # Track usage

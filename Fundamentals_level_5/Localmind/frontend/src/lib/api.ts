@@ -64,4 +64,25 @@ export const projectsAPI = {
 
   // Open a project (mark as accessed)
   open: (id: string) => api.post(`/projects/${id}/open`),
+
+  // Get project cost tracking data
+  getCosts: (id: string) => api.get(`/projects/${id}/costs`),
 };
+
+/**
+ * Cost Tracking Types
+ * Educational Note: These types match the backend cost tracking structure.
+ */
+export interface ModelCostBreakdown {
+  input_tokens: number;
+  output_tokens: number;
+  cost: number;
+}
+
+export interface CostTracking {
+  total_cost: number;
+  by_model: {
+    sonnet: ModelCostBreakdown;
+    haiku: ModelCostBreakdown;
+  };
+}

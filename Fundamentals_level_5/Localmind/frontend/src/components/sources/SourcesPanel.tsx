@@ -51,33 +51,34 @@ interface SourcesPanelProps {
   projectId: string;
   isCollapsed?: boolean;
   onExpand?: () => void;
+  onSourcesChange?: () => void;
 }
 
 /**
  * Get icon component based on source file type
  */
 const getSourceIcon = (source: Source) => {
-  const type = source.file_type?.toLowerCase() || '';
+  const ext = source.file_extension?.toLowerCase() || '';
   const name = source.name?.toLowerCase() || '';
 
   // Check for YouTube links
-  if (source.type === 'link' && (name.includes('youtube') || name.includes('youtu.be'))) {
+  if (source.category === 'link' && (name.includes('youtube') || name.includes('youtu.be'))) {
     return YoutubeLogo;
   }
 
-  // Check by file type
-  if (type.includes('pdf')) return FilePdf;
-  if (type.includes('doc') || type.includes('docx')) return FileDoc;
-  if (type.includes('txt') || type.includes('text')) return FileText;
-  if (type.includes('image') || type.includes('png') || type.includes('jpg') || type.includes('jpeg')) return Image;
-  if (type.includes('audio') || type.includes('mp3') || type.includes('wav')) return MusicNote;
-  if (type.includes('video') || type.includes('mp4')) return Video;
-  if (source.type === 'link') return Link;
+  // Check by file extension
+  if (ext.includes('pdf')) return FilePdf;
+  if (ext.includes('doc') || ext.includes('docx')) return FileDoc;
+  if (ext.includes('txt') || ext.includes('text')) return FileText;
+  if (ext.includes('png') || ext.includes('jpg') || ext.includes('jpeg') || ext.includes('webp')) return Image;
+  if (ext.includes('mp3') || ext.includes('wav') || ext.includes('m4a')) return MusicNote;
+  if (ext.includes('mp4') || ext.includes('mov')) return Video;
+  if (source.category === 'link') return Link;
 
   return File;
 };
 
-export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId, isCollapsed, onExpand }) => {
+export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId, isCollapsed, onExpand, onSourcesChange }) => {
   const { toasts, dismissToast, success, error } = useToast();
 
   // State
@@ -100,6 +101,13 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId, isCollaps
    */
   const errorRef = useRef(error);
   errorRef.current = error;
+
+  // Ref for onSourcesChange to use in effects without triggering re-renders
+  const onSourcesChangeRef = useRef(onSourcesChange);
+  onSourcesChangeRef.current = onSourcesChange;
+
+  // Ref to track previous sources for detecting status changes
+  const prevSourcesRef = useRef<Source[]>([]);
 
   /**
    * Load sources from API (with loading state for initial load)
@@ -136,6 +144,31 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId, isCollaps
   useEffect(() => {
     loadSources();
   }, [loadSources]);
+
+  /**
+   * Detect when sources transition to "ready" status
+   * Educational Note: When a source finishes processing, ChatPanel needs to know
+   * so it can update the active sources count in the header. We compare previous
+   * and current sources to detect this transition.
+   */
+  useEffect(() => {
+    const prevSources = prevSourcesRef.current;
+
+    // Check if any source transitioned to "ready"
+    const hasNewReadySource = sources.some(source => {
+      const prevSource = prevSources.find(s => s.id === source.id);
+      // Source is now ready and wasn't ready before (or didn't exist)
+      return source.status === 'ready' && (!prevSource || prevSource.status !== 'ready');
+    });
+
+    // Update ref for next comparison
+    prevSourcesRef.current = sources;
+
+    // Notify parent if a source became ready
+    if (hasNewReadySource && prevSources.length > 0) {
+      onSourcesChangeRef.current?.();
+    }
+  }, [sources]);
 
   /**
    * Polling for source status updates
@@ -260,6 +293,8 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId, isCollaps
       await sourcesAPI.deleteSource(projectId, sourceId);
       success(`Deleted "${sourceName}"`);
       await loadSources();
+      // Notify parent that sources changed (triggers ChatPanel refresh)
+      onSourcesChange?.();
     } catch (err) {
       console.error('Error deleting source:', err);
       error('Failed to delete source');
@@ -315,6 +350,8 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId, isCollaps
       setSources(prev =>
         prev.map(s => s.id === sourceId ? { ...s, active } : s)
       );
+      // Notify parent that sources changed (triggers ChatPanel refresh)
+      onSourcesChange?.();
     } catch (err) {
       console.error('Error toggling source active state:', err);
       error('Failed to update source');

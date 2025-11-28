@@ -1,13 +1,13 @@
 {
   "projects": [
     {
-      "id": "ffe8e45d-38a0-4b10-a650-8ebb2aa584f8",
-      "name": "testing image processing",
-      "description": "testing image processing",
-      "created_at": "2025-11-27T11:29:47.302302",
-      "updated_at": "2025-11-27T11:29:47.302302",
-      "last_accessed": "2025-11-27T11:29:47.302302"
+      "id": "594d994a-1a49-4620-bac4-6fd799054fd8",
+      "name": "AI Chatbot Development and on-premise deployement",
+      "description": "chatbot development",
+      "created_at": "2025-11-29T02:43:22.536489",
+      "updated_at": "2025-11-29T02:43:22.536489",
+      "last_accessed": "2025-11-29T02:43:22.536489"
     }
   ],
-  "last_updated": "2025-11-28T23:47:23.316515"
+  "last_updated": "2025-11-29T02:43:22.537157"
 }

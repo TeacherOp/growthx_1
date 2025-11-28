@@ -27,8 +27,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
-import { ArrowLeft, DotsThreeVertical, Plus, Trash, FolderOpen, Gear, CircleNotch } from '@phosphor-icons/react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip';
+import { ArrowLeft, DotsThreeVertical, Plus, Trash, FolderOpen, Gear, CircleNotch, CurrencyDollar } from '@phosphor-icons/react';
 import { chatsAPI } from '../lib/api/chats';
+import { projectsAPI, type CostTracking } from '../lib/api';
 import { useToast, ToastContainer } from './ui/toast';
 
 /**
@@ -45,12 +52,14 @@ interface ProjectHeaderProps {
   };
   onBack: () => void;
   onDelete: () => void;
+  costsVersion?: number; // Increment to trigger cost refresh
 }
 
 export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
   project,
   onBack,
   onDelete,
+  costsVersion,
 }) => {
   const { toasts, dismissToast, success, error } = useToast();
 
@@ -65,13 +74,73 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
+  // Cost tracking state
+  const [costs, setCosts] = React.useState<CostTracking | null>(null);
+
   /**
-   * Educational Note: Load the project's system prompt when component mounts.
+   * Educational Note: Load the project's system prompt and costs when component mounts.
    * This fetches either the custom prompt or the default prompt from the backend.
    */
   useEffect(() => {
     loadPrompts();
+    loadCosts();
   }, [project.id]);
+
+  /**
+   * Refresh costs when costsVersion changes (triggered after chat messages)
+   * Educational Note: Uses version counter pattern for cross-component updates
+   */
+  useEffect(() => {
+    if (costsVersion !== undefined && costsVersion > 0) {
+      loadCosts();
+    }
+  }, [costsVersion]);
+
+  /**
+   * Load project cost tracking data
+   * Educational Note: Costs are tracked cumulatively in project.json
+   */
+  const loadCosts = async () => {
+    try {
+      const response = await projectsAPI.getCosts(project.id);
+      if (response.data.success) {
+        setCosts(response.data.costs);
+      }
+    } catch (err) {
+      console.error('Error loading costs:', err);
+      // Silently fail - costs are not critical
+    }
+  };
+
+  /**
+   * Format currency for header display (without $ symbol - icon provides it)
+   */
+  const formatCost = (cost: number): string => {
+    if (cost < 0.01) {
+      return '0.00';
+    }
+    return cost.toFixed(2);
+  };
+
+  /**
+   * Format currency for tooltip with $ symbol
+   */
+  const formatCostWithSymbol = (cost: number): string => {
+    if (cost < 0.01) {
+      return '$0.00';
+    }
+    return `$${cost.toFixed(2)}`;
+  };
+
+  /**
+   * Format token count with K suffix for thousands
+   */
+  const formatTokens = (tokens: number): string => {
+    if (tokens >= 1000) {
+      return `${(tokens / 1000).toFixed(1)}K`;
+    }
+    return tokens.toString();
+  };
 
   /**
    * Load system prompt for the project
@@ -159,6 +228,64 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
           <FolderOpen size={20} className="text-muted-foreground" />
           <h1 className="text-lg font-semibold">{project.name}</h1>
         </div>
+
+        {/* Cost Display with Hover Breakdown */}
+        {costs && costs.total_cost > 0 && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-md cursor-default">
+                  <CurrencyDollar size={14} className="text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground font-medium">
+                    {formatCost(costs.total_cost)}
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="p-3">
+                <div className="space-y-2 text-xs">
+                  <p className="font-semibold text-sm mb-2">API Usage Breakdown</p>
+
+                  {/* Sonnet breakdown */}
+                  {(costs.by_model.sonnet.input_tokens > 0 || costs.by_model.sonnet.output_tokens > 0) && (
+                    <div className="space-y-1">
+                      <p className="font-medium">Sonnet</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted-foreground">
+                        <span>Input:</span>
+                        <span>{formatTokens(costs.by_model.sonnet.input_tokens)} tokens</span>
+                        <span>Output:</span>
+                        <span>{formatTokens(costs.by_model.sonnet.output_tokens)} tokens</span>
+                        <span>Cost:</span>
+                        <span className="font-medium text-foreground">{formatCostWithSymbol(costs.by_model.sonnet.cost)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Haiku breakdown */}
+                  {(costs.by_model.haiku.input_tokens > 0 || costs.by_model.haiku.output_tokens > 0) && (
+                    <div className="space-y-1">
+                      <p className="font-medium">Haiku</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted-foreground">
+                        <span>Input:</span>
+                        <span>{formatTokens(costs.by_model.haiku.input_tokens)} tokens</span>
+                        <span>Output:</span>
+                        <span>{formatTokens(costs.by_model.haiku.output_tokens)} tokens</span>
+                        <span>Cost:</span>
+                        <span className="font-medium text-foreground">{formatCostWithSymbol(costs.by_model.haiku.cost)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="border-t pt-2 mt-2">
+                    <div className="flex justify-between font-medium">
+                      <span>Total:</span>
+                      <span>{formatCostWithSymbol(costs.total_cost)}</span>
+                    </div>
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
 
       {/* Right side - Actions */}

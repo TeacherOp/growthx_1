@@ -1,20 +1,31 @@
 /**
  * ChatList Component
  * Educational Note: Displays all chats for a project with ability to
- * select, delete, or create new chats. Shows chat metadata like
+ * select, delete, rename, or create new chats. Shows chat metadata like
  * message count and last updated time.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
-import { Sparkle, Plus, Clock, Hash, Trash } from '@phosphor-icons/react';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Sparkle, Plus, Clock, Hash, Trash, PencilSimple } from '@phosphor-icons/react';
 import type { ChatMetadata } from '../../lib/api/chats';
 
 interface ChatListProps {
   chats: ChatMetadata[];
   onSelectChat: (chatId: string) => void;
   onDeleteChat: (chatId: string) => void;
+  onRenameChat: (chatId: string, newTitle: string) => void;
   onNewChat: () => void;
 }
 
@@ -41,9 +52,31 @@ export const ChatList: React.FC<ChatListProps> = ({
   chats,
   onSelectChat,
   onDeleteChat,
+  onRenameChat,
   onNewChat,
 }) => {
+  // Rename dialog state
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renameChatId, setRenameChatId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
+  const handleOpenRename = (chatId: string, currentTitle: string) => {
+    setRenameChatId(chatId);
+    setRenameValue(currentTitle);
+    setRenameDialogOpen(true);
+  };
+
+  const handleRenameSubmit = () => {
+    if (renameChatId && renameValue.trim()) {
+      onRenameChat(renameChatId, renameValue.trim());
+      setRenameDialogOpen(false);
+      setRenameChatId(null);
+      setRenameValue('');
+    }
+  };
+
   return (
+    <>
     <div className="flex flex-col h-full bg-card">
       {/* Header - matches Sources/Studio/ChatEmptyState structure */}
       <div className="border-b px-4 py-3">
@@ -92,6 +125,17 @@ export const ChatList: React.FC<ChatListProps> = ({
                     className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={(e) => {
                       e.stopPropagation();
+                      handleOpenRename(chat.id, chat.title);
+                    }}
+                  >
+                    <PencilSimple size={14} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
                       onDeleteChat(chat.id);
                     }}
                   >
@@ -110,5 +154,43 @@ export const ChatList: React.FC<ChatListProps> = ({
         </div>
       </ScrollArea>
     </div>
+
+    {/* Rename Dialog */}
+    <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>Rename Chat</DialogTitle>
+          <DialogDescription>
+            Enter a new name for this chat.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <Label htmlFor="chat-name" className="text-sm font-medium">
+            Chat Name
+          </Label>
+          <Input
+            id="chat-name"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleRenameSubmit();
+              }
+            }}
+            placeholder="Enter chat name..."
+            className="mt-2"
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleRenameSubmit} disabled={!renameValue.trim()}>
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };

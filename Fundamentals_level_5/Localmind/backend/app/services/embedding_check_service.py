@@ -8,13 +8,12 @@ documents where semantic search (RAG) is beneficial.
 Decision Logic:
 1. If character count > 30,000 → definitely needs embedding (skip token count)
 2. If character count <= 30,000 → count actual tokens
-3. If token count > 1,500 → needs embedding
+3. If token count > 2,500 → needs embedding
 4. Otherwise → use direct context injection
 
 Why this approach?
 - Token counting via API has a cost (even if small)
-- Character count is a fast approximation (roughly 4 chars ≈ 1 token)
-- 30,000 chars ≈ 7,500 tokens, well above our 1,500 threshold
+- 30,000 chars ≈ 7,500 tokens, well above our 2,500 threshold
 - We only do precise token counting for borderline cases
 """
 from typing import Tuple, Optional
@@ -22,7 +21,7 @@ from typing import Tuple, Optional
 
 # Thresholds for embedding decision
 CHARACTER_THRESHOLD = 30000  # If above this, definitely needs embedding
-TOKEN_THRESHOLD = 1500  # If token count above this, needs embedding
+TOKEN_THRESHOLD = 2500  # If token count above this, needs embedding
 
 
 class EmbeddingCheckService:

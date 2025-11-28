@@ -221,7 +221,8 @@ class SourceService:
         status: Optional[str] = None,
         active: Optional[bool] = None,
         processing_info: Optional[Dict[str, Any]] = None,
-        embedding_info: Optional[Dict[str, Any]] = None
+        embedding_info: Optional[Dict[str, Any]] = None,
+        summary_info: Optional[Dict[str, Any]] = None
     ) -> Optional[Dict[str, Any]]:
         """
         Update a source's metadata.
@@ -235,6 +236,7 @@ class SourceService:
             active: Whether source is included in chat context (optional)
             processing_info: Processing details (optional)
             embedding_info: Embedding details (optional)
+            summary_info: Summary details (optional)
 
         Returns:
             Updated source metadata or None if not found
@@ -259,6 +261,8 @@ class SourceService:
                     source["processing_info"] = processing_info
                 if embedding_info is not None:
                     source["embedding_info"] = embedding_info
+                if summary_info is not None:
+                    source["summary_info"] = summary_info
 
                 source["updated_at"] = datetime.now().isoformat()
                 index["sources"][i] = source

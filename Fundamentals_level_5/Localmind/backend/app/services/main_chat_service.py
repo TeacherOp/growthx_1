@@ -31,6 +31,8 @@ from app.services.prompt_service import prompt_service
 from app.services.source_context_service import source_context_service
 from app.services.source_search_executor import source_search_executor
 from app.services.tool_loader import tool_loader
+from app.services.chat_naming_service import chat_naming_service
+from app.services.task_service import task_service
 
 
 class MainChatService:
@@ -277,7 +279,8 @@ class MainChatService:
                 model=prompt_config.get("model"),
                 max_tokens=prompt_config.get("max_tokens"),
                 temperature=prompt_config.get("temperature"),
-                tools=tools
+                tools=tools,
+                project_id=project_id
             )
 
             # Log the API call for debugging
@@ -346,7 +349,8 @@ class MainChatService:
                     model=prompt_config.get("model"),
                     max_tokens=prompt_config.get("max_tokens"),
                     temperature=prompt_config.get("temperature"),
-                    tools=tools
+                    tools=tools,
+                    project_id=project_id
                 )
 
                 # Log the follow-up API call
@@ -385,7 +389,46 @@ class MainChatService:
         # Step 7: Sync chat index
         chat_service.sync_chat_to_index(project_id, chat_id)
 
+        # Step 8: Auto-rename chat on first message (background task)
+        # Educational Note: We check if the chat had no messages before this one.
+        # The naming runs in background so it doesn't block the response.
+        if chat.get("message_count", 0) == 0:
+            # Submit naming task to background
+            task_service.submit_task(
+                "chat_naming",
+                chat_id,
+                self._generate_and_update_chat_title,
+                project_id,
+                chat_id,
+                user_message_text
+            )
+
         return user_msg, assistant_msg
+
+    def _generate_and_update_chat_title(
+        self,
+        project_id: str,
+        chat_id: str,
+        user_message: str
+    ) -> None:
+        """
+        Generate and update chat title in background.
+
+        Educational Note: This runs as a background task so it doesn't
+        block the main chat response. Uses AI to generate a concise title.
+
+        Args:
+            project_id: The project UUID
+            chat_id: The chat UUID
+            user_message: The user's first message
+        """
+        try:
+            new_title = chat_naming_service.generate_title(user_message, project_id=project_id)
+            if new_title:
+                chat_service.update_chat(project_id, chat_id, {"title": new_title})
+                print(f"Auto-renamed chat {chat_id} to: {new_title}")
+        except Exception as e:
+            print(f"Error auto-naming chat {chat_id}: {e}")
 
 
 # Singleton instance

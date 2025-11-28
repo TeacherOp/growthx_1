@@ -171,6 +171,10 @@ class ChatService:
         """
         Get full chat data including messages.
 
+        Educational Note: Filters out tool_use and tool_result messages
+        from the response. These are internal messages used in the tool
+        chain and shouldn't be displayed to users.
+
         Args:
             project_id: The project UUID
             chat_id: The chat UUID
@@ -185,7 +189,16 @@ class ChatService:
 
         try:
             with open(chat_file, 'r') as f:
-                return json.load(f)
+                chat_data = json.load(f)
+
+            # Filter out tool_use and tool_result messages for display
+            # These have content as arrays instead of strings
+            chat_data["messages"] = [
+                msg for msg in chat_data.get("messages", [])
+                if isinstance(msg.get("content"), str)
+            ]
+
+            return chat_data
         except json.JSONDecodeError:
             print(f"Warning: Corrupted chat file: {chat_id}")
             return None

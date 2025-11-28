@@ -184,6 +184,7 @@ class PDFService:
         prompt_config: Dict[str, Any],
         tool_def: Dict[str, Any],
         requests_per_minute: int,
+        project_id: str,
         max_retries: int = 3
     ) -> Tuple[int, Dict[str, Any]]:
         """
@@ -276,7 +277,8 @@ class PDFService:
                     temperature=temperature,
                     tools=[tool_def],
                     # Force Claude to use this specific tool (not just "any" tool)
-                    tool_choice={"type": "tool", "name": "submit_page_extraction"}
+                    tool_choice={"type": "tool", "name": "submit_page_extraction"},
+                    project_id=project_id
                 )
 
                 # Parse tool calls from response
@@ -448,7 +450,8 @@ class PDFService:
                     pdf_name,
                     prompt_config,
                     tool_def,
-                    batches_per_minute
+                    batches_per_minute,
+                    project_id
                 )
 
                 if not batch_result.get("success"):
@@ -471,7 +474,8 @@ class PDFService:
                             pdf_name,
                             prompt_config,
                             tool_def,
-                            batches_per_minute
+                            batches_per_minute,
+                            project_id
                         ): batch[0][0]  # Track by first page number
                         for batch in batches
                     }

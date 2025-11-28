@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Button } from './ui/button';
 import { SourcesPanel } from './sources';
 import { ChatPanel } from './chat';
@@ -45,6 +45,20 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
 
+  // Costs version counter - increments when costs change (after chat messages or source processing)
+  const [costsVersion, setCostsVersion] = useState(0);
+  const handleCostsChange = useCallback(() => {
+    setCostsVersion(v => v + 1);
+  }, []);
+
+  // Sources version counter - increments when sources change to trigger ChatPanel refresh
+  // Also triggers cost refresh since source processing uses Claude API
+  const [sourcesVersion, setSourcesVersion] = useState(0);
+  const handleSourcesChange = useCallback(() => {
+    setSourcesVersion(v => v + 1);
+    setCostsVersion(v => v + 1); // Source processing also incurs costs
+  }, []);
+
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Project Header - sits on background layer */}
@@ -52,6 +66,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
         project={project}
         onBack={onBack}
         onDelete={() => onDeleteProject(project.id)}
+        costsVersion={costsVersion}
       />
 
       {/* Main Content Area - Floating panels over background */}
@@ -76,6 +91,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
                   projectId={project.id}
                   isCollapsed={!leftPanelOpen}
                   onExpand={() => leftPanelRef.current?.expand()}
+                  onSourcesChange={handleSourcesChange}
                 />
                 {leftPanelOpen && (
                   <Button
@@ -93,9 +109,14 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
             <ResizableHandle />
 
             {/* Center Panel - Chat */}
-            <ResizablePanel defaultSize={60} minSize={30} className="bg-card">
-              <div className="h-full flex flex-col">
-                <ChatPanel projectId={project.id} projectName={project.name} />
+            <ResizablePanel defaultSize={60} minSize={30} className="bg-card overflow-hidden min-w-0">
+              <div className="h-full min-h-0 min-w-0 w-full flex flex-col overflow-hidden">
+                <ChatPanel
+                  projectId={project.id}
+                  projectName={project.name}
+                  sourcesVersion={sourcesVersion}
+                  onCostsChange={handleCostsChange}
+                />
               </div>
             </ResizablePanel>
 

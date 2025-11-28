@@ -14,6 +14,8 @@ import os
 from typing import Optional, List, Dict, Any
 import anthropic
 
+from app.services.cost_tracking_service import cost_tracking_service
+
 
 class ClaudeService:
     """
@@ -55,6 +57,7 @@ class ClaudeService:
         tools: Optional[List[Dict[str, Any]]] = None,
         tool_choice: Optional[Dict[str, Any]] = None,
         extra_headers: Optional[Dict[str, str]] = None,
+        project_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Send messages to Claude and get a response.
@@ -74,6 +77,7 @@ class ClaudeService:
             tools: Optional list of tool definitions for tool use
             tool_choice: Optional tool choice configuration
             extra_headers: Optional headers for beta features (e.g., {"anthropic-beta": "web-fetch-2025-09-10"})
+            project_id: Optional project ID for cost tracking (if provided, costs are tracked)
 
         Returns:
             Dict containing:
@@ -115,6 +119,16 @@ class ClaudeService:
 
         # Make API call
         response = client.messages.create(**api_params)
+
+        # Track costs if project_id provided
+        if project_id:
+            cost_tracking_service.add_usage(
+                project_id=project_id,
+                model=response.model,
+                input_tokens=response.usage.input_tokens,
+                output_tokens=response.usage.output_tokens
+            )
+
         # Extract and return structured response
         return {
             "content": self._extract_content(response),

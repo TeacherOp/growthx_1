@@ -234,7 +234,8 @@ class ImageService:
                 max_tokens=max_tokens,
                 temperature=temperature,
                 tools=[tool_def],
-                tool_choice={"type": "tool", "name": "submit_image_extraction"}
+                tool_choice={"type": "tool", "name": "submit_image_extraction"},
+                project_id=project_id
             )
 
             extraction = self._parse_tool_response(response)
@@ -352,7 +353,8 @@ class ImageService:
                     max_tokens=max_tokens,
                     temperature=temperature,
                     tools=[tool_def],
-                    tool_choice={"type": "tool", "name": "submit_image_extraction"}
+                    tool_choice={"type": "tool", "name": "submit_image_extraction"},
+                    project_id=project_id
                 )
 
                 extraction = self._parse_tool_response(response)

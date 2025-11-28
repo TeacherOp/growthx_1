@@ -290,7 +290,8 @@ class PPTXService:
                         prompt_config=prompt_config,
                         tool_def=tool_def,
                         requests_per_minute=requests_per_minute,
-                        source_id=source_id
+                        source_id=source_id,
+                        project_id=project_id
                     )
                     if result.get("success"):
                         all_results.update(result["slide_results"])
@@ -310,7 +311,8 @@ class PPTXService:
                                 prompt_config=prompt_config,
                                 tool_def=tool_def,
                                 requests_per_minute=requests_per_minute,
-                                source_id=source_id
+                                source_id=source_id,
+                                project_id=project_id
                             ): batch[0][0]
                             for batch in batches
                         }
@@ -399,6 +401,7 @@ class PPTXService:
         tool_def: Dict[str, Any],
         requests_per_minute: int,
         source_id: str,
+        project_id: str,
         max_retries: int = 3
     ) -> Tuple[int, Dict[str, Any]]:
         """
@@ -479,7 +482,8 @@ class PPTXService:
                     max_tokens=max_tokens,
                     temperature=temperature,
                     tools=[tool_def],
-                    tool_choice={"type": "tool", "name": "submit_slide_extraction"}
+                    tool_choice={"type": "tool", "name": "submit_slide_extraction"},
+                    project_id=project_id
                 )
 
                 slide_results = self._parse_tool_calls(response, batch_slide_numbers)
