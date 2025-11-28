@@ -145,7 +145,8 @@ class ClaudeService:
         """
         text_parts = []
         for block in response.content:
-            if hasattr(block, 'text'):
+            # Check both that attribute exists AND is not None
+            if hasattr(block, 'text') and block.text is not None:
                 text_parts.append(block.text)
         return "".join(text_parts)
 

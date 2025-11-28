@@ -10,25 +10,30 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { UploadTab } from './UploadTab';
 import { LinkTab } from './LinkTab';
 import { PasteTab } from './PasteTab';
+import { GoogleDriveTab } from './GoogleDriveTab';
 import { MAX_SOURCES } from '../../lib/api/sources';
 
 interface AddSourcesSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  projectId: string;
   sourcesCount: number;
   onUpload: (files: FileList | File[]) => Promise<void>;
   onAddUrl: (url: string) => Promise<void>;
   onAddText: (content: string, name: string) => Promise<void>;
+  onImportComplete: () => void;
   uploading: boolean;
 }
 
 export const AddSourcesSheet: React.FC<AddSourcesSheetProps> = ({
   open,
   onOpenChange,
+  projectId,
   sourcesCount,
   onUpload,
   onAddUrl,
   onAddText,
+  onImportComplete,
   uploading,
 }) => {
   const isAtLimit = sourcesCount >= MAX_SOURCES;
@@ -47,10 +52,11 @@ export const AddSourcesSheet: React.FC<AddSourcesSheetProps> = ({
           </p>
 
           <Tabs defaultValue="upload" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="upload">Upload</TabsTrigger>
               <TabsTrigger value="link">Link</TabsTrigger>
               <TabsTrigger value="paste">Paste</TabsTrigger>
+              <TabsTrigger value="drive">Drive</TabsTrigger>
             </TabsList>
 
             <TabsContent value="upload" className="mt-6">
@@ -67,6 +73,17 @@ export const AddSourcesSheet: React.FC<AddSourcesSheetProps> = ({
 
             <TabsContent value="paste" className="mt-6">
               <PasteTab onAddText={onAddText} isAtLimit={isAtLimit} />
+            </TabsContent>
+
+            <TabsContent value="drive" className="mt-6">
+              <GoogleDriveTab
+                projectId={projectId}
+                onImportComplete={() => {
+                  onImportComplete();
+                  onOpenChange(false); // Close sheet after import
+                }}
+                isAtLimit={isAtLimit}
+              />
             </TabsContent>
           </Tabs>
         </div>

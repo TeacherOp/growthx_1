@@ -467,6 +467,85 @@ class SourceService:
 
         return source_metadata
 
+    def create_source_from_file(
+        self,
+        project_id: str,
+        file_path: Path,
+        name: str,
+        original_filename: str,
+        category: str,
+        mime_type: str,
+        description: str = ""
+    ) -> Dict[str, Any]:
+        """
+        Create a source entry from an already-saved file.
+
+        Educational Note: This is used when a file is downloaded/saved externally
+        (e.g., from Google Drive) and we need to create the source index entry.
+        The file should already exist at the given path.
+
+        Args:
+            project_id: The project UUID
+            file_path: Path where the file is already saved
+            name: Display name for the source
+            original_filename: Original filename (used for extension)
+            category: Source category (document, image, audio, etc.)
+            mime_type: MIME type of the file
+            description: Optional description
+
+        Returns:
+            Source metadata dictionary
+        """
+        if not file_path.exists():
+            raise ValueError(f"File does not exist: {file_path}")
+
+        # Get extension from stored filename
+        ext = file_path.suffix.lower()
+        source_id = file_path.stem  # UUID is the filename without extension
+
+        # Get file size
+        file_size = file_path.stat().st_size
+
+        # Create source metadata
+        timestamp = datetime.now().isoformat()
+        source_metadata = {
+            "id": source_id,
+            "project_id": project_id,
+            "name": name,
+            "original_filename": original_filename,
+            "description": description,
+            "category": category,
+            "mime_type": mime_type,
+            "file_extension": ext,
+            "file_size": file_size,
+            "stored_filename": file_path.name,
+            "status": "uploaded",
+            "active": False,
+            "processing_info": None,
+            "created_at": timestamp,
+            "updated_at": timestamp
+        }
+
+        # Update index
+        index = self._load_index(project_id)
+        index["sources"].append(source_metadata)
+        self._save_index(project_id, index)
+
+        print(f"Created source from file: {name} ({source_id})")
+
+        # Submit processing as a background task
+        from app.services.source_processing_service import source_processing_service
+
+        task_service.submit_task(
+            "source_processing",
+            source_id,
+            source_processing_service.process_source,
+            project_id,
+            source_id
+        )
+
+        return source_metadata
+
     def add_url_source(
         self,
         project_id: str,

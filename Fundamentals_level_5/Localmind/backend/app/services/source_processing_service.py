@@ -581,15 +581,11 @@ class SourceProcessingService:
             )
             return {"success": False, "error": "No URL found in link file"}
 
-        # Skip YouTube for now (will be handled separately)
+        # Handle YouTube videos separately
         if link_type == "youtube":
-            source_service.update_source(
-                project_id,
-                source_id,
-                status="error",
-                processing_info={"error": "YouTube processing not yet implemented"}
+            return self._process_youtube(
+                project_id, source_id, source, url, link_data, raw_file_path, source_service
             )
-            return {"success": False, "error": "YouTube processing not yet implemented"}
 
         print(f"Processing link source: {url}")
 
@@ -690,6 +686,142 @@ class SourceProcessingService:
             source_id,
             status="ready",
             active=True,  # Auto-activate when ready
+            processing_info=processing_info,
+            embedding_info=embedding_info
+        )
+        return {"success": True, "status": "ready"}
+
+    def _process_youtube(
+        self,
+        project_id: str,
+        source_id: str,
+        source: Dict[str, Any],
+        url: str,
+        link_data: Dict[str, Any],
+        raw_file_path: Path,
+        source_service
+    ) -> Dict[str, Any]:
+        """
+        Process a YouTube video - fetch transcript using youtube-transcript-api.
+
+        Educational Note: YouTube videos often have captions (manual or auto-generated)
+        that we can fetch directly without downloading the video. This is much faster
+        than audio transcription and uses existing caption data.
+
+        Transcript priority:
+        1. Manual captions (human-created, higher quality)
+        2. Auto-generated captions (YouTube's ASR)
+
+        The transcript is then split into pages using character-based splitting
+        with markers like: === YOUTUBE PAGE 1 of 5 ===
+        """
+        import json
+        from datetime import datetime
+        from app.services.youtube_service import youtube_service
+        from app.utils.text_utils import split_text_into_pages
+
+        # Fetch transcript
+        result = youtube_service.get_transcript(url, include_timestamps=True)
+
+        if not result.get("success"):
+            error_msg = result.get("error_message", "Failed to fetch YouTube transcript")
+            source_service.update_source(
+                project_id,
+                source_id,
+                status="error",
+                processing_info={
+                    "error": error_msg,
+                    "url": url,
+                    "video_id": result.get("video_id")
+                }
+            )
+            return {"success": False, "error": error_msg}
+
+        # Extract transcript data
+        transcript = result.get("transcript", "")
+        video_id = result.get("video_id", "")
+        language = result.get("language", "unknown")
+        is_auto_generated = result.get("is_auto_generated", False)
+        duration_seconds = result.get("duration_seconds", 0)
+        segment_count = result.get("segment_count", 0)
+
+        if not transcript:
+            source_service.update_source(
+                project_id,
+                source_id,
+                status="error",
+                processing_info={"error": "Empty transcript returned", "url": url}
+            )
+            return {"success": False, "error": "Empty transcript returned"}
+
+        # Format duration for display
+        duration_minutes = int(duration_seconds // 60)
+        duration_secs = int(duration_seconds % 60)
+        duration_str = f"{duration_minutes}:{duration_secs:02d}"
+
+        # Split transcript into pages
+        pages = split_text_into_pages(transcript)
+        total_pages = len(pages)
+
+        # Build processed content with YOUTUBE PAGE markers
+        processed_content = f"# YouTube Video Transcript\n"
+        processed_content += f"# URL: {url}\n"
+        processed_content += f"# Video ID: {video_id}\n"
+        processed_content += f"# Language: {language}\n"
+        processed_content += f"# Auto-generated: {is_auto_generated}\n"
+        processed_content += f"# Duration: {duration_str}\n"
+        processed_content += f"# Segments: {segment_count}\n"
+        processed_content += f"# Total pages: {total_pages}\n"
+        processed_content += f"# Processed at: {datetime.now().isoformat()}\n\n"
+
+        for i, page_text in enumerate(pages, start=1):
+            processed_content += f"=== YOUTUBE PAGE {i} of {total_pages} ===\n\n"
+            processed_content += page_text.strip()
+            processed_content += "\n\n"
+
+        # Save processed content
+        processed_dir = source_service._get_processed_dir(project_id)
+        processed_path = processed_dir / f"{source_id}.txt"
+        with open(processed_path, "w", encoding="utf-8") as f:
+            f.write(processed_content)
+
+        # Update link file with transcript info
+        link_data["fetched"] = True
+        link_data["fetched_at"] = datetime.now().isoformat()
+        link_data["video_id"] = video_id
+        link_data["language"] = language
+        link_data["is_auto_generated"] = is_auto_generated
+        link_data["duration_seconds"] = duration_seconds
+        with open(raw_file_path, 'w') as f:
+            json.dump(link_data, f, indent=2)
+
+        processing_info = {
+            "processor": "youtube_transcript",
+            "url": url,
+            "video_id": video_id,
+            "language": language,
+            "is_auto_generated": is_auto_generated,
+            "duration": duration_str,
+            "duration_seconds": duration_seconds,
+            "segment_count": segment_count,
+            "character_count": len(transcript),
+            "total_pages": total_pages
+        }
+
+        # Process embeddings if needed
+        source_name = source.get("name", f"YouTube: {video_id}")
+        embedding_info = self._process_embeddings_for_source(
+            project_id=project_id,
+            source_id=source_id,
+            source_name=source_name,
+            source_service=source_service
+        )
+
+        source_service.update_source(
+            project_id,
+            source_id,
+            status="ready",
+            active=True,
             processing_info=processing_info,
             embedding_info=embedding_info
         )

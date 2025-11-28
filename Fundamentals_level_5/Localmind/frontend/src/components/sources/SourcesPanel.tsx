@@ -340,10 +340,12 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId }) => {
       <AddSourcesSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+        projectId={projectId}
         sourcesCount={sourcesCount}
         onUpload={handleFileUpload}
         onAddUrl={handleAddUrl}
         onAddText={handleAddText}
+        onImportComplete={loadSources}
         uploading={uploading}
       />
 

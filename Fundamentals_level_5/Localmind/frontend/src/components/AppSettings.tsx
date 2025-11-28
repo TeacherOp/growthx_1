@@ -20,9 +20,12 @@ import {
   CheckCircle,
   XCircle,
   CircleNotch,
+  GoogleDriveLogo,
+  SignOut,
+  ArrowSquareOut,
 } from '@phosphor-icons/react';
-import { settingsAPI, processingSettingsAPI } from '@/lib/api/settings';
-import type { ApiKey, AvailableTier } from '@/lib/api/settings';
+import { settingsAPI, processingSettingsAPI, googleDriveAPI } from '@/lib/api/settings';
+import type { ApiKey, AvailableTier, GoogleStatus } from '@/lib/api/settings';
 import { useToast } from './ui/toast';
 import {
   Select,
@@ -73,16 +76,98 @@ export const AppSettings: React.FC<AppSettingsProps> = ({ open, onOpenChange }) 
   const [selectedTier, setSelectedTier] = useState<number>(1);
   const [tierSaving, setTierSaving] = useState(false);
 
+  // Google Drive State
+  const [googleStatus, setGoogleStatus] = useState<GoogleStatus>({
+    configured: false,
+    connected: false,
+    email: null,
+  });
+  const [googleLoading, setGoogleLoading] = useState(false);
+
   // Toast notifications
   const { success, error, info } = useToast();
 
-  // Load API keys and processing settings when dialog opens
+  // Load API keys, processing settings, and Google status when dialog opens
   useEffect(() => {
     if (open) {
       loadApiKeys();
       loadProcessingSettings();
+      loadGoogleStatus();
     }
   }, [open]);
+
+  /**
+   * Load Google Drive connection status
+   * Educational Note: Checks if OAuth is configured and if user is connected
+   */
+  const loadGoogleStatus = async () => {
+    try {
+      const status = await googleDriveAPI.getStatus();
+      setGoogleStatus(status);
+    } catch (err) {
+      console.error('Failed to load Google status:', err);
+    }
+  };
+
+  /**
+   * Handle Google Drive connection
+   * Educational Note: Opens Google OAuth in new window for user to grant access
+   */
+  const handleGoogleConnect = async () => {
+    setGoogleLoading(true);
+    try {
+      const authUrl = await googleDriveAPI.getAuthUrl();
+      if (authUrl) {
+        // Open Google OAuth in new window
+        window.open(authUrl, '_blank', 'width=500,height=600');
+        info('Complete authentication in the new window');
+        // Poll for status change
+        const pollInterval = setInterval(async () => {
+          const status = await googleDriveAPI.getStatus();
+          if (status.connected) {
+            clearInterval(pollInterval);
+            setGoogleStatus(status);
+            setGoogleLoading(false);
+            success(`Connected as ${status.email}`);
+          }
+        }, 2000);
+        // Stop polling after 2 minutes
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          setGoogleLoading(false);
+        }, 120000);
+      } else {
+        error('Failed to get Google auth URL. Check your credentials.');
+        setGoogleLoading(false);
+      }
+    } catch (err) {
+      console.error('Error connecting Google:', err);
+      error('Failed to connect Google Drive');
+      setGoogleLoading(false);
+    }
+  };
+
+  /**
+   * Handle Google Drive disconnection
+   * Educational Note: Removes stored OAuth tokens
+   */
+  const handleGoogleDisconnect = async () => {
+    setGoogleLoading(true);
+    try {
+      const disconnected = await googleDriveAPI.disconnect();
+      if (disconnected) {
+        setGoogleStatus({ configured: googleStatus.configured, connected: false, email: null });
+        success('Google Drive disconnected');
+      } else {
+        error('Failed to disconnect Google Drive');
+      }
+    } catch (err) {
+      console.error('Error disconnecting Google:', err);
+      error('Failed to disconnect Google Drive');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   /**
    * Load processing settings from backend
@@ -492,6 +577,86 @@ export const AppSettings: React.FC<AppSettingsProps> = ({ open, onOpenChange }) 
                         Rate: {availableTiers.find(t => t.tier === selectedTier)?.pages_per_minute || 10} pages/min
                       </p>
                     </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Google Drive Integration Section */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-3">Google Drive Integration</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/30">
+                      <GoogleDriveLogo size={32} weight="duotone" className="text-amber-600" />
+                      <div className="flex-1">
+                        {googleStatus.connected ? (
+                          <>
+                            <p className="text-sm font-medium">Connected</p>
+                            <p className="text-xs text-muted-foreground">{googleStatus.email}</p>
+                          </>
+                        ) : googleStatus.configured ? (
+                          <>
+                            <p className="text-sm font-medium">Not Connected</p>
+                            <p className="text-xs text-muted-foreground">Click connect to authorize Google Drive access</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium">Not Configured</p>
+                            <p className="text-xs text-muted-foreground">Add Google Client ID and Secret above first</p>
+                          </>
+                        )}
+                      </div>
+                      {googleStatus.connected ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleGoogleDisconnect}
+                          disabled={googleLoading}
+                        >
+                          {googleLoading ? (
+                            <CircleNotch size={16} className="animate-spin" />
+                          ) : (
+                            <>
+                              <SignOut size={16} className="mr-1" />
+                              Disconnect
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={handleGoogleConnect}
+                          disabled={googleLoading || !googleStatus.configured}
+                        >
+                          {googleLoading ? (
+                            <CircleNotch size={16} className="animate-spin" />
+                          ) : (
+                            <>
+                              <ArrowSquareOut size={16} className="mr-1" />
+                              Connect
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Import files directly from Google Drive. Supports Google Docs, Sheets, Slides, PDFs, images, and audio.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Setup: Create OAuth 2.0 credentials at{' '}
+                      <a
+                        href="https://console.cloud.google.com/apis/credentials"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-amber-600 hover:underline"
+                      >
+                        Google Cloud Console
+                      </a>
+                      {' '}and add{' '}
+                      <code className="text-xs bg-muted px-1 rounded">http://localhost:5000/api/v1/google/callback</code>
+                      {' '}as a redirect URI.
+                    </p>
                   </div>
                 </div>
               </div>

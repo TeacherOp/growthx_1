@@ -6,9 +6,8 @@
 
 import React, { useState, useRef } from 'react';
 import { Button } from '../ui/button';
-import { Separator } from '../ui/separator';
 import { Alert, AlertDescription } from '../ui/alert';
-import { UploadSimple, FolderOpen, CircleNotch, Warning } from '@phosphor-icons/react';
+import { UploadSimple, CircleNotch, Warning } from '@phosphor-icons/react';
 import { ALLOWED_EXTENSIONS, MAX_IMAGE_SIZE } from '../../lib/api/sources';
 
 interface UploadTabProps {
@@ -163,21 +162,6 @@ export const UploadTab: React.FC<UploadTabProps> = ({
           <AlertDescription>{validationError}</AlertDescription>
         </Alert>
       )}
-
-      <Separator className="my-6" />
-
-      {/* Google Drive Integration (Coming Soon) */}
-      <div className="space-y-3">
-        <Button
-          variant="outline"
-          className="w-full justify-start gap-3"
-          disabled
-          title="Coming soon"
-        >
-          <FolderOpen size={16} />
-          Google Drive (Coming soon)
-        </Button>
-      </div>
     </>
   );
 };

@@ -166,9 +166,11 @@ class WebAgentService:
 
         # Build extra_headers for beta features (e.g., web_fetch)
         extra_headers = None
-        if tools_config.get("beta_headers"):
-            # Join multiple beta headers with comma if needed
-            extra_headers = {"anthropic-beta": ",".join(tools_config["beta_headers"])}
+        beta_headers = tools_config.get("beta_headers", [])
+        # Filter out None values before joining
+        valid_beta_headers = [h for h in beta_headers if h is not None]
+        if valid_beta_headers:
+            extra_headers = {"anthropic-beta": ",".join(valid_beta_headers)}
 
         # Initialize conversation
         messages = [{"role": "user", "content": task}]
@@ -317,8 +319,10 @@ class WebAgentService:
             block_type = getattr(block, "type", None)
 
             if block_type == "text":
-                assistant_content.append({"type": "text", "text": block.text})
-                print(f"    Agent: {block.text[:100]}...")
+                text_content = getattr(block, "text", "")
+                assistant_content.append({"type": "text", "text": text_content})
+                if text_content:
+                    print(f"    Agent: {text_content[:100]}...")
 
             elif block_type == "tool_use":
                 # Client tool - we need to execute
@@ -365,9 +369,21 @@ class WebAgentService:
                 })
                 print(f"    Server tool: {block.name}")
 
-            elif block_type in ["web_search_tool_result", "web_fetch_tool_result"]:
-                # Server tool results - automatically included
-                print(f"    Server tool result received")
+            elif block_type == "web_search_tool_result":
+                # Server tool results - include in assistant content
+                assistant_content.append({
+                    "type": "web_search_tool_result",
+                    "tool_use_id": getattr(block, "tool_use_id", None),
+                    "content": getattr(block, "content", None)
+                })
+
+            elif block_type == "web_fetch_tool_result":
+                # Server tool results - include in assistant content
+                assistant_content.append({
+                    "type": "web_fetch_tool_result",
+                    "tool_use_id": getattr(block, "tool_use_id", None),
+                    "content": getattr(block, "content", None)
+                })
 
         # Check if we have a final result
         if final_result is not None:

@@ -72,8 +72,10 @@ class ChunkingService:
     AUDIO_PAGE_PATTERN = r'=== AUDIO PAGE (\d+) of (\d+) ==='
     # LINK: === LINK PAGE 1 of 5 ===
     LINK_PAGE_PATTERN = r'=== LINK PAGE (\d+) of (\d+) ==='
+    # YOUTUBE: === YOUTUBE PAGE 1 of 5 ===
+    YOUTUBE_PAGE_PATTERN = r'=== YOUTUBE PAGE (\d+) of (\d+) ==='
     # Combined pattern for finding any page marker
-    ANY_PAGE_PATTERN = r'=== (?:PDF|TEXT|DOCX|PPTX|AUDIO|LINK) PAGE (\d+) of (\d+).*?==='
+    ANY_PAGE_PATTERN = r'=== (?:PDF|TEXT|DOCX|PPTX|AUDIO|LINK|YOUTUBE) PAGE (\d+) of (\d+).*?==='
 
     def __init__(self):
         """Initialize the chunking service."""

@@ -151,3 +151,145 @@ class ProcessingSettingsAPI {
 }
 
 export const processingSettingsAPI = new ProcessingSettingsAPI();
+
+// ============================================================================
+// Google Drive Types and API
+// ============================================================================
+
+export interface GoogleStatus {
+  configured: boolean;
+  connected: boolean;
+  email: string | null;
+}
+
+export interface GoogleFile {
+  id: string;
+  name: string;
+  mime_type: string;
+  size: number | null;
+  modified_time: string;
+  is_folder: boolean;
+  is_google_file: boolean;
+  export_extension: string | null;
+  google_type: string | null;
+  icon_link: string | null;
+  thumbnail_link: string | null;
+}
+
+export interface GoogleFilesResponse {
+  success: boolean;
+  files: GoogleFile[];
+  next_page_token: string | null;
+  folder_id: string | null;
+  error?: string;
+}
+
+class GoogleDriveAPI {
+  /**
+   * Get Google Drive connection status
+   * Educational Note: Checks if OAuth is configured and if user is connected
+   */
+  async getStatus(): Promise<GoogleStatus> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/google/status`);
+      return {
+        configured: response.data.configured,
+        connected: response.data.connected,
+        email: response.data.email,
+      };
+    } catch (error) {
+      console.error('Error fetching Google status:', error);
+      return {
+        configured: false,
+        connected: false,
+        email: null,
+      };
+    }
+  }
+
+  /**
+   * Start Google OAuth flow
+   * Educational Note: Returns the auth URL to redirect user to
+   */
+  async getAuthUrl(): Promise<string | null> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/google/auth`);
+      return response.data.auth_url;
+    } catch (error) {
+      console.error('Error getting Google auth URL:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Disconnect Google Drive
+   * Educational Note: Removes stored tokens
+   */
+  async disconnect(): Promise<boolean> {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/google/disconnect`);
+      return response.data.success;
+    } catch (error) {
+      console.error('Error disconnecting Google:', error);
+      return false;
+    }
+  }
+
+  /**
+   * List files from Google Drive
+   * Educational Note: Supports folder navigation and pagination
+   */
+  async listFiles(
+    folderId?: string,
+    pageSize: number = 50,
+    pageToken?: string
+  ): Promise<GoogleFilesResponse> {
+    try {
+      const params = new URLSearchParams();
+      if (folderId) params.append('folder_id', folderId);
+      if (pageSize) params.append('page_size', pageSize.toString());
+      if (pageToken) params.append('page_token', pageToken);
+
+      const response = await axios.get(`${API_BASE_URL}/google/files?${params}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error listing Google files:', error);
+      return {
+        success: false,
+        files: [],
+        next_page_token: null,
+        folder_id: null,
+        error: 'Failed to list files',
+      };
+    }
+  }
+
+  /**
+   * Import a file from Google Drive to project sources
+   * Educational Note: Downloads/exports file and creates source entry
+   */
+  async importFile(
+    projectId: string,
+    fileId: string,
+    name?: string
+  ): Promise<{ success: boolean; source?: unknown; error?: string }> {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/projects/${projectId}/sources/google-import`,
+        { file_id: fileId, name }
+      );
+      return {
+        success: true,
+        source: response.data.source,
+      };
+    } catch (error) {
+      console.error('Error importing from Google Drive:', error);
+      return {
+        success: false,
+        error: 'Failed to import file',
+      };
+    }
+  }
+}
+
+export const googleDriveAPI = new GoogleDriveAPI();

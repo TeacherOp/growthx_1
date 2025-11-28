@@ -35,6 +35,8 @@ def get_api_keys():
             {'id': 'PINECONE_INDEX_NAME', 'name': 'Pinecone Index Name', 'description': 'Auto-managed (set to "growthxlearn" after API key validation)', 'category': 'storage'},
             {'id': 'PINECONE_REGION', 'name': 'Pinecone Region', 'description': 'Auto-managed (set to "us-east-1" after API key validation)', 'category': 'storage'},
             {'id': 'TAVILY_API_KEY', 'name': 'Tavily AI', 'description': 'Web search AI', 'category': 'utility'},
+            {'id': 'GOOGLE_CLIENT_ID', 'name': 'Google Client ID', 'description': 'Google OAuth client ID for Drive integration', 'category': 'utility'},
+            {'id': 'GOOGLE_CLIENT_SECRET', 'name': 'Google Client Secret', 'description': 'Google OAuth client secret for Drive integration', 'category': 'utility'},
         ]
 
         # Get current values from .env
