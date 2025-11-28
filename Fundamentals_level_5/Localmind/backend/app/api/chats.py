@@ -4,22 +4,16 @@ API endpoints for chat management and conversations.
 Educational Note: These endpoints handle chat operations including
 creating chats, sending messages, and managing conversations within projects.
 
-Service Dependencies:
+Routes are thin - all logic is delegated to services:
 - chat_service: Chat CRUD operations
-- claude_service: Claude API calls
-- message_service: Message persistence
+- main_chat_service: Message processing and AI responses
 - prompt_service: Prompt management
 """
 from flask import jsonify, request, current_app
 from app.api import api_bp
 from app.services.chat_service import chat_service
-from app.services.claude_service import claude_service
-from app.services.message_service import message_service
+from app.services.main_chat_service import main_chat_service
 from app.services.prompt_service import prompt_service
-from app.services.project_service import ProjectService
-
-# Initialize project service (still uses class pattern)
-project_service = ProjectService()
 
 
 # =============================================================================
@@ -183,16 +177,13 @@ def send_message(project_id, chat_id):
     """
     Send a message in a chat and get AI response.
 
-    Educational Note: This endpoint orchestrates multiple services:
-    1. message_service: Store user message
-    2. prompt_service: Get system prompt
-    3. message_service: Build context for API
-    4. claude_service: Get AI response
-    5. message_service: Store AI response
-    6. chat_service: Sync index
-
-    This separation allows claude_service to be reused by subagents
-    and other tools without chat-specific logic.
+    Educational Note: This endpoint is kept thin - all logic is delegated
+    to main_chat_service. The service handles:
+    1. Storing user message
+    2. Building context with system prompt
+    3. Calling Claude API
+    4. Storing assistant response
+    5. Syncing chat index
     """
     try:
         data = request.get_json()
@@ -205,55 +196,12 @@ def send_message(project_id, chat_id):
 
         user_message_text = data['message']
 
-        # Verify chat exists
-        chat = chat_service.get_chat(project_id, chat_id)
-        if not chat:
-            return jsonify({
-                'success': False,
-                'error': 'Chat not found'
-            }), 404
-
-        # Step 1: Store user message
-        user_msg = message_service.add_user_message(
-            project_id, chat_id, user_message_text
+        # Delegate all processing to main_chat_service
+        user_msg, assistant_msg = main_chat_service.send_message(
+            project_id=project_id,
+            chat_id=chat_id,
+            user_message_text=user_message_text
         )
-
-        # Step 2: Get system prompt for this project
-        system_prompt = prompt_service.get_project_prompt(project_id)
-
-        # Step 3: Build message context for API
-        api_messages = message_service.build_api_messages(project_id, chat_id)
-
-        # Step 4: Call Claude API
-        try:
-            response = claude_service.send_message(
-                messages=api_messages,
-                system_prompt=system_prompt,
-                model="claude-sonnet-4-5-20250929",
-                max_tokens=4096
-            )
-
-            # Step 5: Store assistant response
-            assistant_msg = message_service.add_assistant_message(
-                project_id=project_id,
-                chat_id=chat_id,
-                content=response["content"],
-                model=response["model"],
-                tokens=response["usage"]
-            )
-
-        except Exception as api_error:
-            current_app.logger.error(f"Claude API error: {api_error}")
-            # Store error message
-            assistant_msg = message_service.add_assistant_message(
-                project_id=project_id,
-                chat_id=chat_id,
-                content=f"Sorry, I encountered an error: {str(api_error)}",
-                error=True
-            )
-
-        # Step 6: Sync chat index (updates message count, updated_at)
-        chat_service.sync_chat_to_index(project_id, chat_id)
 
         return jsonify({
             'success': True,

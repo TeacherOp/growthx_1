@@ -44,18 +44,24 @@ export const ChatList: React.FC<ChatListProps> = ({
   onNewChat,
 }) => {
   return (
-    <div className="flex flex-col h-full bg-background">
-      <div className="border-b px-6 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkle size={20} className="text-primary" />
-            <h2 className="font-semibold">All Chats</h2>
-          </div>
-          <Button size="sm" onClick={onNewChat} className="gap-2">
-            <Plus size={16} />
-            New Chat
-          </Button>
+    <div className="flex flex-col h-full bg-card">
+      {/* Header - matches Sources/Studio/ChatEmptyState structure */}
+      <div className="border-b px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Sparkle size={20} className="text-primary" />
+          <h2 className="font-semibold">All Chats</h2>
         </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Select a chat to continue or start a new one
+        </p>
+      </div>
+
+      {/* New Chat Button - in controls section */}
+      <div className="px-4 pt-4">
+        <Button onClick={onNewChat} variant="outline" className="w-full gap-2">
+          <Plus size={16} />
+          New Chat
+        </Button>
       </div>
 
       <ScrollArea className="flex-1">

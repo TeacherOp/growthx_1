@@ -1,7 +1,7 @@
 /**
  * SourcesHeader Component
- * Educational Note: Header section with title, search input, and add sources button.
- * Receives state and callbacks from parent SourcesPanel.
+ * Educational Note: Header section matching Chat/Studio header style.
+ * Title + description in header, controls (search, add) in separate section below.
  */
 
 import React from 'react';
@@ -23,34 +23,43 @@ export const SourcesHeader: React.FC<SourcesHeaderProps> = ({
   isAtLimit,
 }) => {
   return (
-    <div className="p-4 pr-12 border-b">
-      <div className="flex items-center gap-2 mb-3">
-        <Books size={20} className="text-primary" />
-        <h2 className="text-sm font-semibold">Sources</h2>
+    <div>
+      {/* Header Section - matches Chat/Studio header style */}
+      <div className="px-4 py-3 pr-12 border-b">
+        <div className="flex items-center gap-2">
+          <Books size={20} className="text-primary" />
+          <h2 className="font-semibold">Sources</h2>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          All sources for your project
+        </p>
       </div>
 
-      {/* Search */}
-      <div className="relative mb-3">
-        <MagnifyingGlass size={16} className="absolute left-2 top-2.5 text-muted-foreground" />
-        <Input
-          placeholder="Search sources..."
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-8 h-9"
-        />
-      </div>
+      {/* Controls Section */}
+      <div className="p-4 space-y-3">
+        {/* Search */}
+        <div className="relative">
+          <MagnifyingGlass size={16} className="absolute left-2 top-2.5 text-muted-foreground" />
+          <Input
+            placeholder="Search sources..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-8 h-9"
+          />
+        </div>
 
-      {/* Add Source Button */}
-      <Button
-        onClick={onAddClick}
-        className="w-full gap-2"
-        variant="outline"
-        size="sm"
-        disabled={isAtLimit}
-      >
-        <Plus size={16} />
-        Add sources
-      </Button>
+        {/* Add Source Button */}
+        <Button
+          onClick={onAddClick}
+          className="w-full gap-2"
+          variant="outline"
+          size="sm"
+          disabled={isAtLimit}
+        >
+          <Plus size={16} />
+          Add sources
+        </Button>
+      </div>
     </div>
   );
 };

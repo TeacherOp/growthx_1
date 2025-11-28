@@ -19,11 +19,11 @@
 
 @layer base {
   :root {
-    /* Background colors */
-    --background: 60 9% 98%;           /* stone-50: warm off-white */
+    /* Background colors - slightly tinted for contrast with white panels */
+    --background: 40 15% 95%;          /* warm cream/beige - more visible than stone-50 */
     --foreground: 12 10% 15%;          /* stone-800: warm dark text */
 
-    /* Card/Panel surfaces */
+    /* Card/Panel surfaces - pure white for maximum contrast */
     --card: 0 0% 100%;                 /* pure white for cards */
     --card-foreground: 12 10% 15%;     /* stone-800 */
 

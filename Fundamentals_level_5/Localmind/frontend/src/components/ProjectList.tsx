@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, FolderOpen, Trash, Clock } from '@phosphor-icons/react';
+import { Plus, Trash, Clock } from '@phosphor-icons/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from './ui/empty';
 import { projectsAPI } from '@/lib/api';
 
 /**
@@ -114,76 +113,54 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Section Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Projects</h2>
-          <p className="text-muted-foreground">
-            Your knowledge workspaces • {projects.length} total
-          </p>
-        </div>
-        <Button onClick={onCreateNew} size="lg">
-          <Plus size={20} className="mr-2" />
-          Create New Project
-        </Button>
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Create New Project Card - Always first */}
+      <Card
+        className="cursor-pointer hover:shadow-lg transition-shadow border-dashed border-2 border-stone-300 bg-transparent hover:bg-card/50"
+        onClick={onCreateNew}
+      >
+        <CardContent className="flex flex-col items-center justify-center h-full min-h-[140px] py-8">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+            <Plus size={24} className="text-primary" />
+          </div>
+          <p className="font-medium text-sm">Create New Project</p>
+          <p className="text-xs text-muted-foreground mt-1">Start a new knowledge workspace</p>
+        </CardContent>
+      </Card>
 
-      {/* Projects Grid */}
-      {projects.length === 0 ? (
-        <Empty className="border">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <FolderOpen size={24} />
-            </EmptyMedia>
-            <EmptyTitle>No projects yet</EmptyTitle>
-            <EmptyDescription>
-              Create your first project to get started
-            </EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
-            <Button onClick={onCreateNew}>
-              <Plus size={16} className="mr-2" />
-              Create First Project
-            </Button>
-          </EmptyContent>
-        </Empty>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projects.map((project) => (
-            <Card
-              key={project.id}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => handleOpenProject(project)}
-            >
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{project.name}</CardTitle>
-                    <CardDescription className="mt-1">
-                      {project.description || 'No description'}
-                    </CardDescription>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => handleDeleteProject(e, project.id)}
-                    className="ml-2"
-                  >
-                    <Trash size={16} />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Clock size={12} className="mr-1" />
-                  Last opened: {formatDate(project.last_accessed)}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      {/* Existing Projects */}
+      {projects.map((project) => (
+        <Card
+          key={project.id}
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => handleOpenProject(project)}
+        >
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <CardTitle className="text-lg">{project.name}</CardTitle>
+                <CardDescription className="mt-1">
+                  {project.description || 'No description'}
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => handleDeleteProject(e, project.id)}
+                className="ml-2"
+              >
+                <Trash size={16} />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Clock size={12} className="mr-1" />
+              Last opened: {formatDate(project.last_accessed)}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 };

@@ -6,7 +6,6 @@
  */
 
 import React, { useRef, useEffect } from 'react';
-import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { PaperPlaneTilt, Microphone, CircleNotch } from '@phosphor-icons/react';
 
@@ -58,15 +57,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="border-t p-4">
-      <div className="flex gap-2 items-end">
-        {/* Microphone Button - Click to toggle recording */}
-        <Button
-          variant={isRecording ? 'default' : 'outline'}
-          size="icon"
-          className={`h-10 w-10 flex-shrink-0 ${
-            isRecording ? 'bg-red-500 hover:bg-red-600 animate-pulse' : ''
-          } ${!transcriptionConfigured ? 'opacity-50' : ''}`}
+    <div className="p-4 pt-2">
+      {/* Floating pill container - mic, textarea, send all inside */}
+      <div className="flex items-center gap-2 border rounded-2xl px-3 py-2 bg-background">
+        {/* Microphone Button - seamlessly integrated */}
+        <button
+          type="button"
           onClick={onMicClick}
           disabled={sending || !transcriptionConfigured}
           title={
@@ -76,43 +72,48 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               ? 'Click to stop recording'
               : 'Click to start recording'
           }
+          className={`flex-shrink-0 p-1.5 rounded-full transition-colors ${
+            isRecording
+              ? 'bg-red-500 text-white animate-pulse'
+              : 'text-muted-foreground hover:text-foreground'
+          } ${!transcriptionConfigured ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         >
-          <Microphone size={16} className={isRecording ? 'text-white' : ''} />
-        </Button>
+          <Microphone size={18} />
+        </button>
 
-        <div className="flex-1 relative">
-          <Textarea
-            ref={textareaRef}
-            placeholder={
-              isRecording
-                ? 'Listening...'
-                : !transcriptionConfigured
-                ? 'Type your message... (voice disabled - set API key)'
-                : 'Ask about your sources... (Shift+Enter for new line)'
-            }
-            value={displayMessage}
-            onChange={(e) => onMessageChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className={`pr-10 min-h-[40px] max-h-[100px] resize-none ${
-              partialTranscript ? 'text-muted-foreground' : ''
-            }`}
-            disabled={sending || isRecording}
-            rows={1}
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onSend}
-            className="absolute right-1 bottom-1 h-7 w-7"
-            disabled={!message.trim() || sending || isRecording}
-          >
-            {sending ? (
-              <CircleNotch size={14} className="animate-spin" />
-            ) : (
-              <PaperPlaneTilt size={14} />
-            )}
-          </Button>
-        </div>
+        {/* Textarea - no border, blends with container */}
+        <Textarea
+          ref={textareaRef}
+          placeholder={
+            isRecording
+              ? 'Listening...'
+              : !transcriptionConfigured
+              ? 'Type your message... (voice disabled - set API key)'
+              : 'Ask about your sources... (Shift+Enter for new line)'
+          }
+          value={displayMessage}
+          onChange={(e) => onMessageChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className={`flex-1 py-1.5 min-h-[32px] max-h-[100px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent ${
+            partialTranscript ? 'text-muted-foreground' : ''
+          }`}
+          disabled={sending || isRecording}
+          rows={1}
+        />
+
+        {/* Send Button - seamlessly integrated */}
+        <button
+          type="button"
+          onClick={onSend}
+          disabled={!message.trim() || sending || isRecording}
+          className="flex-shrink-0 p-1.5 rounded-full text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {sending ? (
+            <CircleNotch size={18} className="animate-spin" />
+          ) : (
+            <PaperPlaneTilt size={18} />
+          )}
+        </button>
       </div>
 
       <p className="text-xs text-muted-foreground mt-2 text-center">

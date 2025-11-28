@@ -2,11 +2,12 @@
  * GoogleDriveTab Component
  * Educational Note: Tab content for importing files from Google Drive.
  * Shows file browser when connected, or setup instructions when not.
- * Click on files to import (with confirmation dialog), click folders to navigate.
+ * Features: folder navigation, pagination (Load More), client-side search.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { ScrollArea } from '../ui/scroll-area';
 import {
   AlertDialog,
@@ -20,20 +21,14 @@ import {
 } from '../ui/alert-dialog';
 import {
   GoogleDriveLogo,
-  Folder,
-  File,
-  FileDoc,
-  FileXls,
-  FilePpt,
-  FilePdf,
-  FileImage,
-  FileAudio,
   ArrowLeft,
   CircleNotch,
   Gear,
+  MagnifyingGlass,
 } from '@phosphor-icons/react';
 import { googleDriveAPI, type GoogleFile, type GoogleStatus } from '@/lib/api/settings';
 import { useToast } from '../ui/toast';
+import { DriveItem } from './drive';
 
 interface GoogleDriveTabProps {
   projectId: string;
@@ -46,19 +41,29 @@ export const GoogleDriveTab: React.FC<GoogleDriveTabProps> = ({
   onImportComplete,
   isAtLimit,
 }) => {
+  // Connection status
   const [status, setStatus] = useState<GoogleStatus>({
     configured: false,
     connected: false,
     email: null,
   });
+
+  // Files state
   const [files, setFiles] = useState<GoogleFile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [importing, setImporting] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+
+  // Search state (client-side filtering)
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Navigation state
   const [folderStack, setFolderStack] = useState<{ id: string | null; name: string }[]>([
     { id: null, name: 'My Drive' },
   ]);
 
-  // Confirmation dialog state
+  // Import state
+  const [importing, setImporting] = useState<string | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<GoogleFile | null>(null);
 
@@ -72,7 +77,8 @@ export const GoogleDriveTab: React.FC<GoogleDriveTabProps> = ({
   // Load files when connected or folder changes
   useEffect(() => {
     if (status.connected) {
-      loadFiles();
+      loadFiles(true);
+      setSearchQuery(''); // Reset search when changing folders
     }
   }, [status.connected, folderStack]);
 
@@ -88,13 +94,34 @@ export const GoogleDriveTab: React.FC<GoogleDriveTabProps> = ({
     }
   };
 
-  const loadFiles = async () => {
-    setLoading(true);
+  /**
+   * Load files from Google Drive
+   * Educational Note: freshLoad=true resets the list, false appends (pagination)
+   */
+  const loadFiles = useCallback(async (freshLoad: boolean = true) => {
+    if (freshLoad) {
+      setLoading(true);
+      setFiles([]);
+      setNextPageToken(null);
+    } else {
+      setLoadingMore(true);
+    }
+
     try {
       const currentFolder = folderStack[folderStack.length - 1];
-      const result = await googleDriveAPI.listFiles(currentFolder.id || undefined);
+      const result = await googleDriveAPI.listFiles(
+        currentFolder.id || undefined,
+        50,
+        freshLoad ? undefined : nextPageToken || undefined
+      );
+
       if (result.success) {
-        setFiles(result.files);
+        if (freshLoad) {
+          setFiles(result.files);
+        } else {
+          setFiles(prev => [...prev, ...result.files]);
+        }
+        setNextPageToken(result.next_page_token);
       } else {
         error(result.error || 'Failed to load files');
       }
@@ -103,11 +130,22 @@ export const GoogleDriveTab: React.FC<GoogleDriveTabProps> = ({
       error('Failed to load Google Drive files');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  };
+  }, [folderStack, nextPageToken, error]);
 
-  const handleFolderClick = (file: GoogleFile) => {
-    setFolderStack([...folderStack, { id: file.id, name: file.name }]);
+  /**
+   * Client-side search filtering
+   * Educational Note: Simple case-insensitive name matching
+   */
+  const filteredFiles = useMemo(() => {
+    if (!searchQuery.trim()) return files;
+    const query = searchQuery.toLowerCase();
+    return files.filter(file => file.name.toLowerCase().includes(query));
+  }, [files, searchQuery]);
+
+  const handleFolderClick = (folder: GoogleFile) => {
+    setFolderStack([...folderStack, { id: folder.id, name: folder.name }]);
   };
 
   const handleBack = () => {
@@ -116,9 +154,6 @@ export const GoogleDriveTab: React.FC<GoogleDriveTabProps> = ({
     }
   };
 
-  /**
-   * Handle file click - open confirmation dialog
-   */
   const handleFileClick = (file: GoogleFile) => {
     if (file.is_folder) {
       handleFolderClick(file);
@@ -132,9 +167,6 @@ export const GoogleDriveTab: React.FC<GoogleDriveTabProps> = ({
     }
   };
 
-  /**
-   * Confirm import and execute
-   */
   const handleConfirmImport = async () => {
     if (!selectedFile) return;
 
@@ -158,28 +190,8 @@ export const GoogleDriveTab: React.FC<GoogleDriveTabProps> = ({
     }
   };
 
-  const getFileIcon = (file: GoogleFile) => {
-    if (file.is_folder) return <Folder size={20} weight="fill" className="text-amber-500" />;
-    if (file.mime_type.includes('document') || file.google_type === 'Google Doc')
-      return <FileDoc size={20} weight="fill" className="text-blue-500" />;
-    if (file.mime_type.includes('spreadsheet') || file.google_type === 'Google Sheet')
-      return <FileXls size={20} weight="fill" className="text-green-500" />;
-    if (file.mime_type.includes('presentation') || file.google_type === 'Google Slides')
-      return <FilePpt size={20} weight="fill" className="text-orange-500" />;
-    if (file.mime_type.includes('pdf'))
-      return <FilePdf size={20} weight="fill" className="text-red-500" />;
-    if (file.mime_type.startsWith('image/'))
-      return <FileImage size={20} weight="fill" className="text-purple-500" />;
-    if (file.mime_type.startsWith('audio/'))
-      return <FileAudio size={20} weight="fill" className="text-pink-500" />;
-    return <File size={20} weight="fill" className="text-stone-400" />;
-  };
-
-  const formatFileSize = (bytes: number | null) => {
-    if (!bytes) return '';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  const handleLoadMore = () => {
+    loadFiles(false);
   };
 
   // Not configured state
@@ -218,8 +230,8 @@ export const GoogleDriveTab: React.FC<GoogleDriveTabProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header with breadcrumb */}
+    <div className="space-y-3">
+      {/* Header: Back button + Breadcrumb */}
       <div className="flex items-center gap-2">
         {folderStack.length > 1 && (
           <Button variant="ghost" size="sm" onClick={handleBack}>
@@ -238,56 +250,68 @@ export const GoogleDriveTab: React.FC<GoogleDriveTabProps> = ({
         </div>
       </div>
 
-      {/* File list */}
-      <ScrollArea className="h-[350px] border rounded-lg">
+      {/* Search input */}
+      <div className="relative">
+        <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search files..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9 h-9"
+        />
+      </div>
+
+      {/* File browser */}
+      <ScrollArea className="h-[300px] border rounded-lg">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <CircleNotch size={24} className="animate-spin text-muted-foreground" />
           </div>
-        ) : files.length === 0 ? (
+        ) : filteredFiles.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Folder size={32} className="mb-2" />
-            <p className="text-sm">No files found</p>
+            <p className="text-sm">
+              {searchQuery ? 'No files match your search' : 'No files found'}
+            </p>
           </div>
         ) : (
           <div className="divide-y">
-            {files.map((file) => (
-              <div
+            {filteredFiles.map((file) => (
+              <DriveItem
                 key={file.id}
-                className={`grid grid-cols-[auto_1fr] items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer transition-colors ${
-                  importing === file.id ? 'opacity-50 pointer-events-none' : ''
-                }`}
-                onClick={() => handleFileClick(file)}
-              >
-                {/* File icon */}
-                <div className="flex-shrink-0">
-                  {importing === file.id ? (
-                    <CircleNotch size={20} className="animate-spin text-amber-600" />
-                  ) : (
-                    getFileIcon(file)
-                  )}
-                </div>
-                {/* File info - truncates properly */}
-                <div className="overflow-hidden">
-                  <p className="text-sm font-medium truncate">
-                    {file.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {file.is_google_file && file.google_type && (
-                      <span className="mr-2">{file.google_type}</span>
-                    )}
-                    {file.size && formatFileSize(file.size)}
-                  </p>
-                </div>
-              </div>
+                file={file}
+                isImporting={importing === file.id}
+                onClick={handleFileClick}
+              />
             ))}
+
+            {/* Load More button - only show if not searching and has more */}
+            {!searchQuery && nextPageToken && (
+              <div className="p-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? (
+                    <>
+                      <CircleNotch size={16} className="mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    'Load More'
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </ScrollArea>
 
       {/* Footer info */}
       <p className="text-xs text-muted-foreground">
-        Connected as {status.email}. Click on folders to navigate, click files to import.
+        Connected as {status.email}
       </p>
 
       {/* Import Confirmation Dialog */}

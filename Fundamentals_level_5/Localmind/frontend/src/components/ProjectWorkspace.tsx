@@ -1,21 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from './ui/button';
 import { SourcesPanel } from './sources';
-import { ChatPanel } from './ChatPanel';
-import { StudioPanel } from './StudioPanel';
+import { ChatPanel } from './chat';
+import { StudioPanel } from './studio';
 import { ProjectHeader } from './ProjectHeader';
-import { CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, Warning } from '@phosphor-icons/react';
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
+  type ImperativePanelHandle,
 } from './ui/resizable';
 
 /**
  * ProjectWorkspace Component
  * Educational Note: This is the main workspace view for a project, inspired by NotebookLM.
- * It uses a three-panel layout: Sources (left), Chat (center), and Studio (right).
- * Panels can be collapsed/expanded for better focus.
+ *
+ * Layout Structure:
+ * - Background layer: Contains header and footer disclaimer
+ * - Floating panels: Sources, Chat, Studio sit on top with padding and rounded corners
+ * - Minimal resize handles that appear on hover
  */
 
 interface ProjectWorkspaceProps {
@@ -33,106 +37,109 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
   onBack,
   onDeleteProject
 }) => {
-  // State for panel visibility
+  // Refs for programmatic panel control
+  const leftPanelRef = useRef<ImperativePanelHandle>(null);
+  const rightPanelRef = useRef<ImperativePanelHandle>(null);
+
+  // State for panel visibility (synced with panel collapse state)
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      {/* Project Header */}
+      {/* Project Header - sits on background layer */}
       <ProjectHeader
         project={project}
         onBack={onBack}
         onDelete={() => onDeleteProject(project.id)}
       />
 
-      {/* Main Content Area - Resizable Panels */}
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
-        {/* Left Panel - Sources (Resizable) */}
-        <ResizablePanel
-          defaultSize={20}
-          minSize={15}
-          maxSize={40}
-          collapsible
-          collapsedSize={3}
-          onCollapse={() => setLeftPanelOpen(false)}
-          onExpand={() => setLeftPanelOpen(true)}
-          className="bg-muted/30"
-        >
-          {leftPanelOpen ? (
-            <div className="h-full flex flex-col relative">
-              <SourcesPanel projectId={project.id} />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setLeftPanelOpen(false)}
-                className="absolute top-2 right-2 z-10 h-8 w-8"
-              >
-                <CaretLeft size={16} />
-              </Button>
-            </div>
-          ) : (
-            <div className="h-full flex items-center justify-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setLeftPanelOpen(true)}
-                className="h-8 w-8"
-              >
-                <CaretRight size={16} />
-              </Button>
-            </div>
-          )}
-        </ResizablePanel>
+      {/* Main Content Area - Floating panels over background */}
+      <div className="flex-1 flex flex-col px-3 pb-2 min-h-0">
+        {/* Panel Container - bg-background so resize handles blend in as "gaps" */}
+        <div className="flex-1 rounded-xl overflow-hidden bg-background min-h-0">
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            {/* Left Panel - Sources (Resizable) */}
+            <ResizablePanel
+              ref={leftPanelRef}
+              defaultSize={20}
+              minSize={15}
+              maxSize={40}
+              collapsible
+              collapsedSize={4}
+              onCollapse={() => setLeftPanelOpen(false)}
+              onExpand={() => setLeftPanelOpen(true)}
+              className="bg-card"
+            >
+              <div className="h-full flex flex-col relative">
+                <SourcesPanel
+                  projectId={project.id}
+                  isCollapsed={!leftPanelOpen}
+                  onExpand={() => leftPanelRef.current?.expand()}
+                />
+                {leftPanelOpen && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => leftPanelRef.current?.collapse()}
+                    className="absolute top-2 right-2 z-10 h-8 w-8 hover:bg-muted"
+                  >
+                    <CaretLeft size={16} />
+                  </Button>
+                )}
+              </div>
+            </ResizablePanel>
 
-        <ResizableHandle withHandle />
+            <ResizableHandle />
 
-        {/* Center Panel - Chat */}
-        <ResizablePanel defaultSize={60} minSize={30}>
-          <div className="h-full flex flex-col">
-            <ChatPanel projectId={project.id} projectName={project.name} />
-          </div>
-        </ResizablePanel>
+            {/* Center Panel - Chat */}
+            <ResizablePanel defaultSize={60} minSize={30} className="bg-card">
+              <div className="h-full flex flex-col">
+                <ChatPanel projectId={project.id} projectName={project.name} />
+              </div>
+            </ResizablePanel>
 
-        <ResizableHandle withHandle />
+            <ResizableHandle />
 
-        {/* Right Panel - Studio (Resizable) */}
-        <ResizablePanel
-          defaultSize={20}
-          minSize={15}
-          maxSize={40}
-          collapsible
-          collapsedSize={3}
-          onCollapse={() => setRightPanelOpen(false)}
-          onExpand={() => setRightPanelOpen(true)}
-          className="bg-muted/30"
-        >
-          {rightPanelOpen ? (
-            <div className="h-full flex flex-col relative">
-              <StudioPanel projectId={project.id} />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setRightPanelOpen(false)}
-                className="absolute top-2 left-2 z-10 h-8 w-8"
-              >
-                <CaretRight size={16} />
-              </Button>
-            </div>
-          ) : (
-            <div className="h-full flex items-center justify-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setRightPanelOpen(true)}
-                className="h-8 w-8"
-              >
-                <CaretLeft size={16} />
-              </Button>
-            </div>
-          )}
-        </ResizablePanel>
-      </ResizablePanelGroup>
+            {/* Right Panel - Studio (Resizable) */}
+            <ResizablePanel
+              ref={rightPanelRef}
+              defaultSize={20}
+              minSize={15}
+              maxSize={40}
+              collapsible
+              collapsedSize={4}
+              onCollapse={() => setRightPanelOpen(false)}
+              onExpand={() => setRightPanelOpen(true)}
+              className="bg-card"
+            >
+              <div className="h-full flex flex-col relative">
+                <StudioPanel
+                  projectId={project.id}
+                  isCollapsed={!rightPanelOpen}
+                  onExpand={() => rightPanelRef.current?.expand()}
+                />
+                {rightPanelOpen && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => rightPanelRef.current?.collapse()}
+                    className="absolute top-2 left-2 z-10 h-8 w-8 hover:bg-muted"
+                  >
+                    <CaretRight size={16} />
+                  </Button>
+                )}
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
+
+        {/* Footer Disclaimer - sits on background layer */}
+        <div className="flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground">
+          <Warning size={12} />
+          <span>LocalLM can make mistakes. Please verify important information.</span>
+        </div>
+      </div>
     </div>
   );
 };

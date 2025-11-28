@@ -161,12 +161,13 @@ class GoogleDriveService:
 
             # Execute query
             # Educational Note: fields parameter limits response data for efficiency
+            # Sort by modified time (newest first). Frontend separates folders/files.
             results = service.files().list(
                 q=query,
                 pageSize=page_size,
                 pageToken=page_token,
                 fields="nextPageToken, files(id, name, mimeType, size, modifiedTime, parents, iconLink, thumbnailLink)",
-                orderBy="folder,name"  # Folders first, then by name
+                orderBy="modifiedTime desc"
             ).execute()
 
             files = results.get('files', [])

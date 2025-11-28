@@ -18,12 +18,15 @@ export const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
   onNewChat,
 }) => {
   return (
-    <div className="flex flex-col h-full bg-background">
-      <div className="border-b px-6 py-3">
+    <div className="flex flex-col h-full bg-card">
+      <div className="border-b px-4 py-3">
         <div className="flex items-center gap-2">
           <Sparkle size={20} className="text-primary" />
-          <h2 className="font-semibold">Chat with {projectName}</h2>
+          <h2 className="font-semibold">Chat</h2>
         </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Ask questions about your sources or request analysis
+        </p>
       </div>
 
       <div className="flex-1 flex items-center justify-center">
