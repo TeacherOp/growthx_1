@@ -1,0 +1,18 @@
+{
+  "name": "search_sources",
+  "description": "Search for information in the project's uploaded sources. Use this tool when the user asks questions that require information from their documents, PDFs, audio transcripts, or other uploaded content. Choose the appropriate source based on the user's question and the source names/types available.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "source_id": {
+        "type": "string",
+        "description": "The ID of the source to search. Choose from the available sources listed in your context based on which source is most likely to contain the answer."
+      },
+      "query": {
+        "type": "string",
+        "description": "Optional search query for semantic search. Only used for embedded sources. For non-embedded sources, the full content is returned regardless of this field."
+      }
+    },
+    "required": ["source_id"]
+  }
+}

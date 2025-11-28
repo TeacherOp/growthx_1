@@ -32,33 +32,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Brain size={32} className="text-primary" />
-              <div>
-                <h1 className="text-2xl font-bold">LocalLm</h1>
-                <p className="text-xs text-muted-foreground">Your private AI knowledge hub</p>
-              </div>
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setAppSettingsOpen(true)}
-              className="gap-2"
-            >
-              <Gear size={16} />
-              App Settings
-            </Button>
+      {/* Header - contained within same width as content */}
+      <header className="h-14 bg-background">
+        <div className="container mx-auto px-4 h-full flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Brain size={24} className="text-primary" />
+            <h1 className="text-lg font-semibold">LocalLM</h1>
           </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAppSettingsOpen(true)}
+            className="gap-2 border-stone-300"
+          >
+            <Gear size={16} />
+            App Settings
+          </Button>
         </div>
       </header>
 
       {/* Main Content - Two Part Layout */}
-      <main className="container mx-auto px-4 py-6 flex flex-col h-[calc(100vh-73px)]">
+      <main className="container mx-auto px-4 py-6 flex flex-col h-[calc(100vh-56px)]">
         {/* Top Section: Projects (Scrollable) */}
         <div className="flex-1 min-h-0 overflow-y-auto mb-6">
           <ProjectList

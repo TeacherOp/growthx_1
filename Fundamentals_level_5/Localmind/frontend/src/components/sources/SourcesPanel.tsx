@@ -26,12 +26,58 @@ import {
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { ScrollArea } from '../ui/scroll-area';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
+import {
+  Books,
+  File,
+  FilePdf,
+  FileDoc,
+  FileText,
+  Link,
+  Image,
+  MusicNote,
+  Video,
+  YoutubeLogo,
+  CaretRight,
+} from '@phosphor-icons/react';
 
 interface SourcesPanelProps {
   projectId: string;
+  isCollapsed?: boolean;
+  onExpand?: () => void;
 }
 
-export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId }) => {
+/**
+ * Get icon component based on source file type
+ */
+const getSourceIcon = (source: Source) => {
+  const type = source.file_type?.toLowerCase() || '';
+  const name = source.name?.toLowerCase() || '';
+
+  // Check for YouTube links
+  if (source.type === 'link' && (name.includes('youtube') || name.includes('youtu.be'))) {
+    return YoutubeLogo;
+  }
+
+  // Check by file type
+  if (type.includes('pdf')) return FilePdf;
+  if (type.includes('doc') || type.includes('docx')) return FileDoc;
+  if (type.includes('txt') || type.includes('text')) return FileText;
+  if (type.includes('image') || type.includes('png') || type.includes('jpg') || type.includes('jpeg')) return Image;
+  if (type.includes('audio') || type.includes('mp3') || type.includes('wav')) return MusicNote;
+  if (type.includes('video') || type.includes('mp4')) return Video;
+  if (source.type === 'link') return Link;
+
+  return File;
+};
+
+export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId, isCollapsed, onExpand }) => {
   const { toasts, dismissToast, success, error } = useToast();
 
   // State
@@ -311,6 +357,66 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId }) => {
   const totalSize = sources.reduce((sum, s) => sum + s.file_size, 0);
   const sourcesCount = sources.length;
   const isAtLimit = sourcesCount >= MAX_SOURCES;
+
+  // Collapsed view - show icon bar with source icons
+  if (isCollapsed) {
+    return (
+      <TooltipProvider delayDuration={100}>
+        <div className="h-full flex flex-col items-center py-3 bg-card">
+          {/* Sources header icon */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onExpand}
+                className="p-2 rounded-lg hover:bg-muted transition-colors mb-2"
+              >
+                <Books size={20} className="text-primary" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Sources</p>
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Expand button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onExpand}
+                className="p-1.5 rounded-lg hover:bg-muted transition-colors mb-3"
+              >
+                <CaretRight size={14} className="text-muted-foreground" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Expand panel</p>
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Source icons */}
+          <ScrollArea className="flex-1 w-full">
+            <div className="flex flex-col items-center gap-1 px-1">
+              {sources.map((source) => {
+                const IconComponent = getSourceIcon(source);
+                return (
+                  <Tooltip key={source.id}>
+                    <TooltipTrigger asChild>
+                      <button className="p-2 rounded-lg hover:bg-muted transition-colors w-full flex justify-center">
+                        <IconComponent size={18} className="text-muted-foreground" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <p className="max-w-[200px] truncate">{source.name}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </div>
+      </TooltipProvider>
+    );
+  }
 
   return (
     <>

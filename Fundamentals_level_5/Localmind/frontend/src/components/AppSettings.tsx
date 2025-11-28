@@ -442,11 +442,11 @@ export const AppSettings: React.FC<AppSettingsProps> = ({ open, onOpenChange }) 
           className="font-mono text-sm flex-1"
         />
         <Button
-          variant="ghost"
+          variant="default"
           size="sm"
           onClick={() => validateApiKey(apiKey.id)}
           disabled={!modifiedKeys[apiKey.id] || modifiedKeys[apiKey.id].includes('***') || validationState[apiKey.id]?.validating}
-          className="min-w-[110px]"
+          className="min-w-[120px]"
         >
           {validationState[apiKey.id]?.validating ? (
             <>
@@ -503,7 +503,7 @@ export const AppSettings: React.FC<AppSettingsProps> = ({ open, onOpenChange }) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
+      <DialogContent className="max-w-5xl max-h-[90vh] bg-card">
         <DialogHeader>
           <DialogTitle>App Settings</DialogTitle>
           <DialogDescription>
@@ -511,13 +511,15 @@ export const AppSettings: React.FC<AppSettingsProps> = ({ open, onOpenChange }) 
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="h-[500px] mt-4">
+        {/* Scrollable content with fade indicator */}
+        <div className="relative">
+          <ScrollArea className="h-[550px]">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <CircleNotch size={32} className="animate-spin" />
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-6 px-1 pb-12">
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Warning size={16} />
@@ -662,9 +664,16 @@ export const AppSettings: React.FC<AppSettingsProps> = ({ open, onOpenChange }) 
               </div>
             </div>
           )}
-        </ScrollArea>
+          </ScrollArea>
+          {/* Bottom fade gradient to indicate more content */}
+          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent pointer-events-none" />
+        </div>
 
-        <DialogFooter className="mt-6">
+        <p className="text-xs text-muted-foreground text-center py-2">
+          Scroll to see all settings
+        </p>
+
+        <DialogFooter>
           {Object.keys(modifiedKeys).length > 0 ? (
             <>
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>

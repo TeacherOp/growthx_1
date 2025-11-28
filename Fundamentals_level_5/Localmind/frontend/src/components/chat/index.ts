@@ -1,9 +1,9 @@
 /**
  * Chat Components Index
  * Educational Note: Barrel export for cleaner imports.
- * Usage: import { ChatHeader, ChatMessages } from './chat';
  */
 
+export { ChatPanel } from './ChatPanel';
 export { ChatHeader } from './ChatHeader';
 export { ChatMessages } from './ChatMessages';
 export { ChatInput } from './ChatInput';

@@ -1,5 +1,5 @@
-import { DotsSixVertical } from "@phosphor-icons/react"
 import * as ResizablePrimitive from "react-resizable-panels"
+import type { ImperativePanelHandle } from "react-resizable-panels"
 
 import { cn } from "@/lib/utils"
 
@@ -18,6 +18,12 @@ const ResizablePanelGroup = ({
 
 const ResizablePanel = ResizablePrimitive.Panel
 
+/**
+ * ResizableHandle Component
+ * Educational Note: Wide gutter-style handle that creates visual separation between panels.
+ * The handle itself IS the gap - matches background color to look like space between cards.
+ * Cursor changes on hover to indicate draggable area.
+ */
 const ResizableHandle = ({
   withHandle,
   className,
@@ -27,17 +33,23 @@ const ResizableHandle = ({
 }) => (
   <ResizablePrimitive.PanelResizeHandle
     className={cn(
-      "relative flex w-px items-center justify-center bg-border after:absolute after:inset-y-0 after:left-1/2 after:w-1 after:-translate-x-1/2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 data-[panel-group-direction=vertical]:h-px data-[panel-group-direction=vertical]:w-full data-[panel-group-direction=vertical]:after:left-0 data-[panel-group-direction=vertical]:after:h-1 data-[panel-group-direction=vertical]:after:w-full data-[panel-group-direction=vertical]:after:-translate-y-1/2 data-[panel-group-direction=vertical]:after:translate-x-0 [&[data-panel-group-direction=vertical]>div]:rotate-90",
+      // Wide gutter that acts as visual gap between panels (w-3 = 12px)
+      "relative flex w-3 items-center justify-center",
+      // Match background color to create "gap" illusion
+      "bg-background hover:bg-muted/50 transition-colors cursor-col-resize",
+      "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+      // Vertical direction support (h-3 = 12px for vertical gaps)
+      "data-[panel-group-direction=vertical]:h-3 data-[panel-group-direction=vertical]:w-full data-[panel-group-direction=vertical]:cursor-row-resize",
       className
     )}
     {...props}
   >
+    {/* Optional visual indicator - only shows on hover */}
     {withHandle && (
-      <div className="z-10 flex h-4 w-3 items-center justify-center rounded-sm border bg-border">
-        <DotsSixVertical size={10} />
-      </div>
+      <div className="h-8 w-1 rounded-full bg-border/0 hover:bg-border/60 transition-colors" />
     )}
   </ResizablePrimitive.PanelResizeHandle>
 )
 
 export { ResizablePanelGroup, ResizablePanel, ResizableHandle }
+export type { ImperativePanelHandle }

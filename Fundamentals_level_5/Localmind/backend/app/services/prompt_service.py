@@ -5,13 +5,26 @@ Educational Note: This service handles loading, storing, and retrieving
 prompts used in AI conversations. Projects can have custom prompts or
 fall back to the global default.
 
+Prompt Config Structure (consistent across all prompt files):
+{
+    "version": "2.0",
+    "name": "prompt_name",
+    "description": "What this prompt is for",
+    "model": "claude-sonnet-4-5-20250929",
+    "max_tokens": 4096,
+    "temperature": 0.7,
+    "system_prompt": "The actual prompt text...",
+    "created_at": "...",
+    "updated_at": "..."
+}
+
 Prompt Hierarchy:
 1. Project custom prompt (if set)
 2. Global default prompt (fallback)
 """
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from config import Config
 
@@ -33,9 +46,31 @@ class PromptService:
         # Ensure prompts directory exists
         self.prompts_dir.mkdir(exist_ok=True, parents=True)
 
+    def get_default_prompt_config(self) -> Dict[str, Any]:
+        """
+        Load the full default prompt configuration.
+
+        Educational Note: Returns the complete prompt config including
+        model, max_tokens, temperature, and system_prompt. This allows
+        services to use consistent settings from a single source.
+
+        Returns:
+            Dict with all prompt config fields
+        """
+        default_prompt_file = self.prompts_dir / "default_prompt.json"
+
+        with open(default_prompt_file, 'r') as f:
+            prompt_data = json.load(f)
+
+            # Handle legacy format where "prompt" was used instead of "system_prompt"
+            if "prompt" in prompt_data and "system_prompt" not in prompt_data:
+                prompt_data["system_prompt"] = prompt_data.pop("prompt")
+
+            return prompt_data
+
     def get_default_prompt(self) -> str:
         """
-        Load the global default system prompt.
+        Load the global default system prompt text.
 
         Educational Note: This is used when projects don't have custom prompts.
         It provides a baseline behavior for the AI assistant.
@@ -43,27 +78,8 @@ class PromptService:
         Returns:
             The default system prompt text
         """
-        default_prompt_file = self.prompts_dir / "default_prompt.json"
-
-        try:
-            with open(default_prompt_file, 'r') as f:
-                prompt_data = json.load(f)
-                return prompt_data.get("prompt", self._fallback_prompt())
-        except (FileNotFoundError, json.JSONDecodeError):
-            return self._fallback_prompt()
-
-    def _fallback_prompt(self) -> str:
-        """
-        Fallback prompt if default_prompt.json is missing.
-
-        Educational Note: Always have a hardcoded fallback to ensure
-        the application works even if config files are missing.
-        """
-        return (
-            "You are LocalMind AI, a helpful assistant for students and learners. "
-            "Help users understand complex topics, answer questions clearly, "
-            "and provide accurate information with helpful explanations."
-        )
+        config = self.get_default_prompt_config()
+        return config.get("system_prompt", "")
 
     def get_project_prompt(self, project_id: str) -> str:
         """
@@ -92,6 +108,37 @@ class PromptService:
 
         # Return default if no custom prompt
         return self.get_default_prompt()
+
+    def get_project_prompt_config(self, project_id: str) -> Dict[str, Any]:
+        """
+        Get the full prompt config for a specific project.
+
+        Educational Note: Returns the default config but with custom prompt
+        if the project has one. This ensures model/max_tokens/temperature
+        come from the default config even when using custom prompts.
+
+        Args:
+            project_id: The project UUID
+
+        Returns:
+            Dict with all prompt config fields
+        """
+        config = self.get_default_prompt_config()
+
+        # Check for custom prompt override
+        project_file = self.projects_dir / f"{project_id}.json"
+
+        try:
+            with open(project_file, 'r') as f:
+                project_data = json.load(f)
+                custom_prompt = project_data.get("settings", {}).get("custom_prompt")
+
+                if custom_prompt:
+                    config["system_prompt"] = custom_prompt
+        except (FileNotFoundError, json.JSONDecodeError):
+            pass
+
+        return config
 
     def update_project_prompt(self, project_id: str, prompt: Optional[str]) -> bool:
         """

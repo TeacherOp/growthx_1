@@ -143,14 +143,14 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
   };
 
   return (
-    <div className="h-14 border-b flex items-center justify-between px-4 bg-background">
+    <div className="h-14 flex items-center justify-between px-4 bg-background">
       {/* Left side - Back button and project name */}
       <div className="flex items-center gap-3">
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon"
           onClick={onBack}
-          className="h-8 w-8"
+          className="h-8 w-8 border-stone-300"
         >
           <ArrowLeft size={16} />
         </Button>
@@ -167,7 +167,7 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
           variant="outline"
           size="sm"
           onClick={handleOpenSettings}
-          className="gap-2"
+          className="gap-2 border-stone-300"
         >
           <Gear size={16} />
           Project Settings
@@ -177,7 +177,7 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
           variant="outline"
           size="sm"
           onClick={handleNewProject}
-          className="gap-2"
+          className="gap-2 border-stone-300"
         >
           <Plus size={16} />
           New Project
@@ -185,7 +185,7 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button variant="outline" size="icon" className="h-8 w-8 border-stone-300">
               <DotsThreeVertical size={16} />
             </Button>
           </DropdownMenuTrigger>

@@ -7,17 +7,15 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sparkle, CircleNotch } from '@phosphor-icons/react';
-import { chatsAPI } from '../lib/api/chats';
-import type { Chat, ChatMetadata } from '../lib/api/chats';
-import { useToast, ToastContainer } from './ui/toast';
-import { useVoiceRecording } from './hooks/useVoiceRecording';
-import {
-  ChatHeader,
-  ChatMessages,
-  ChatInput,
-  ChatList,
-  ChatEmptyState,
-} from './chat';
+import { chatsAPI } from '@/lib/api/chats';
+import type { Chat, ChatMetadata } from '@/lib/api/chats';
+import { useToast, ToastContainer } from '../ui/toast';
+import { useVoiceRecording } from '../hooks/useVoiceRecording';
+import { ChatHeader } from './ChatHeader';
+import { ChatMessages } from './ChatMessages';
+import { ChatInput } from './ChatInput';
+import { ChatList } from './ChatList';
+import { ChatEmptyState } from './ChatEmptyState';
 
 interface ChatPanelProps {
   projectId: string;
@@ -215,12 +213,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ projectId, projectName }) 
   // Loading state
   if (loading) {
     return (
-      <div className="flex flex-col h-full bg-background">
-        <div className="border-b px-6 py-3">
+      <div className="flex flex-col h-full bg-card">
+        <div className="border-b px-4 py-3">
           <div className="flex items-center gap-2">
             <Sparkle size={20} className="text-primary" />
-            <h2 className="font-semibold">Chat with {projectName}</h2>
+            <h2 className="font-semibold">Chat</h2>
           </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Ask questions about your sources or request analysis
+          </p>
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
@@ -260,7 +261,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ projectId, projectName }) 
 
   // Active chat view
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-card">
       <ChatHeader
         activeChat={activeChat}
         allChats={allChats}

@@ -21,7 +21,7 @@ export const SourcesFooter: React.FC<SourcesFooterProps> = ({
   const isAtLimit = sourcesCount >= MAX_SOURCES;
 
   return (
-    <div className="p-4 border-t space-y-2">
+    <div className="px-4 pb-4 space-y-2">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>
           {sourcesCount} / {MAX_SOURCES} sources
