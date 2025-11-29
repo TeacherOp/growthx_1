@@ -1,0 +1,19 @@
+{
+  "name": "save_memory",
+  "description": "Save the merged and condensed memory. You MUST use this tool to output the final memory after merging existing and new memory content.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "memory_type": {
+        "type": "string",
+        "enum": ["user", "project"],
+        "description": "The type of memory being saved."
+      },
+      "memory": {
+        "type": "string",
+        "description": "The final merged memory content. Must be concise (max 150 tokens) and capture the most important information from both existing and new memory."
+      }
+    },
+    "required": ["memory_type", "memory"]
+  }
+}

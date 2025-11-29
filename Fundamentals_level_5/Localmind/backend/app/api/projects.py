@@ -14,6 +14,7 @@ from pathlib import Path
 from app.api import api_bp
 from app.services.project_service import ProjectService
 from app.services.cost_tracking_service import cost_tracking_service
+from app.services.memory_service import memory_service
 
 # Initialize the project service
 project_service = ProjectService()
@@ -303,4 +304,48 @@ def get_project_costs(project_id):
         return jsonify({
             "success": False,
             "error": f"Failed to get project costs: {str(e)}"
+        }), 500
+
+
+@api_bp.route('/projects/<project_id>/memory', methods=['GET'])
+def get_project_memory(project_id):
+    """
+    Get memory data for a project (user memory + project memory).
+
+    URL Parameters:
+        - project_id: string - The project UUID
+
+    Returns:
+        JSON object with memory data:
+        - user_memory: string | null - Global user memory
+        - project_memory: string | null - Project-specific memory
+
+    Educational Note: Memory helps the AI maintain context across conversations.
+    User memory persists across all projects, project memory is specific to this project.
+    """
+    try:
+        # Verify project exists
+        project = project_service.get_project(project_id)
+        if not project:
+            return jsonify({
+                "success": False,
+                "error": "Project not found"
+            }), 404
+
+        # Get memory data
+        user_memory = memory_service.get_user_memory()
+        project_memory = memory_service.get_project_memory(project_id)
+
+        return jsonify({
+            "success": True,
+            "memory": {
+                "user_memory": user_memory,
+                "project_memory": project_memory
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to get memory: {str(e)}"
         }), 500

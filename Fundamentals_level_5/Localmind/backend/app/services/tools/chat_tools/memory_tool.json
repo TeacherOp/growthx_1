@@ -1,0 +1,22 @@
+{
+  "name": "store_memory",
+  "description": "Store important information in memory for future conversations. Use this tool to remember user preferences, goals, important context, and project-specific information. Only use for significant details that should persist across conversations - NOT for trivial or temporary information.\n\nWhen to use:\n- User explicitly states a preference (e.g., 'I prefer concise answers', 'Call me John')\n- User shares important context about themselves or their goals\n- Project-related insights that should be remembered (e.g., 'This project is for my thesis on AI')\n- Key decisions or milestones in the project\n\nWhen NOT to use:\n- Temporary information that only matters for current conversation\n- Information already available in sources\n- Trivial details or greetings never pass user memory and project memory in together when using this tool, only one memory tyoe user or project at a time",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "user_memory": {
+        "type": "string",
+        "description": "Important information about the user that should persist across all projects. Examples: name, preferences, communication style, general goals, expertise level. Leave empty if no user-level memory to store."
+      },
+      "project_memory": {
+        "type": "string",
+        "description": "Important information specific to this project. Examples: project goals, what the user is trying to achieve, key milestones, decisions made, progress notes. Leave empty if no project-level memory to store."
+      },
+      "why_generated": {
+        "type": "string",
+        "description": "Brief explanation of why this memory is being stored. Helps with future context and memory management."
+      }
+    },
+    "required": ["why_generated"]
+  }
+}

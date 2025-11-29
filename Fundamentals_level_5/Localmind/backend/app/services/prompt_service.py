@@ -229,6 +229,30 @@ class PromptService:
         except (FileNotFoundError, json.JSONDecodeError):
             return None
 
+    def get_prompt_config(self, prompt_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Load full prompt configuration by name.
+
+        Educational Note: Loads the complete prompt config including
+        model, max_tokens, temperature, system_prompt, and user_message.
+        Used by services like memory_service, summary_service for
+        specialized AI tasks.
+
+        Args:
+            prompt_name: Name of the prompt file (without _prompt.json suffix)
+                        e.g., "memory" loads "memory_prompt.json"
+
+        Returns:
+            Full prompt config dict, or None if not found
+        """
+        prompt_file = self.prompts_dir / f"{prompt_name}_prompt.json"
+
+        try:
+            with open(prompt_file, 'r') as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return None
+
 
 # Singleton instance for easy import
 prompt_service = PromptService()

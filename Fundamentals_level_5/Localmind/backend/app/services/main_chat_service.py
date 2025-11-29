@@ -30,6 +30,7 @@ from app.services.message_service import message_service
 from app.services.prompt_service import prompt_service
 from app.services.source_context_service import source_context_service
 from app.services.source_search_executor import source_search_executor
+from app.services.memory_executor import memory_executor
 from app.services.tool_loader import tool_loader
 from app.services.chat_naming_service import chat_naming_service
 from app.services.task_service import task_service
@@ -49,14 +50,41 @@ class MainChatService:
 
     def __init__(self):
         """Initialize the service."""
-        self._tool_definition = None
+        self._search_tool = None
+        self._memory_tool = None
         self.projects_dir = Config.PROJECTS_DIR
 
-    def _get_tool(self) -> Dict[str, Any]:
+    def _get_search_tool(self) -> Dict[str, Any]:
         """Load the search_sources tool definition (cached)."""
-        if self._tool_definition is None:
-            self._tool_definition = tool_loader.load_tool("chat_tools", "source_search_tool")
-        return self._tool_definition
+        if self._search_tool is None:
+            self._search_tool = tool_loader.load_tool("chat_tools", "source_search_tool")
+        return self._search_tool
+
+    def _get_memory_tool(self) -> Dict[str, Any]:
+        """Load the store_memory tool definition (cached)."""
+        if self._memory_tool is None:
+            self._memory_tool = tool_loader.load_tool("chat_tools", "memory_tool")
+        return self._memory_tool
+
+    def _get_tools(self, has_active_sources: bool) -> List[Dict[str, Any]]:
+        """
+        Get tools list for Claude API call.
+
+        Educational Note: Memory tool is always available. Search tool
+        is only available when there are active sources to search.
+
+        Args:
+            has_active_sources: Whether project has active sources
+
+        Returns:
+            List of tool definitions
+        """
+        tools = [self._get_memory_tool()]  # Always include memory tool
+
+        if has_active_sources:
+            tools.append(self._get_search_tool())
+
+        return tools
 
     # =========================================================================
     # Debug Logging
@@ -150,14 +178,15 @@ class MainChatService:
 
     def _build_system_prompt(self, project_id: str, base_prompt: str) -> str:
         """
-        Build system prompt with source context appended.
+        Build system prompt with memory and source context appended.
 
-        Educational Note: Source context is rebuilt on every message
-        to reflect current state (active/inactive sources).
+        Educational Note: Context is rebuilt on every message to reflect
+        current state (memory updates, active/inactive sources).
+        Includes both memory context (personalization) and source context (tools).
         """
-        source_context = source_context_service.build_source_context(project_id)
-        if source_context:
-            return base_prompt + "\n" + source_context
+        full_context = source_context_service.build_full_context(project_id)
+        if full_context:
+            return base_prompt + "\n" + full_context
         return base_prompt
 
     def _execute_tool(self, project_id: str, tool_name: str, tool_input: Dict[str, Any]) -> str:
@@ -165,7 +194,8 @@ class MainChatService:
         Execute a tool and return result string.
 
         Educational Note: Routes tool calls to appropriate executor.
-        Currently only search_sources, but extensible for future tools.
+        - search_sources: Searches project sources for information
+        - store_memory: Stores user/project memory (non-blocking, queues background task)
         """
         if tool_name == "search_sources":
             result = source_search_executor.execute(
@@ -177,6 +207,20 @@ class MainChatService:
                 return result.get("content", "No content found")
             else:
                 return f"Error: {result.get('error', 'Unknown error')}"
+
+        elif tool_name == "store_memory":
+            # Memory tool returns immediately, actual update happens in background
+            result = memory_executor.execute(
+                project_id=project_id,
+                user_memory=tool_input.get("user_memory"),
+                project_memory=tool_input.get("project_memory"),
+                why_generated=tool_input.get("why_generated", "")
+            )
+            if result.get("success"):
+                return result.get("message", "Memory stored successfully")
+            else:
+                return f"Error: {result.get('message', 'Unknown error')}"
+
         else:
             return f"Unknown tool: {tool_name}"
 
@@ -265,9 +309,9 @@ class MainChatService:
         base_prompt = prompt_config.get("system_prompt", "")
         system_prompt = self._build_system_prompt(project_id, base_prompt)
 
-        # Step 3: Check if we have active sources (determines if we include tools)
+        # Step 3: Get tools (memory always available, search only if sources active)
         active_sources = source_context_service.get_active_sources(project_id)
-        tools = [self._get_tool()] if active_sources else None
+        tools = self._get_tools(has_active_sources=bool(active_sources))
 
         try:
             # Step 4: Build messages and call Claude
