@@ -1,28 +1,29 @@
 """
-Source Context Service - Builds dynamic source context for chat system prompts.
+Source Context Service - Builds dynamic source and memory context for chat system prompts.
 
-Educational Note: This service creates a formatted list of available sources
-that gets appended to the system prompt. This allows the AI to know:
-- Which sources are available to search
-- Source IDs (needed for the search_sources tool)
-- Source types and names (to pick the right source for a question)
-- Whether a source is embedded (affects search behavior)
-- Source summaries (to understand content and pick the right source)
+Educational Note: This service creates formatted context blocks for the system prompt:
+
+1. Source Context - List of available sources with IDs, types, and summaries
+2. Memory Context - User and project memory for personalization
 
 The context is rebuilt on every message to reflect the current state
-of sources (active/inactive toggles, new uploads, deletions).
+(active/inactive sources, new uploads, updated memories).
 """
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from app.services.source_service import source_service
+from app.services.memory_service import memory_service
 
 
 class SourceContextService:
     """
-    Service for building source context for chat prompts.
+    Service for building source and memory context for chat prompts.
 
     Educational Note: This service is called by main_chat_service
-    before each API call to build up-to-date source context.
+    before each API call to build up-to-date context including:
+    - Available sources with metadata
+    - User memory (persistent across projects)
+    - Project memory (specific to current project)
     """
 
     def get_active_sources(self, project_id: str) -> List[Dict[str, Any]]:
@@ -149,6 +150,74 @@ class SourceContextService:
         }
 
         return category_map.get(category, category.title())
+
+    def build_memory_context(self, project_id: str) -> str:
+        """
+        Build formatted memory context for the system prompt.
+
+        Educational Note: Memory context includes:
+        - User memory: Persistent preferences and context across all projects
+        - Project memory: Context specific to the current project
+
+        This helps the AI personalize responses and maintain continuity.
+
+        Args:
+            project_id: The project UUID
+
+        Returns:
+            Formatted string to append to system prompt, or empty string if no memory
+        """
+        user_memory = memory_service.get_user_memory()
+        project_memory = memory_service.get_project_memory(project_id)
+
+        # Return empty if no memory exists
+        if not user_memory and not project_memory:
+            return ""
+
+        lines = [
+            "",
+            "## Memory Context",
+            "",
+        ]
+
+        if user_memory:
+            lines.append("### User Memory")
+            lines.append(f"{user_memory}")
+            lines.append("")
+
+        if project_memory:
+            lines.append("### Project Memory")
+            lines.append(f"{project_memory}")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    def build_full_context(self, project_id: str) -> str:
+        """
+        Build complete context including sources and memory.
+
+        Educational Note: Combines all context types for the system prompt.
+        Order: Memory context first (general context), then source context (specific tools).
+
+        Args:
+            project_id: The project UUID
+
+        Returns:
+            Complete context string to append to system prompt
+        """
+        parts = []
+
+        # Add memory context first (general personalization)
+        memory_context = self.build_memory_context(project_id)
+        if memory_context:
+            parts.append(memory_context)
+
+        # Add source context (available tools)
+        source_context = self.build_source_context(project_id)
+        if source_context:
+            parts.append(source_context)
+
+        return "\n".join(parts)
 
 
 # Singleton instance

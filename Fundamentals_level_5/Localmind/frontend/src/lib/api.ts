@@ -67,7 +67,20 @@ export const projectsAPI = {
 
   // Get project cost tracking data
   getCosts: (id: string) => api.get(`/projects/${id}/costs`),
+
+  // Get project memory data (user memory + project memory)
+  getMemory: (id: string) => api.get(`/projects/${id}/memory`),
 };
+
+/**
+ * Memory Types
+ * Educational Note: Memory helps the AI maintain context across conversations.
+ * User memory persists across all projects, project memory is specific to a project.
+ */
+export interface MemoryData {
+  user_memory: string | null;
+  project_memory: string | null;
+}
 
 /**
  * Cost Tracking Types

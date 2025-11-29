@@ -33,9 +33,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
-import { ArrowLeft, DotsThreeVertical, Plus, Trash, FolderOpen, Gear, CircleNotch, CurrencyDollar } from '@phosphor-icons/react';
+import { ArrowLeft, DotsThreeVertical, Plus, Trash, FolderOpen, Gear, CircleNotch, CurrencyDollar, Brain } from '@phosphor-icons/react';
 import { chatsAPI } from '../lib/api/chats';
-import { projectsAPI, type CostTracking } from '../lib/api';
+import { projectsAPI, type CostTracking, type MemoryData } from '../lib/api';
 import { useToast, ToastContainer } from './ui/toast';
 
 /**
@@ -77,6 +77,11 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
   // Cost tracking state
   const [costs, setCosts] = React.useState<CostTracking | null>(null);
 
+  // Memory state
+  const [memoryDialogOpen, setMemoryDialogOpen] = React.useState(false);
+  const [memory, setMemory] = React.useState<MemoryData | null>(null);
+  const [loadingMemory, setLoadingMemory] = React.useState(false);
+
   /**
    * Educational Note: Load the project's system prompt and costs when component mounts.
    * This fetches either the custom prompt or the default prompt from the backend.
@@ -110,6 +115,34 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
       console.error('Error loading costs:', err);
       // Silently fail - costs are not critical
     }
+  };
+
+  /**
+   * Load memory data (user + project memory)
+   * Educational Note: Memory is loaded when user opens the memory dialog.
+   */
+  const loadMemory = async () => {
+    try {
+      setLoadingMemory(true);
+      const response = await projectsAPI.getMemory(project.id);
+      if (response.data.success) {
+        setMemory(response.data.memory);
+      }
+    } catch (err) {
+      console.error('Error loading memory:', err);
+      error('Failed to load memory');
+    } finally {
+      setLoadingMemory(false);
+    }
+  };
+
+  /**
+   * Open memory dialog and load memory data
+   * Educational Note: Memory is fetched on-demand when dialog opens.
+   */
+  const handleOpenMemory = () => {
+    setMemoryDialogOpen(true);
+    loadMemory();
   };
 
   /**
@@ -293,6 +326,16 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
         <Button
           variant="outline"
           size="sm"
+          onClick={handleOpenMemory}
+          className="gap-2 border-stone-300"
+        >
+          <Brain size={16} />
+          Memory
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
           onClick={handleOpenSettings}
           className="gap-2 border-stone-300"
         >
@@ -440,6 +483,75 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
               ) : (
                 'Save Changes'
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Memory Dialog */}
+      <Dialog open={memoryDialogOpen} onOpenChange={setMemoryDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain size={20} />
+              Memory
+            </DialogTitle>
+            <DialogDescription>
+              Information the AI remembers about you and this project
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {loadingMemory ? (
+              <div className="flex items-center justify-center py-8">
+                <CircleNotch size={24} className="animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading memory...</span>
+              </div>
+            ) : (
+              <>
+                {/* User Memory Section */}
+                <div className="space-y-2">
+                  <Label>User Memory</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Preferences and context that persist across all your projects
+                  </p>
+                  <div className="p-3 bg-muted/50 rounded-md min-h-[80px]">
+                    {memory?.user_memory ? (
+                      <p className="text-sm whitespace-pre-wrap">{memory.user_memory}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        No user memory stored yet. The AI will remember important details about you as you chat.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Project Memory Section */}
+                <div className="space-y-2">
+                  <Label>Project Memory</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Context specific to "{project.name}"
+                  </p>
+                  <div className="p-3 bg-muted/50 rounded-md min-h-[80px]">
+                    {memory?.project_memory ? (
+                      <p className="text-sm whitespace-pre-wrap">{memory.project_memory}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        No project memory stored yet. The AI will remember important project-specific details as you chat.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setMemoryDialogOpen(false)}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
