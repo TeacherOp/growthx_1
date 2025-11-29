@@ -1,0 +1,14 @@
+{
+  "name": "run_analysis",
+  "description": "Execute Python code to analyze the data. The dataset is pre-loaded as a pandas DataFrame named 'df'. You have access to pandas, numpy, matplotlib, and seaborn. Run any analysis queries needed to answer the user question. Do not modify or delete the source file. Assign your final output to 'result'.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "code": {
+        "type": "string",
+        "description": "Python code to execute. DataFrame is available as 'df'. Assign final output to 'result'."
+      }
+    },
+    "required": ["code"]
+  }
+}

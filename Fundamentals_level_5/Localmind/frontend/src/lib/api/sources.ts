@@ -315,6 +315,16 @@ class SourcesAPI {
       throw error;
     }
   }
+
+  /**
+   * Get the URL for an AI-generated image
+   * Educational Note: AI agents like the CSV analyzer can generate images
+   * (charts, plots). These are rendered in chat using [[image:FILENAME]]
+   * syntax which gets converted to <img> tags pointing to this URL.
+   */
+  getAIImageUrl(projectId: string, filename: string): string {
+    return `${API_BASE_URL}/projects/${projectId}/ai-images/${filename}`;
+  }
 }
 
 export const sourcesAPI = new SourcesAPI();

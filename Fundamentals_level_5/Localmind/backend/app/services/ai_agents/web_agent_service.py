@@ -1,470 +1,253 @@
 """
 Web Agent Service - AI agent for web content extraction and search.
 
-Educational Note: This service implements an agentic loop for web operations.
-It uses existing services for consistency:
-    - prompt_loader: Load agent system prompt
-    - tool_loader: Load server and client tools
-    - claude_service: Make API calls
-    - message_service: Parse tool calls from responses
-    - web_agent_executor: Execute client tools
+Educational Note: This is a simple agentic loop pattern:
+1. Send task to Claude with tools (2 server tools + 2 client tools)
+2. Loop until 'return_search_result' tool is called
+3. Server tools (web_fetch, web_search) - Claude handles execution
+4. Client tools (tavily_search) - we execute and send result back
+5. Termination tool (return_search_result) - extract input as final result
 
-Agent Loop Flow:
-    1. Send task to Claude with available tools
-    2. Claude responds with tool calls or text
-    3. For server tools: results come automatically in response
-    4. For client tools: executor handles, we send results back
-    5. Loop until return_search_result is called
-    6. Return final extracted content
+Tools:
+- web_fetch: Server tool - fetches URL content (Claude handles)
+- web_search: Server tool - searches web (Claude handles)
+- tavily_search: Client tool - Tavily AI search (we execute)
+- return_search_result: Termination tool - signals completion
 """
 
 import json
 import uuid
-from pathlib import Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-from config import Config
 from app.services.integrations.claude import claude_service
 from app.config import prompt_loader, tool_loader
 from app.services.tool_executors import web_agent_executor
+from app.services.data_services import message_service
+from app.utils import claude_parsing_utils
 
 
 class WebAgentService:
     """
-    Service class for web content extraction agent.
+    Simple web content extraction agent.
 
-    Educational Note: This agent orchestrates web fetching and searching
-    using a combination of Claude's server tools and custom tools.
+    Educational Note: Agent loops are simpler than they seem:
+    - Keep calling Claude until a specific tool signals completion
+    - Server tools require no action from us
+    - Client tools need execution and result sent back
     """
 
-    # Agent name for loading prompts and tools
     AGENT_NAME = "web_agent"
-
-    # Maximum iterations to prevent infinite loops
-    MAX_ITERATIONS = 10
+    MAX_ITERATIONS = 15
 
     def __init__(self):
-        """Initialize the web agent service."""
-        self._tools_cache = None
+        """Initialize agent with lazy-loaded config and tools."""
+        self._prompt_config = None
+        self._tools = None
 
-    def _get_tools(self) -> Dict[str, Any]:
+    def _load_config(self) -> Dict[str, Any]:
+        """Lazy load prompt configuration."""
+        if self._prompt_config is None:
+            self._prompt_config = prompt_loader.get_prompt_config("web_agent")
+        return self._prompt_config
+
+    def _load_tools(self) -> List[Dict[str, Any]]:
         """
-        Load tools using tool_loader.
+        Load all 4 agent tools.
 
-        Returns:
-            Dict with 'server_tools', 'client_tools', 'all_tools', 'beta_headers'
+        Educational Note: We load tools from JSON files:
+        - 2 server tools (web_fetch, web_search) - type: "server_tool"
+        - 1 client tool (tavily_search) - we execute
+        - 1 termination tool (return_search_result) - signals completion
         """
-        if self._tools_cache is None:
-            self._tools_cache = tool_loader.load_tools_for_agent(self.AGENT_NAME)
-            # Combine for API calls (server tools + client tools)
-            self._tools_cache["all_tools"] = (
-                self._tools_cache["server_tools"] +
-                self._tools_cache["client_tools"]
-            )
-        return self._tools_cache
+        if self._tools is None:
+            self._tools = tool_loader.load_tools_for_agent(self.AGENT_NAME)
+        return self._tools
 
-    def _get_system_prompt(self) -> str:
-        """
-        Load system prompt using prompt_loader.
+    # =========================================================================
+    # Agent Loop - Simple and Clean
+    # =========================================================================
 
-        Returns:
-            System prompt string
-        """
-        prompt = prompt_loader.get_agent_prompt(self.AGENT_NAME)
-        if not prompt:
-            # Fallback prompt
-            prompt = (
-                "You are a web content extraction agent. "
-                "Extract content from URLs using available tools. "
-                "Always call return_search_result when done."
-            )
-        return prompt
-
-    def extract_from_url(
+    def run(
         self,
         url: str,
         project_id: Optional[str] = None,
-        source_id: Optional[str] = None,
-        additional_context: Optional[str] = None
+        source_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Extract content from a URL using the web agent.
+        Run the agent to extract content from a URL.
 
-        Educational Note: This is the main entry point for URL extraction.
-        The agent will:
-        1. Try web_fetch first
-        2. Fall back to tavily_search if web_fetch fails
-        3. Return structured content via return_search_result
-
-        Args:
-            url: The URL to extract content from
-            project_id: Optional project ID for saving execution logs
-            source_id: Optional source ID for reference in logs
-            additional_context: Optional context about what to extract
-
-        Returns:
-            Dict with extracted content and metadata
+        Educational Note: Simple agentic loop:
+        1. URL is injected into system_prompt
+        2. user_message from config triggers the agent
+        3. Loop until return_search_result tool is called
+        4. Server tools (web_fetch, web_search) - Claude handles
+        5. Client tools (tavily_search) - we execute
         """
-        task = f"Extract all content from this URL: {url}"
-        if additional_context:
-            task += f"\n\nAdditional context: {additional_context}"
+        config = self._load_config()
+        tools_config = self._load_tools()
 
-        return self._run_agent(task, project_id=project_id, source_id=source_id, url=url)
-
-    def search_web(
-        self,
-        query: str,
-        max_results: int = 5
-    ) -> Dict[str, Any]:
-        """
-        Search the web using the agent.
-
-        Args:
-            query: The search query
-            max_results: Maximum number of results to return
-
-        Returns:
-            Dict with search results and synthesized content
-        """
-        task = f"Search the web for: {query}\n\nReturn the top {max_results} most relevant results with their content."
-        return self._run_agent(task)
-
-    def _run_agent(
-        self,
-        task: str,
-        project_id: Optional[str] = None,
-        source_id: Optional[str] = None,
-        url: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        Run the agent loop with a task.
-
-        Educational Note: This implements the agentic loop using existing services:
-        - claude_service for API calls
-        - message_service for parsing tool calls
-        - web_agent_executor for executing client tools
-
-        Args:
-            task: The task description for the agent
-            project_id: Optional project ID for saving execution logs
-            source_id: Optional source ID for reference
-            url: Optional URL being processed
-
-        Returns:
-            Dict with agent result
-        """
-        # Generate execution ID for logging
         execution_id = str(uuid.uuid4())
         started_at = datetime.now().isoformat()
 
-        system_prompt = self._get_system_prompt()
-        tools_config = self._get_tools()
+        # Inject URL into system prompt
+        system_prompt = config["system_prompt"] + f"\n\nURL to extract: {url}"
+
+        # Get all tools and beta headers for server tools
         all_tools = tools_config["all_tools"]
-
-        # Build extra_headers for beta features (e.g., web_fetch)
-        extra_headers = None
         beta_headers = tools_config.get("beta_headers", [])
-        # Filter out None values before joining
         valid_beta_headers = [h for h in beta_headers if h is not None]
-        if valid_beta_headers:
-            extra_headers = {"anthropic-beta": ",".join(valid_beta_headers)}
+        extra_headers = {"anthropic-beta": ",".join(valid_beta_headers)} if valid_beta_headers else None
 
-        # Initialize conversation
-        messages = [{"role": "user", "content": task}]
+        # Initial message from config - triggers the agent
+        user_message = config.get("user_message", "Please run the analysis.")
+        messages = [{"role": "user", "content": user_message}]
 
-        # Track usage
         total_input_tokens = 0
         total_output_tokens = 0
-        iteration = 0
 
-        print(f"Web Agent starting: {task[:100]}...")
+        print(f"[WebAgent] Starting (execution_id: {execution_id[:8]})")
 
-        while iteration < self.MAX_ITERATIONS:
-            iteration += 1
+        for iteration in range(1, self.MAX_ITERATIONS + 1):
             print(f"  Iteration {iteration}/{self.MAX_ITERATIONS}")
 
-            # Call Claude using claude_service
+            # Call Claude API
             response = claude_service.send_message(
                 messages=messages,
                 system_prompt=system_prompt,
+                model=config["model"],
+                max_tokens=config["max_tokens"],
+                temperature=config["temperature"],
                 tools=all_tools,
-                max_tokens=8192,
-                temperature=0,
                 extra_headers=extra_headers,
                 project_id=project_id
             )
 
-            # Track usage
+            # Track token usage
             total_input_tokens += response["usage"]["input_tokens"]
             total_output_tokens += response["usage"]["output_tokens"]
 
-            # Process response
-            result = self._process_response(response, messages)
+            # Serialize and add assistant response to messages
+            content_blocks = response.get("content_blocks", [])
+            serialized_content = claude_parsing_utils.serialize_content_blocks(content_blocks)
+            messages.append({"role": "assistant", "content": serialized_content})
 
-            if result["done"]:
-                # Agent completed
-                final_result = result.get("final_result", {})
-                print(f"  Agent completed in {iteration} iterations")
-                agent_result = {
-                    "success": final_result.get("success", False),
-                    "title": final_result.get("title", ""),
-                    "url": final_result.get("url", ""),
-                    "content": final_result.get("content", ""),
-                    "summary": final_result.get("summary", ""),
-                    "content_type": final_result.get("content_type", "other"),
-                    "source_urls": final_result.get("source_urls", []),
-                    "error_message": final_result.get("error_message"),
-                    "iterations": iteration,
-                    "usage": {
-                        "input_tokens": total_input_tokens,
-                        "output_tokens": total_output_tokens
-                    },
-                    "extracted_at": datetime.now().isoformat()
-                }
-                # Save execution log
-                self._save_execution(
-                    project_id=project_id,
-                    execution_id=execution_id,
-                    source_id=source_id,
-                    url=url,
-                    task=task,
-                    messages=messages,
-                    result=agent_result,
-                    started_at=started_at
-                )
-                return agent_result
+            # Process tool calls - simple inline logic
+            tool_results = []
 
-            if result["end_turn"]:
-                # Agent ended without calling termination tool
-                print(f"  Agent ended without explicit result")
-                agent_result = {
-                    "success": False,
-                    "error_message": "Agent ended without returning a result",
-                    "content": response.get("content", ""),
-                    "iterations": iteration,
-                    "usage": {
-                        "input_tokens": total_input_tokens,
-                        "output_tokens": total_output_tokens
-                    }
-                }
-                # Save execution log
-                self._save_execution(
-                    project_id=project_id,
-                    execution_id=execution_id,
-                    source_id=source_id,
-                    url=url,
-                    task=task,
-                    messages=messages,
-                    result=agent_result,
-                    started_at=started_at
-                )
-                return agent_result
+            for block in content_blocks:
+                block_type = getattr(block, "type", None) if hasattr(block, "type") else block.get("type")
+
+                if block_type == "tool_use":
+                    tool_name = getattr(block, "name", "") if hasattr(block, "name") else block.get("name", "")
+                    tool_input = getattr(block, "input", {}) if hasattr(block, "input") else block.get("input", {})
+                    tool_id = getattr(block, "id", "") if hasattr(block, "id") else block.get("id", "")
+
+                    print(f"    Tool: {tool_name}")
+
+                    # TERMINATION: return_search_result means we're done
+                    if tool_name == "return_search_result":
+                        final_result = self._build_result(
+                            tool_input, iteration, total_input_tokens, total_output_tokens
+                        )
+                        print(f"  Completed in {iteration} iterations")
+
+                        # Save execution log
+                        self._save_execution(
+                            project_id, execution_id, url, messages,
+                            final_result, started_at, source_id
+                        )
+                        return final_result
+
+                    # CLIENT TOOL: tavily_search - execute and add result
+                    elif tool_name == "tavily_search":
+                        result, _ = web_agent_executor.execute_tool(tool_name, tool_input)
+                        # Result is already a formatted string, use directly
+                        content = result if isinstance(result, str) else json.dumps(result)
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": tool_id,
+                            "content": content
+                        })
+
+                elif block_type == "server_tool_use":
+                    # SERVER TOOLS: web_fetch, web_search - Claude handles, no action needed
+                    server_tool_name = getattr(block, "name", "") if hasattr(block, "name") else block.get("name", "")
+                    print(f"    Server tool: {server_tool_name}")
+
+            # Add tool results to messages if any client tools were executed
+            if tool_results:
+                messages.append({"role": "user", "content": tool_results})
 
         # Max iterations reached
-        print(f"  Agent reached max iterations ({self.MAX_ITERATIONS})")
-        agent_result = {
+        print(f"  Max iterations reached ({self.MAX_ITERATIONS})")
+        error_result = {
             "success": False,
             "error_message": f"Agent reached maximum iterations ({self.MAX_ITERATIONS})",
-            "iterations": iteration,
-            "usage": {
-                "input_tokens": total_input_tokens,
-                "output_tokens": total_output_tokens
-            }
+            "iterations": self.MAX_ITERATIONS,
+            "usage": {"input_tokens": total_input_tokens, "output_tokens": total_output_tokens}
         }
-        # Save execution log
         self._save_execution(
-            project_id=project_id,
-            execution_id=execution_id,
-            source_id=source_id,
-            url=url,
-            task=task,
-            messages=messages,
-            result=agent_result,
-            started_at=started_at
+            project_id, execution_id, url, messages,
+            error_result, started_at, source_id
         )
-        return agent_result
+        return error_result
 
-    def _process_response(
+    # =========================================================================
+    # Helper Methods
+    # =========================================================================
+
+    def _build_result(
         self,
-        response: Dict[str, Any],
-        messages: List[Dict[str, Any]]
+        tool_input: Dict[str, Any],
+        iterations: int,
+        input_tokens: int,
+        output_tokens: int
     ) -> Dict[str, Any]:
         """
-        Process Claude's response and handle tool calls.
+        Build the final result from return_search_result tool input.
 
-        Educational Note: This method:
-        1. Extracts tool calls using message_service
-        2. Executes client tools using web_agent_executor
-        3. Updates messages for next iteration
-        4. Detects termination signal
-
-        Args:
-            response: Response from claude_service
-            messages: Conversation messages (mutated in place)
-
-        Returns:
-            Dict with 'done', 'end_turn', and optionally 'final_result'
+        Educational Note: The termination tool's input IS the result.
+        We just add metadata (iterations, token usage, timestamp).
         """
-        content_blocks = response.get("content_blocks", [])
-        stop_reason = response.get("stop_reason")
-
-        # Build assistant content for message history
-        assistant_content = []
-        tool_results_to_send = []
-        final_result = None
-
-        for block in content_blocks:
-            block_type = getattr(block, "type", None)
-
-            if block_type == "text":
-                text_content = getattr(block, "text", "")
-                assistant_content.append({"type": "text", "text": text_content})
-                if text_content:
-                    print(f"    Agent: {text_content[:100]}...")
-
-            elif block_type == "tool_use":
-                # Client tool - we need to execute
-                tool_name = block.name
-                tool_input = block.input
-                tool_id = block.id
-
-                print(f"    Tool call: {tool_name}")
-
-                # Add tool_use to assistant content
-                assistant_content.append({
-                    "type": "tool_use",
-                    "id": tool_id,
-                    "name": tool_name,
-                    "input": tool_input
-                })
-
-                # Execute using web_agent_executor
-                result, is_termination = web_agent_executor.execute_tool(
-                    tool_name, tool_input
-                )
-
-                if is_termination:
-                    final_result = result
-                    tool_results_to_send.append({
-                        "type": "tool_result",
-                        "tool_use_id": tool_id,
-                        "content": json.dumps({"status": "completed"})
-                    })
-                else:
-                    tool_results_to_send.append({
-                        "type": "tool_result",
-                        "tool_use_id": tool_id,
-                        "content": json.dumps(result)
-                    })
-
-            elif block_type == "server_tool_use":
-                # Server tool - Claude handles execution
-                assistant_content.append({
-                    "type": "server_tool_use",
-                    "id": block.id,
-                    "name": block.name,
-                    "input": block.input
-                })
-                print(f"    Server tool: {block.name}")
-
-            elif block_type == "web_search_tool_result":
-                # Server tool results - include in assistant content
-                assistant_content.append({
-                    "type": "web_search_tool_result",
-                    "tool_use_id": getattr(block, "tool_use_id", None),
-                    "content": getattr(block, "content", None)
-                })
-
-            elif block_type == "web_fetch_tool_result":
-                # Server tool results - include in assistant content
-                assistant_content.append({
-                    "type": "web_fetch_tool_result",
-                    "tool_use_id": getattr(block, "tool_use_id", None),
-                    "content": getattr(block, "content", None)
-                })
-
-        # Check if we have a final result
-        if final_result is not None:
-            return {"done": True, "final_result": final_result, "end_turn": False}
-
-        # Check if agent ended without tools
-        if stop_reason == "end_turn" and not tool_results_to_send:
-            return {"done": False, "end_turn": True}
-
-        # Continue conversation if there are tool results
-        if tool_results_to_send:
-            messages.append({"role": "assistant", "content": assistant_content})
-            messages.append({"role": "user", "content": tool_results_to_send})
-        elif stop_reason == "tool_use":
-            # Tool use but no client tools (server tools only)
-            messages.append({"role": "assistant", "content": assistant_content})
-
-        return {"done": False, "end_turn": False}
+        return {
+            "success": tool_input.get("success", False),
+            "title": tool_input.get("title", ""),
+            "url": tool_input.get("url", ""),
+            "content": tool_input.get("content", ""),
+            "summary": tool_input.get("summary", ""),
+            "content_type": tool_input.get("content_type", "other"),
+            "source_urls": tool_input.get("source_urls", []),
+            "error_message": tool_input.get("error_message"),
+            "iterations": iterations,
+            "usage": {"input_tokens": input_tokens, "output_tokens": output_tokens},
+            "extracted_at": datetime.now().isoformat()
+        }
 
     def _save_execution(
         self,
         project_id: Optional[str],
         execution_id: str,
-        source_id: Optional[str],
-        url: Optional[str],
-        task: str,
+        url: str,
         messages: List[Dict[str, Any]],
         result: Dict[str, Any],
-        started_at: str
+        started_at: str,
+        source_id: Optional[str] = None
     ) -> None:
-        """
-        Save the agent execution log to a JSON file.
-
-        Educational Note: Saving execution logs enables:
-        - Debugging agent behavior
-        - Analyzing tool usage patterns
-        - Auditing content extraction quality
-
-        Structure:
-            data/projects/{project_id}/agents/web_agent/{execution_id}.json
-
-        Args:
-            project_id: Project ID (if None, logs are not saved)
-            execution_id: Unique execution ID
-            source_id: Source ID being processed
-            url: URL being extracted
-            task: The task description
-            messages: Full message chain
-            result: Agent result
-            started_at: Execution start timestamp
-        """
+        """Save execution log using message_service."""
         if not project_id:
-            print("  No project_id provided, skipping execution log save")
             return
 
-        try:
-            # Build directory path
-            agents_dir = Path(Config.DATA_DIR) / "projects" / project_id / "agents" / "web_agent"
-            agents_dir.mkdir(parents=True, exist_ok=True)
-
-            # Build execution log
-            execution_log = {
-                "execution_id": execution_id,
-                "agent_name": self.AGENT_NAME,
-                "source_id": source_id,
-                "url": url,
-                "task": task,
-                "messages": messages,
-                "result": result,
-                "started_at": started_at,
-                "completed_at": datetime.now().isoformat()
-            }
-
-            # Save to file
-            log_file = agents_dir / f"{execution_id}.json"
-            with open(log_file, "w", encoding="utf-8") as f:
-                json.dump(execution_log, f, indent=2, ensure_ascii=False)
-
-            print(f"  Execution log saved: {log_file}")
-
-        except Exception as e:
-            print(f"  Error saving execution log: {e}")
+        message_service.save_agent_execution(
+            project_id=project_id,
+            agent_name=self.AGENT_NAME,
+            execution_id=execution_id,
+            task=f"Extract content from: {url}",
+            messages=messages,
+            result=result,
+            started_at=started_at,
+            metadata={"source_id": source_id, "url": url}
+        )
 
 
 # Singleton instance

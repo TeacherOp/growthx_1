@@ -30,6 +30,7 @@ from app.services.data_services import message_service
 from app.config import prompt_loader, tool_loader, context_loader
 from app.services.tool_executors import source_search_executor
 from app.services.tool_executors import memory_executor
+from app.services.tool_executors import csv_analyzer_agent_executor
 from app.services.ai_services import chat_naming_service
 from app.services.background_services import task_service
 from app.utils import claude_parsing_utils
@@ -51,6 +52,7 @@ class MainChatService:
         """Initialize the service."""
         self._search_tool = None
         self._memory_tool = None
+        self._csv_analyzer_tool = None
         self.projects_dir = Config.PROJECTS_DIR
 
     def _get_search_tool(self) -> Dict[str, Any]:
@@ -65,15 +67,23 @@ class MainChatService:
             self._memory_tool = tool_loader.load_tool("chat_tools", "memory_tool")
         return self._memory_tool
 
-    def _get_tools(self, has_active_sources: bool) -> List[Dict[str, Any]]:
+    def _get_csv_analyzer_tool(self) -> Dict[str, Any]:
+        """Load the analyze_csv_agent tool definition (cached)."""
+        if self._csv_analyzer_tool is None:
+            self._csv_analyzer_tool = tool_loader.load_tool("chat_tools", "analyze_csv_agent_tool")
+        return self._csv_analyzer_tool
+
+    def _get_tools(self, has_active_sources: bool, has_csv_sources: bool = False) -> List[Dict[str, Any]]:
         """
         Get tools list for Claude API call.
 
         Educational Note: Memory tool is always available. Search tool
-        is only available when there are active sources to search.
+        is only available when there are active non-CSV sources. CSV analyzer
+        tool is available when there are CSV sources.
 
         Args:
-            has_active_sources: Whether project has active sources
+            has_active_sources: Whether project has active non-CSV sources
+            has_csv_sources: Whether project has active CSV sources
 
         Returns:
             List of tool definitions
@@ -82,6 +92,9 @@ class MainChatService:
 
         if has_active_sources:
             tools.append(self._get_search_tool())
+
+        if has_csv_sources:
+            tools.append(self._get_csv_analyzer_tool())
 
         return tools
 
@@ -195,6 +208,7 @@ class MainChatService:
         Educational Note: Routes tool calls to appropriate executor.
         - search_sources: Searches project sources for information
         - store_memory: Stores user/project memory (non-blocking, queues background task)
+        - analyze_csv_agent: Triggers CSV analyzer agent for CSV data questions
         """
         if tool_name == "search_sources":
             result = source_search_executor.execute(
@@ -217,9 +231,29 @@ class MainChatService:
                 why_generated=tool_input.get("why_generated", "")
             )
             if result.get("success"):
-                return result.get("message", "Memory stored successfully")
+                return result.get("message", "Memory stored successfully, you dont have to tell the user ever time you store memeories, this is a tool to improve overall UX so the user feels the service automatically keeps getting personalised")
             else:
                 return f"Error: {result.get('message', 'Unknown error')}"
+
+        elif tool_name == "analyze_csv_agent":
+            # CSV analyzer agent for answering questions about CSV data
+            result = csv_analyzer_agent_executor.execute(
+                project_id=project_id,
+                source_id=tool_input.get("source_id", ""),
+                query=tool_input.get("query", "")
+            )
+            if result.get("success"):
+                content = result.get("content", "No analysis result")
+                # Include image filenames if any plots were generated
+                # Educational Note: Filenames are auto-generated unique IDs
+                # Main chat Claude MUST use these exact filenames with [[image:FILENAME]]
+                if result.get("image_paths"):
+                    content += f"\n\nGenerated visualizations (use these exact filenames):\n"
+                    for filename in result["image_paths"]:
+                        content += f"- [[image:{filename}]]\n"
+                return content
+            else:
+                return f"Error: {result.get('error', 'Analysis failed')}"
 
         else:
             return f"Unknown tool: {tool_name}"
@@ -260,9 +294,15 @@ class MainChatService:
         base_prompt = prompt_config.get("system_prompt", "")
         system_prompt = self._build_system_prompt(project_id, base_prompt)
 
-        # Step 3: Get tools (memory always available, search only if sources active)
+        # Step 3: Get tools (memory always available, search for non-CSV, analyzer for CSV)
         active_sources = context_loader.get_active_sources(project_id)
-        tools = self._get_tools(has_active_sources=bool(active_sources))
+        # Separate CSV sources from other sources
+        csv_sources = [s for s in active_sources if s.get("file_extension") == ".csv"]
+        non_csv_sources = [s for s in active_sources if s.get("file_extension") != ".csv"]
+        tools = self._get_tools(
+            has_active_sources=bool(non_csv_sources),
+            has_csv_sources=bool(csv_sources)
+        )
 
         try:
             # Step 4: Build messages and call Claude

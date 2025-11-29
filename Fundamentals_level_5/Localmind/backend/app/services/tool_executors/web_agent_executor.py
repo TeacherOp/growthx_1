@@ -10,7 +10,7 @@ Server tools (web_search, web_fetch) are handled by Claude automatically
 and don't need execution here.
 """
 
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Tuple, Union
 
 
 class WebAgentExecutor:
@@ -62,26 +62,44 @@ class WebAgentExecutor:
             "error": f"Unknown tool: {tool_name}"
         }, False
 
-    def _execute_tavily_search(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
+    def _execute_tavily_search(self, tool_input: Dict[str, Any]) -> str:
         """
-        Execute Tavily search tool.
+        Execute Tavily search tool and format result as readable string.
 
         Args:
-            tool_input: Search parameters from the agent
+            tool_input: Contains 'query' parameter
 
         Returns:
-            Search results in standardized format
+            Formatted search results as a string for Claude to use
         """
         from app.services.integrations.tavily import tavily_service
 
-        return tavily_service.search(
-            query=tool_input.get("query", ""),
-            search_depth=tool_input.get("search_depth", "basic"),
-            include_answer=tool_input.get("include_answer", True),
-            include_raw_content=tool_input.get("include_raw_content", True),
-            max_results=tool_input.get("max_results", 5),
-            include_domains=tool_input.get("include_domains")
-        )
+        query = tool_input.get("query", "")
+        result = tavily_service.search(query=query)
+
+        # Format the result as a clean readable string
+        if not result.get("success"):
+            return f"Search failed: {result.get('error', 'Unknown error')}"
+
+        # Build formatted output
+        output_parts = []
+
+        # Add AI-generated answer if available
+        answer = result.get("answer")
+        if answer:
+            output_parts.append(f"## Summary\n{answer}")
+
+        # Add search results
+        results = result.get("results", [])
+        if results:
+            output_parts.append("\n## Sources")
+            for i, r in enumerate(results, 1):
+                title = r.get("title", "Untitled")
+                url = r.get("url", "")
+                content = r.get("content", "")
+                output_parts.append(f"\n### {i}. {title}\nURL: {url}\n{content}")
+
+        return "\n".join(output_parts) if output_parts else "No results found."
 
     def _handle_termination(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """

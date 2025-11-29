@@ -1,0 +1,23 @@
+{
+  "name": "return_analysis",
+  "description": "Return the final analysis result. Call this when you have completed the analysis and are ready to provide the answer to the user.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "summary": {
+        "type": "string",
+        "description": "Summary of the analysis findings that answers the user question"
+      },
+      "data": {
+        "type": "object",
+        "description": "Optional structured data from the analysis (key metrics, tables, etc.)"
+      },
+      "image_paths": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Paths to any generated plots/charts from the analysis"
+      }
+    },
+    "required": ["summary"]
+  }
+}

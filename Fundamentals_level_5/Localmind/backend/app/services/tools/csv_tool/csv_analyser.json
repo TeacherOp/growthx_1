@@ -1,0 +1,67 @@
+{
+  "name": "csv_analyzer",
+  "description": "Advanced CSV analyzer for analytics. Handles large datasets with intelligent data type detection, statistical analysis, data profiling, quality assessment, and business insights. Perfect for analyzing any structured CSV data. Also if you require only summary call the sumamry operation and pass the file name just to get the sumamry",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "filename": {
+        "type": "string",
+        "description": "Name of the CSV file to analyze."
+      },
+      "operation": {
+        "type": "string",
+        "description": "Type of analysis to perform. Each operation provides different insights into your data.",
+        "enum": [
+          "summary",
+          "profile",
+          "statistics",
+          "count_by_column",
+          "filter",
+          "search",
+          "group_by",
+          "unique_values",
+          "data_quality",
+          "top_bottom"
+        ],
+        "default": "summary"
+      },
+      "column": {
+        "type": "string",
+        "description": "Column name for single-column operations. Required for: statistics (numeric column), count_by_column, filter, group_by, top_bottom, unique_values (if columns not specified)"
+      },
+      "columns": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "List of column names for multi-column operations. Optional for: profile (specific columns to profile), data_quality (specific columns to check), unique_values (multiple columns)"
+      },
+      "value": {
+        "type": "string",
+        "description": "Value for filter operation. Can be numeric ('100', '50.5') or text ('active', 'pending'). Used with operator parameter."
+      },
+      "operator": {
+        "type": "string",
+        "description": "Comparison operator for filter operation. Numeric operators: greater_than, less_than, greater_equal, less_equal. Text operators: contains, not_contains. Universal: equals, not_equals",
+        "enum": ["equals", "not_equals", "contains", "not_contains", "greater_than", "less_than", "greater_equal", "less_equal"],
+        "default": "equals"
+      },
+      "search_term": {
+        "type": "string",
+        "description": "Search term for finding text across all columns. Case-insensitive partial matching."
+      },
+      "aggregation": {
+        "type": "string",
+        "description": "Aggregation method for group_by operation. Count: frequency, Sum/Mean/Median: numeric aggregation, Min/Max: extreme values",
+        "enum": ["count", "sum", "mean", "median", "min", "max"],
+        "default": "count"
+      },
+      "n": {
+        "type": "integer",
+        "description": "Number of items to return. Used in: top_bottom (top/bottom N values), unique_values (limit unique values shown)",
+        "default": 10,
+        "minimum": 1,
+        "maximum": 100
+      }
+    },
+    "required": ["filename", "operation"]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "return_csv_summary",
+  "description": "Return the final CSV analysis summary. Call this when you have analyzed the CSV and are ready to provide the summary.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "summary": {
+        "type": "string",
+        "description": "Concise summary of the CSV dataset (300-400 tokens)."
+      },
+      "row_count": {
+        "type": "integer",
+        "description": "Total number of rows in the CSV"
+      },
+      "column_count": {
+        "type": "integer",
+        "description": "Total number of columns in the CSV"
+      }
+    },
+    "required": ["summary"]
+  }
+}

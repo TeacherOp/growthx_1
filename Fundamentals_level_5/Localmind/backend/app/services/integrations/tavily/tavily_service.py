@@ -3,21 +3,15 @@ Tavily Service - Web search using Tavily AI API.
 
 Educational Note: Tavily is an AI-powered search API that provides
 high-quality search results with optional AI-generated answers.
-We use it as a fallback when Claude's web_fetch fails, or for
-comprehensive web searches.
-
-API Endpoints:
-    POST /search - Execute a search query
+We use it as a fallback when Claude's web_fetch fails.
 
 Features:
     - AI-generated answer summarizing results
-    - Raw content extraction in markdown format
-    - Domain filtering (include/exclude)
     - Search depth control (basic/advanced)
 """
 
 import os
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from tavily import TavilyClient
 
 
@@ -54,31 +48,17 @@ class TavilyService:
 
         return self._client
 
-    def search(
-        self,
-        query: str,
-        search_depth: str = "basic",
-        include_answer: bool = True,
-        include_raw_content: bool = True,
-        max_results: int = 5,
-        include_domains: Optional[List[str]] = None,
-        exclude_domains: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+    def search(self, query: str) -> Dict[str, Any]:
         """
-        Execute a web search using Tavily.
+        Execute a web search using Tavily with optimized defaults.
 
-        Educational Note: This method wraps the Tavily search API.
-        We return a standardized response format that can be used
-        as a tool result in the web agent.
+        Educational Note: Uses fixed parameters for consistent results:
+        - include_answer: "advanced" for AI summary
+        - search_depth: "advanced" for better results
+        - max_results: 5 for good coverage
 
         Args:
-            query: The search query (can be a URL or general query)
-            search_depth: "basic" or "advanced" (advanced costs more)
-            include_answer: Include AI-generated answer
-            include_raw_content: Include full page content in markdown
-            max_results: Maximum number of results (1-10)
-            include_domains: Only search these domains
-            exclude_domains: Exclude these domains from results
+            query: The search query (URL or topic)
 
         Returns:
             Dict with search results in standardized format
@@ -86,27 +66,18 @@ class TavilyService:
         try:
             client = self._get_client()
 
-            # Build search parameters
-            search_params = {
-                "query": query,
-                "search_depth": search_depth,
-                "include_answer": include_answer,
-                "include_raw_content": "markdown" if include_raw_content else False,
-                "max_results": max_results
-            }
+            print(f"Tavily search: {query[:50]}...")
 
-            # Add domain filters if specified
-            if include_domains:
-                search_params["include_domains"] = include_domains
-            if exclude_domains:
-                search_params["exclude_domains"] = exclude_domains
+            # Execute search with optimized fixed params
+            response = client.search(
+                query=query,
+                include_answer="advanced",
+                search_depth="advanced",
+                max_results=10,
+                chunks_per_source=5
+            )
 
-            print(f"Tavily search: {query[:100]}...")
-
-            # Execute search
-            response = client.search(**search_params)
-
-            # Standardize response format
+            # Return clean standardized format
             return {
                 "success": True,
                 "query": response.get("query", query),
@@ -115,13 +86,10 @@ class TavilyService:
                     {
                         "title": r.get("title", ""),
                         "url": r.get("url", ""),
-                        "content": r.get("content", ""),
-                        "raw_content": r.get("raw_content"),
-                        "score": r.get("score", 0)
+                        "content": r.get("content", "")
                     }
                     for r in response.get("results", [])
-                ],
-                "response_time": response.get("response_time")
+                ]
             }
 
         except ValueError as e:

@@ -15,6 +15,7 @@ import type { Message } from '../../lib/api/chats';
 import { parseCitations } from '../../lib/citations';
 import { CitationBadge } from './CitationBadge';
 import { Separator } from '../ui/separator';
+import { sourcesAPI } from '../../lib/api/sources';
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -185,20 +186,34 @@ const AIMessage: React.FC<AIMessageProps> = ({ content, projectId }) => {
     [content]
   );
 
-  // Pre-process content: Convert [[cite:chunk_id]] to [N](#cite-chunk_id) for inline rendering
-  // Using hash URLs (#cite-...) prevents browser navigation on click
+  // Pre-process content: Convert citations and images to markdown format
   const processedContent = useMemo(() => {
+    let processed = content;
+
     // Replace citation markers with markdown hash links
     // [[cite:CHUNK_ID]] -> [N](#cite-CHUNK_ID)
     // CHUNK_ID format: {source_id}_page_{page}_chunk_{n}
-    return content.replace(
+    processed = processed.replace(
       /\[\[cite:([a-zA-Z0-9_-]+_page_\d+_chunk_\d+)\]\]/g,
       (match, chunkId) => {
         const citationNumber = markerToNumber.get(match) || 0;
         return `[${citationNumber}](#cite-${chunkId})`;
       }
     );
-  }, [content, markerToNumber]);
+
+    // Replace image markers with markdown images
+    // [[image:FILENAME]] -> ![Chart](URL)
+    // Educational Note: AI agents generate charts/plots saved to ai_outputs/images
+    processed = processed.replace(
+      /\[\[image:([^\]]+)\]\]/g,
+      (_match, filename) => {
+        const imageUrl = sourcesAPI.getAIImageUrl(projectId, filename);
+        return `![${filename}](${imageUrl})`;
+      }
+    );
+
+    return processed;
+  }, [content, markerToNumber, projectId]);
 
   // Create markdown components with citation-aware link handler
   const componentsWithCitations = useMemo(() => ({

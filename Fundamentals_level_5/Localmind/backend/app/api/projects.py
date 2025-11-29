@@ -262,7 +262,7 @@ def open_project(project_id):
 
 
 @api_bp.route('/projects/<project_id>/costs', methods=['GET'])
-def get_project_costs(project_id):
+def get_project_costs_endpoint(project_id):
     """
     Get cost tracking data for a project.
 
