@@ -8,6 +8,7 @@ data files that provide context for AI conversations.
 from flask import jsonify, request, current_app, send_file
 from app.api import api_bp
 from app.services.source_service import SourceService
+from app.services.citation_service import citation_service
 
 # Initialize service
 source_service = SourceService()
@@ -475,6 +476,68 @@ def add_text_source(project_id: str):
 
     except Exception as e:
         current_app.logger.error(f"Error adding text source: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@api_bp.route('/projects/<project_id>/sources/<source_id>/page/<int:page_num>', methods=['GET'])
+def get_source_page(project_id: str, source_id: str, page_num: int):
+    """
+    Get the content of a specific page from a processed source.
+
+    Educational Note: This endpoint enables the citation feature. When Claude
+    cites a source with [[cite:SOURCE_ID:PAGE]], the frontend can fetch the
+    actual page content to display in a tooltip on hover.
+
+    Args:
+        project_id: The project UUID
+        source_id: The source UUID
+        page_num: The page number (1-indexed)
+
+    Returns:
+        JSON with page content and metadata
+    """
+    try:
+        # Validate page number
+        if page_num < 1:
+            return jsonify({
+                'success': False,
+                'error': 'Page number must be at least 1'
+            }), 400
+
+        # Get source metadata for the source name
+        source = source_service.get_source(project_id, source_id)
+        if not source:
+            return jsonify({
+                'success': False,
+                'error': 'Source not found'
+            }), 404
+
+        # Get page content
+        page_data = citation_service.get_page_content(project_id, source_id, page_num)
+
+        if not page_data:
+            return jsonify({
+                'success': False,
+                'error': f'Page {page_num} not found in source'
+            }), 404
+
+        return jsonify({
+            'success': True,
+            'page': {
+                'content': page_data['content'],
+                'page_number': page_data['page_number'],
+                'total_pages': page_data['total_pages'],
+                'source_type': page_data['source_type'],
+                'source_id': source_id,
+                'source_name': source.get('name', 'Unknown')
+            }
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error getting source page: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

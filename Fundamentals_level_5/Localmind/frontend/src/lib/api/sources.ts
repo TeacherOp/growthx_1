@@ -68,6 +68,20 @@ export const ALLOWED_EXTENSIONS = {
   data: ['.csv'],
 };
 
+/**
+ * Page content returned from citation API
+ * Educational Note: This is used for the citation tooltip feature.
+ * When Claude cites a source, we fetch the actual page content to display.
+ */
+export interface PageContent {
+  content: string;
+  page_number: number;
+  total_pages: number;
+  source_type: string;
+  source_id: string;
+  source_name: string;
+}
+
 class SourcesAPI {
   /**
    * List all sources for a project
@@ -276,6 +290,28 @@ class SourcesAPI {
       );
     } catch (error) {
       console.error('Error retrying source processing:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a specific page's content from a processed source
+   * Educational Note: This enables the citation feature. When Claude cites
+   * a source with [[cite:SOURCE_ID:PAGE]], we fetch the actual page content
+   * to display in a tooltip on hover.
+   */
+  async getSourcePage(
+    projectId: string,
+    sourceId: string,
+    pageNum: number
+  ): Promise<PageContent> {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/projects/${projectId}/sources/${sourceId}/page/${pageNum}`
+      );
+      return response.data.page;
+    } catch (error) {
+      console.error('Error fetching source page:', error);
       throw error;
     }
   }

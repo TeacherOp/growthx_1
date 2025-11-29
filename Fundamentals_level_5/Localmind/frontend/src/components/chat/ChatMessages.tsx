@@ -2,20 +2,146 @@
  * ChatMessages Component
  * Educational Note: Displays the conversation message list with user and AI messages.
  * - User messages: Right-aligned, simple styling
- * - AI messages: Left-aligned with markdown rendering
+ * - AI messages: Left-aligned with markdown rendering and citation support
+ * - Citations appear as hoverable badges that show source content
  * - Shows a loading indicator when waiting for AI response
  */
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { User, Robot, CircleNotch } from '@phosphor-icons/react';
+import { User, Robot, CircleNotch, FileText } from '@phosphor-icons/react';
 import type { Message } from '../../lib/api/chats';
+import { parseCitations } from '../../lib/citations';
+import { CitationBadge } from './CitationBadge';
+import { Separator } from '../ui/separator';
 
 interface ChatMessagesProps {
   messages: Message[];
   sending: boolean;
+  projectId: string;
 }
+
+/**
+ * Shared markdown component configurations
+ * Educational Note: These define how different markdown elements are rendered.
+ * Extracted as a constant to be reused across text segments.
+ * Using 'as const' and explicit any typing for react-markdown compatibility.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const markdownComponents: Record<string, React.FC<any>> = {
+  // Headers
+  h1: ({ children }: { children: React.ReactNode }) => (
+    <h1 className="text-lg font-bold mt-4 mb-2 first:mt-0">{children}</h1>
+  ),
+  h2: ({ children }: { children: React.ReactNode }) => (
+    <h2 className="text-base font-bold mt-4 mb-2 first:mt-0">{children}</h2>
+  ),
+  h3: ({ children }: { children: React.ReactNode }) => (
+    <h3 className="text-sm font-bold mt-3 mb-1 first:mt-0">{children}</h3>
+  ),
+  // Paragraphs - inline-block allows citations to sit next to text
+  p: ({ children }: { children: React.ReactNode }) => (
+    <p className="text-sm mb-2 last:mb-0">{children}</p>
+  ),
+  // Lists
+  ul: ({ children }: { children: React.ReactNode }) => (
+    <ul className="text-sm list-disc pl-4 mb-2 space-y-1">{children}</ul>
+  ),
+  ol: ({ children }: { children: React.ReactNode }) => (
+    <ol className="text-sm list-decimal pl-4 mb-2 space-y-1">{children}</ol>
+  ),
+  li: ({ children }: { children: React.ReactNode }) => (
+    <li className="text-sm">{children}</li>
+  ),
+  // Code blocks
+  code: ({ className, children, ...props }: { className?: string; children: React.ReactNode }) => {
+    const content = String(children).replace(/\n$/, '');
+    const hasNewlines = content.includes('\n');
+    const isBlock = className || hasNewlines;
+
+    if (!isBlock) {
+      return (
+        <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono break-all">
+          {children}
+        </code>
+      );
+    }
+    return (
+      <code className="text-xs font-mono whitespace-pre" {...props}>
+        {children}
+      </code>
+    );
+  },
+  pre: ({ children }: { children: React.ReactNode }) => (
+    <pre className="my-2 overflow-x-auto max-w-full !bg-stone-900 !text-stone-100 p-3 rounded-lg">
+      {children}
+    </pre>
+  ),
+  // Links
+  a: ({ href, children }: { href?: string; children: React.ReactNode }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary underline hover:no-underline break-all"
+    >
+      {children}
+    </a>
+  ),
+  // Bold and italic
+  strong: ({ children }: { children: React.ReactNode }) => (
+    <strong className="font-semibold">{children}</strong>
+  ),
+  em: ({ children }: { children: React.ReactNode }) => (
+    <em className="italic">{children}</em>
+  ),
+  // Blockquotes
+  blockquote: ({ children }: { children: React.ReactNode }) => (
+    <blockquote className="border-l-2 border-primary/50 pl-3 italic text-muted-foreground my-2">
+      {children}
+    </blockquote>
+  ),
+  // Horizontal rule
+  hr: () => <hr className="border-border my-4" />,
+  // Tables
+  table: ({ children }: { children: React.ReactNode }) => (
+    <div className="overflow-x-auto my-3 max-w-full">
+      <table className="min-w-full text-sm border-collapse border border-border rounded-lg">
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children }: { children: React.ReactNode }) => (
+    <thead className="bg-muted/70">{children}</thead>
+  ),
+  tbody: ({ children }: { children: React.ReactNode }) => (
+    <tbody className="divide-y divide-border">{children}</tbody>
+  ),
+  tr: ({ children }: { children: React.ReactNode }) => (
+    <tr className="hover:bg-muted/30">{children}</tr>
+  ),
+  th: ({ children }: { children: React.ReactNode }) => (
+    <th className="px-3 py-2 text-left font-semibold border-b border-border">
+      {children}
+    </th>
+  ),
+  td: ({ children }: { children: React.ReactNode }) => (
+    <td className="px-3 py-2 border-b border-border">{children}</td>
+  ),
+  // Images
+  img: ({ src, alt }: { src?: string; alt?: string }) => (
+    <img
+      src={src}
+      alt={alt || ''}
+      className="max-w-full h-auto rounded-lg my-2"
+    />
+  ),
+  // Strikethrough
+  del: ({ children }: { children: React.ReactNode }) => (
+    <del className="line-through text-muted-foreground">{children}</del>
+  ),
+};
 
 /**
  * User Message Component
@@ -39,161 +165,126 @@ const UserMessage: React.FC<{ content: string }> = ({ content }) => (
 /**
  * AI Message Component
  * Educational Note: Left-aligned with full markdown rendering support.
- * Uses react-markdown for parsing headers, lists, code blocks, links, etc.
+ * Now handles citations with [[cite:SOURCE_ID:PAGE]] format.
+ *
+ * Citation Strategy:
+ * 1. Pre-process content: Convert [[cite:X:Y]] to markdown links [#N](cite:X:Y)
+ * 2. Render through single ReactMarkdown instance (preserves inline flow)
+ * 3. Custom 'a' component detects cite: links and renders CitationBadge
  */
-const AIMessage: React.FC<{ content: string }> = ({ content }) => (
-  <div className="flex justify-start w-full max-w-full overflow-hidden">
-    <div className="max-w-[85%] min-w-0 flex gap-3 overflow-hidden">
-      <div className="flex-shrink-0">
-        <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-          <Robot size={16} className="text-primary-foreground" />
-        </div>
-      </div>
-      <div className="bg-muted/50 rounded-2xl rounded-tl-sm px-4 py-3 min-w-0 overflow-hidden flex-1">
-        <p className="text-xs font-medium text-muted-foreground mb-2">LocalMind</p>
-        {/* Markdown rendering with custom styling */}
-        <div className="prose prose-sm prose-stone max-w-none min-w-0 overflow-hidden prose-pre:bg-stone-900 prose-pre:text-stone-100 prose-code:text-stone-100 prose-code:bg-transparent">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              // Headers
-              h1: ({ children }) => (
-                <h1 className="text-lg font-bold mt-4 mb-2 first:mt-0">{children}</h1>
-              ),
-              h2: ({ children }) => (
-                <h2 className="text-base font-bold mt-4 mb-2 first:mt-0">{children}</h2>
-              ),
-              h3: ({ children }) => (
-                <h3 className="text-sm font-bold mt-3 mb-1 first:mt-0">{children}</h3>
-              ),
-              // Paragraphs
-              p: ({ children }) => (
-                <p className="text-sm mb-2 last:mb-0">{children}</p>
-              ),
-              // Lists
-              ul: ({ children }) => (
-                <ul className="text-sm list-disc pl-4 mb-2 space-y-1">{children}</ul>
-              ),
-              ol: ({ children }) => (
-                <ol className="text-sm list-decimal pl-4 mb-2 space-y-1">{children}</ol>
-              ),
-              li: ({ children }) => (
-                <li className="text-sm">{children}</li>
-              ),
-              // Code blocks - inline code wraps, block code scrolls horizontally
-              code: ({ className, children, node, ...props }) => {
-                // Check if this is a block code by looking at parent or if content has newlines
-                const content = String(children).replace(/\n$/, '');
-                const hasNewlines = content.includes('\n');
-                const isBlock = className || hasNewlines;
+interface AIMessageProps {
+  content: string;
+  projectId: string;
+}
 
-                if (!isBlock) {
-                  // Inline code
-                  return (
-                    <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono break-all">
-                      {children}
-                    </code>
-                  );
-                }
-                // Block code - no background, text color inherited from pre
-                return (
-                  <code className="text-xs font-mono whitespace-pre" {...props}>
-                    {children}
-                  </code>
-                );
-              },
-              // Pre element gets background and overflow
-              pre: ({ children }) => (
-                <pre className="my-2 overflow-x-auto max-w-full !bg-stone-900 !text-stone-100 p-3 rounded-lg">
-                  {children}
-                </pre>
-              ),
-              // Links - break-all prevents long URLs from overflowing
-              a: ({ href, children }) => (
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary underline hover:no-underline break-all"
-                >
-                  {children}
-                </a>
-              ),
-              // Bold and italic
-              strong: ({ children }) => (
-                <strong className="font-semibold">{children}</strong>
-              ),
-              em: ({ children }) => (
-                <em className="italic">{children}</em>
-              ),
-              // Blockquotes
-              blockquote: ({ children }) => (
-                <blockquote className="border-l-2 border-primary/50 pl-3 italic text-muted-foreground my-2">
-                  {children}
-                </blockquote>
-              ),
-              // Horizontal rule
-              hr: () => <hr className="border-border my-4" />,
-              // Tables - wrapper constrains width, allows horizontal scroll within
-              table: ({ children }) => (
-                <div className="overflow-x-auto my-3 max-w-full">
-                  <table className="min-w-full text-sm border-collapse border border-border rounded-lg">
-                    {children}
-                  </table>
+const AIMessage: React.FC<AIMessageProps> = ({ content, projectId }) => {
+  // Parse citations from content to get citation numbers
+  const { uniqueCitations, markerToNumber } = useMemo(
+    () => parseCitations(content),
+    [content]
+  );
+
+  // Pre-process content: Convert [[cite:X:Y]] to [N](#cite-X-Y) for inline rendering
+  // Using hash URLs (#cite-...) prevents browser navigation on click
+  const processedContent = useMemo(() => {
+    // Replace citation markers with markdown hash links
+    // [[cite:SOURCE_ID:PAGE]] -> [N](#cite-SOURCE_ID-PAGE)
+    return content.replace(
+      /\[\[cite:([a-zA-Z0-9_-]+):(\d+)\]\]/g,
+      (match, sourceId, page) => {
+        const citationNumber = markerToNumber.get(match) || 0;
+        return `[${citationNumber}](#cite-${sourceId}-${page})`;
+      }
+    );
+  }, [content, markerToNumber]);
+
+  // Create markdown components with citation-aware link handler
+  const componentsWithCitations = useMemo(() => ({
+    ...markdownComponents,
+    // Override 'a' to handle citation links
+    a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
+      // Check if this is a citation link (#cite-SOURCE_ID-PAGE)
+      // Using hash URLs prevents browser navigation
+      if (href) {
+        // Match hash citation format: #cite-SOURCE_ID-PAGE
+        const citeMatch = href.match(/#cite-([a-zA-Z0-9_-]+)-(\d+)$/);
+        if (citeMatch) {
+          const [, sourceId, pageStr] = citeMatch;
+          const pageNumber = parseInt(pageStr, 10);
+          const citationNumber = typeof children === 'string' ? parseInt(children, 10) : 0;
+          return (
+            <CitationBadge
+              citationNumber={citationNumber}
+              sourceId={sourceId}
+              pageNumber={pageNumber}
+              projectId={projectId}
+            />
+          );
+        }
+      }
+      // Regular link
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline hover:no-underline break-all"
+        >
+          {children}
+        </a>
+      );
+    },
+  }), [projectId]);
+
+  return (
+    <div className="flex justify-start w-full max-w-full overflow-hidden">
+      <div className="max-w-[85%] min-w-0 flex gap-3 overflow-hidden">
+        <div className="flex-shrink-0">
+          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+            <Robot size={16} className="text-primary-foreground" />
+          </div>
+        </div>
+        <div className="bg-muted/50 rounded-2xl rounded-tl-sm px-4 py-3 min-w-0 overflow-hidden flex-1">
+          <p className="text-xs font-medium text-muted-foreground mb-2">LocalMind</p>
+
+          {/* Single ReactMarkdown instance - preserves inline flow */}
+          <div className="prose prose-sm prose-stone max-w-none min-w-0 overflow-hidden prose-pre:bg-stone-900 prose-pre:text-stone-100 prose-code:text-stone-100 prose-code:bg-transparent">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={componentsWithCitations}
+            >
+              {processedContent}
+            </ReactMarkdown>
+          </div>
+
+          {/* Sources footer - only show if there are citations */}
+          {uniqueCitations.length > 0 && (
+            <>
+              <Separator className="my-3" />
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <FileText size={12} />
+                  <span>Sources</span>
                 </div>
-              ),
-              thead: ({ children }) => (
-                <thead className="bg-muted/70">{children}</thead>
-              ),
-              tbody: ({ children }) => (
-                <tbody className="divide-y divide-border">{children}</tbody>
-              ),
-              tr: ({ children }) => (
-                <tr className="hover:bg-muted/30">{children}</tr>
-              ),
-              th: ({ children }) => (
-                <th className="px-3 py-2 text-left font-semibold border-b border-border">
-                  {children}
-                </th>
-              ),
-              td: ({ children }) => (
-                <td className="px-3 py-2 border-b border-border">{children}</td>
-              ),
-              // Images
-              img: ({ src, alt }) => (
-                <img
-                  src={src}
-                  alt={alt || ''}
-                  className="max-w-full h-auto rounded-lg my-2"
-                />
-              ),
-              // Strikethrough (del)
-              del: ({ children }) => (
-                <del className="line-through text-muted-foreground">{children}</del>
-              ),
-              // Task lists (checkboxes)
-              input: ({ type, checked }) => {
-                if (type === 'checkbox') {
-                  return (
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      readOnly
-                      className="mr-2 rounded border-border"
-                    />
-                  );
-                }
-                return <input type={type} />;
-              },
-            }}
-          >
-            {content}
-          </ReactMarkdown>
+                <div className="flex flex-wrap gap-2">
+                  {uniqueCitations.map((citation) => (
+                    <div
+                      key={`footer-${citation.citationNumber}`}
+                      className="text-xs text-muted-foreground"
+                    >
+                      <span className="font-medium">[{citation.citationNumber}]</span>
+                      {' '}Page {citation.pageNumber}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 /**
  * Loading Indicator
@@ -218,7 +309,7 @@ const LoadingIndicator: React.FC = () => (
   </div>
 );
 
-export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, sending }) => {
+export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, sending, projectId }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -279,7 +370,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, sending })
             {msg.role === 'user' ? (
               <UserMessage content={msg.content} />
             ) : (
-              <AIMessage content={msg.content} />
+              <AIMessage content={msg.content} projectId={projectId} />
             )}
             {msg.error && (
               <p className="text-xs text-destructive text-center mt-1">

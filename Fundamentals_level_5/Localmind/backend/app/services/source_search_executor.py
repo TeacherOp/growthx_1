@@ -254,7 +254,8 @@ class SourceSearchExecutor:
             score = result.get("score", 0)
             metadata = result.get("metadata", {})
 
-            page = metadata.get("page", "?")
+            # Metadata uses "page_number" key (from chunking_service)
+            page = metadata.get("page_number", "?")
             text = metadata.get("text", "")
 
             lines.append(f"### Result {i} (Page {page}, Score: {score:.2f})")
