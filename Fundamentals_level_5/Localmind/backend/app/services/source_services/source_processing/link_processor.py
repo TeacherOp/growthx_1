@@ -72,8 +72,8 @@ def process_link(
     print(f"Processing link source: {url}")
 
     # Use web agent to extract content
-    result = web_agent_service.extract_from_url(
-        url,
+    result = web_agent_service.run(
+        url=url,
         project_id=project_id,
         source_id=source_id
     )

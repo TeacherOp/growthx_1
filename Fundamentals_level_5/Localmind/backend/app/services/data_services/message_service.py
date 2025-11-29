@@ -1,7 +1,7 @@
 """
-Message Service - Handles message persistence and retrieval for chat conversations.
+Message Service - Handles message persistence and retrieval for chat and agent conversations.
 
-Educational Note: This is a pure CRUD service for chat messages.
+Educational Note: This is a pure CRUD service for messages (chat and agent).
 It handles storing and retrieving messages, building message arrays for API calls.
 
 Key Responsibilities:
@@ -9,6 +9,7 @@ Key Responsibilities:
 - Retrieve message history
 - Build message arrays for Claude API calls
 - Support different message types (user, assistant, tool_result)
+- Store and retrieve agent execution logs (web_agent, etc.)
 
 For parsing Claude API responses (tool_use blocks, content extraction),
 see utils/claude_parsing_utils.py
@@ -21,6 +22,7 @@ from typing import Optional, Dict, List, Any
 
 from config import Config
 from app.utils import claude_parsing_utils
+from app.utils.path_utils import get_web_agent_dir, get_agents_dir
 
 
 class MessageService:
@@ -333,6 +335,181 @@ class MessageService:
         chat_data["updated_at"] = datetime.now().isoformat()
 
         return self._save_chat_data(project_id, chat_id, chat_data)
+
+    # =========================================================================
+    # Agent Execution Logs - For storing agent debug/execution data
+    # =========================================================================
+
+    def _get_agent_dir(self, project_id: str, agent_name: str) -> Path:
+        """
+        Get the directory for a specific agent's execution logs.
+
+        Educational Note: Uses path_utils for centralized path management.
+        Currently supports 'web_agent', can be extended for other agents.
+
+        Args:
+            project_id: The project UUID
+            agent_name: The agent name (e.g., 'web_agent')
+
+        Returns:
+            Path to agent's execution log directory (auto-created)
+        """
+        if agent_name == "web_agent":
+            return get_web_agent_dir(project_id)
+        else:
+            # Generic fallback for future agents
+            agents_dir = get_agents_dir(project_id)
+            agent_dir = agents_dir / agent_name
+            agent_dir.mkdir(parents=True, exist_ok=True)
+            return agent_dir
+
+    def save_agent_execution(
+        self,
+        project_id: str,
+        agent_name: str,
+        execution_id: str,
+        task: str,
+        messages: List[Dict[str, Any]],
+        result: Dict[str, Any],
+        started_at: str,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Optional[str]:
+        """
+        Save an agent execution log.
+
+        Educational Note: Agent execution logs are stored separately from chat
+        messages. They capture the full message chain, tool calls, and results
+        for debugging and auditing agent behavior.
+
+        Structure: data/projects/{project_id}/agents/{agent_name}/{execution_id}.json
+
+        Args:
+            project_id: The project UUID
+            agent_name: The agent name (e.g., 'web_agent')
+            execution_id: Unique execution ID
+            task: The task description that was given to the agent
+            messages: Full message chain (includes tool_use, tool_result, etc.)
+            result: Final result from the agent
+            started_at: Execution start timestamp (ISO format)
+            metadata: Optional additional metadata (source_id, url, etc.)
+
+        Returns:
+            The execution_id if successful, None if failed
+        """
+        if not project_id:
+            print(f"  No project_id provided, skipping {agent_name} execution log save")
+            return None
+
+        try:
+            # Get agent directory using path_utils
+            agent_dir = self._get_agent_dir(project_id, agent_name)
+
+            # Build execution log
+            execution_log = {
+                "execution_id": execution_id,
+                "agent_name": agent_name,
+                "task": task,
+                "messages": messages,
+                "result": result,
+                "started_at": started_at,
+                "completed_at": datetime.now().isoformat()
+            }
+
+            # Add optional metadata
+            if metadata:
+                execution_log.update(metadata)
+
+            # Save to file
+            log_file = agent_dir / f"{execution_id}.json"
+            with open(log_file, "w", encoding="utf-8") as f:
+                json.dump(execution_log, f, indent=2, ensure_ascii=False)
+
+            print(f"  Agent execution log saved: {log_file}")
+            return execution_id
+
+        except Exception as e:
+            print(f"  Error saving {agent_name} execution log: {e}")
+            return None
+
+    def get_agent_execution(
+        self,
+        project_id: str,
+        agent_name: str,
+        execution_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get a specific agent execution log.
+
+        Args:
+            project_id: The project UUID
+            agent_name: The agent name (e.g., 'web_agent')
+            execution_id: The execution UUID
+
+        Returns:
+            Execution log dict or None if not found
+        """
+        try:
+            agent_dir = self._get_agent_dir(project_id, agent_name)
+            log_file = agent_dir / f"{execution_id}.json"
+
+            if not log_file.exists():
+                return None
+
+            with open(log_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"  Error reading {agent_name} execution log: {e}")
+            return None
+
+    def list_agent_executions(
+        self,
+        project_id: str,
+        agent_name: str,
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """
+        List agent execution logs for a project.
+
+        Educational Note: Returns basic metadata for each execution without
+        loading the full message chains. Sorted by completion time (newest first).
+
+        Args:
+            project_id: The project UUID
+            agent_name: The agent name (e.g., 'web_agent')
+            limit: Maximum number of executions to return
+
+        Returns:
+            List of execution summaries (id, task, completed_at, success)
+        """
+        try:
+            agent_dir = self._get_agent_dir(project_id, agent_name)
+
+            if not agent_dir.exists():
+                return []
+
+            executions = []
+            for log_file in agent_dir.glob("*.json"):
+                try:
+                    with open(log_file, "r", encoding="utf-8") as f:
+                        log = json.load(f)
+                        executions.append({
+                            "execution_id": log.get("execution_id"),
+                            "task": log.get("task", "")[:100],  # Truncate task
+                            "completed_at": log.get("completed_at"),
+                            "success": log.get("result", {}).get("success", False)
+                        })
+                except (json.JSONDecodeError, IOError):
+                    continue
+
+            # Sort by completion time (newest first)
+            executions.sort(key=lambda x: x.get("completed_at", ""), reverse=True)
+
+            return executions[:limit]
+
+        except Exception as e:
+            print(f"  Error listing {agent_name} executions: {e}")
+            return []
 
 
 # Singleton instance for easy import

@@ -1,8 +1,0 @@
-{
-  "_comment": "Claude Server Tool - web_fetch_20250910 (beta). Claude handles execution automatically.",
-  "_type": "server_tool",
-  "_beta_header": "web-fetch-2025-09-10",
-  "type": "web_fetch_20250910",
-  "name": "web_fetch",
-  "max_uses": 5
-}

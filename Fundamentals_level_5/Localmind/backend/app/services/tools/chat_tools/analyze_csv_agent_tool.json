@@ -1,0 +1,18 @@
+{
+  "name": "analyze_csv_agent",
+  "description": "Trigger a data analysis agent for CSV files. Use this for any questions about CSV/spreadsheet data. The agent can perform in-depth analysis using pandas, calculate complex aggregations, filter and transform data, and generate visualizations (charts, graphs, plots) using matplotlib and seaborn. Do NOT use search_sources for CSV files - use this tool instead.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "source_id": {
+        "type": "string",
+        "description": "The ID of the CSV source to analyze (from available sources in your context)"
+      },
+      "query": {
+        "type": "string",
+        "description": "The users question or analysis request. Can include requests for statistics, aggregations, filtering, grouping, comparisons, trends, or visualizations like bar charts, line graphs, pie charts etc."
+      }
+    },
+    "required": ["source_id", "query"]
+  }
+}

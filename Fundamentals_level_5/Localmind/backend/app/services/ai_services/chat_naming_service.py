@@ -14,6 +14,7 @@ from typing import Optional
 
 from app.services.integrations.claude import claude_service
 from app.config import prompt_loader
+from app.utils import claude_parsing_utils
 
 
 class ChatNamingService:
@@ -75,7 +76,8 @@ class ChatNamingService:
                 project_id=project_id
             )
 
-            title = response.get("content", "").strip()
+            # Use claude_parsing_utils to extract text from response
+            title = claude_parsing_utils.extract_text(response).strip()
 
             if not title:
                 return None

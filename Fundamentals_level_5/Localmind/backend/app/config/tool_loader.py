@@ -236,6 +236,7 @@ class ToolLoader:
         return {
             "server_tools": server_tools,
             "client_tools": client_tools,
+            "all_tools": server_tools + client_tools,
             "beta_headers": beta_headers
         }
 

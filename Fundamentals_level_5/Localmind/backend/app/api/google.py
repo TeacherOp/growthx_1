@@ -213,6 +213,7 @@ def google_import_file(project_id):
         import uuid
         from pathlib import Path
         from app.services.source_services import source_service
+        from app.utils.path_utils import get_raw_dir
 
         data = request.get_json()
         if not data or 'file_id' not in data:
@@ -258,11 +259,9 @@ def google_import_file(project_id):
         elif extension == '.csv':
             category = 'data'
 
-        # Ensure directories exist
-        source_service._ensure_directories(project_id)
-
         # Build destination path (same pattern as upload_source)
-        raw_dir = source_service._get_raw_dir(project_id)
+        # Note: get_raw_dir auto-creates directories if they don't exist
+        raw_dir = get_raw_dir(project_id)
         stored_filename = f"{source_id}{extension}"
         destination_path = raw_dir / stored_filename
 

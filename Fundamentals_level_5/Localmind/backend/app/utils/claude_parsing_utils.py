@@ -7,27 +7,38 @@ Educational Note: Claude API has specific message patterns for tool use:
    stop_reason: "end_turn"
    content: [{type: "text", text: "..."}]
 
-2. Tool use response (can be parallel - multiple tools at once):
+2. Client Tool use (we execute, send results back):
    stop_reason: "tool_use"
    content: [
-       {type: "text", text: "I'll check..."},           # Optional explanation
+       {type: "text", text: "I'll check..."},
        {type: "tool_use", id: "toolu_01", name: "get_weather", input: {...}},
-       {type: "tool_use", id: "toolu_02", name: "get_time", input: {...}},
    ]
 
-3. Tool results (sent as ONE user message with all results):
+3. Server Tool use (Claude executes, results come in same response):
+   stop_reason: "end_turn" (or continues)
+   content: [
+       {type: "server_tool_use", id: "srvtoolu_01", name: "web_fetch", input: {...}},
+       {type: "web_fetch_tool_result", tool_use_id: "srvtoolu_01", content: "..."},
+   ]
+
+4. Tool results (sent as ONE user message with all results):
    role: "user"
    content: [
        {type: "tool_result", tool_use_id: "toolu_01", content: "68°F sunny"},
-       {type: "tool_result", tool_use_id: "toolu_02", content: "2:30 PM PST"},
    ]
+
+Server Tools (web_search, web_fetch):
+- Claude handles execution directly
+- Results appear as *_tool_result blocks in the same response
+- No tool_result message needed from us
+- Requires beta headers: "anthropic-beta": "web-search-2025-03-05,web-fetch-2025-09-10"
 
 Message chain: user → assistant (tool_use[]) → user (tool_result[]) → assistant (final)
 
 This utility is used by:
 - main_chat_service (chat with search/memory tools)
 - ai_services (PDF, PPTX, image extraction with forced tool use)
-- ai_agents (web agent with multiple tools)
+- ai_agents (web agent with server + client tools)
 """
 from typing import Dict, List, Any, Optional
 
@@ -187,6 +198,107 @@ def extract_tool_inputs(
 
 
 # =============================================================================
+# Server Tool Extraction - For web_search, web_fetch (Claude-executed tools)
+# =============================================================================
+
+def extract_server_tool_use_blocks(
+    response: Dict[str, Any],
+    tool_name: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """
+    Extract server_tool_use blocks from Claude response.
+
+    Educational Note: Server tools (web_search, web_fetch) are executed by Claude
+    directly. They appear as "server_tool_use" blocks, and their results come
+    back in the same response as "*_tool_result" blocks.
+
+    Args:
+        response: Response dict from claude_service.send_message()
+        tool_name: Optional filter - only return blocks for this tool
+
+    Returns:
+        List of dicts: [{id, name, input}, ...]
+    """
+    tool_blocks = []
+    content_blocks = response.get("content_blocks", [])
+
+    for block in content_blocks:
+        # Handle Anthropic objects
+        if hasattr(block, 'type') and block.type == "server_tool_use":
+            if tool_name is None or block.name == tool_name:
+                tool_blocks.append({
+                    "id": block.id,
+                    "name": block.name,
+                    "input": block.input,
+                })
+
+        # Handle dict format
+        elif isinstance(block, dict) and block.get("type") == "server_tool_use":
+            if tool_name is None or block.get("name") == tool_name:
+                tool_blocks.append({
+                    "id": block.get("id"),
+                    "name": block.get("name"),
+                    "input": block.get("input", {}),
+                })
+
+    return tool_blocks
+
+
+def extract_server_tool_results(
+    response: Dict[str, Any],
+    result_type: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """
+    Extract server tool result blocks from Claude response.
+
+    Educational Note: Server tool results have types like:
+    - "web_search_tool_result" - Results from web_search
+    - "web_fetch_tool_result" - Results from web_fetch
+
+    These results are included directly in Claude's response and don't
+    require us to send tool_result messages back.
+
+    Args:
+        response: Response dict from claude_service.send_message()
+        result_type: Optional filter - "web_search_tool_result" or "web_fetch_tool_result"
+
+    Returns:
+        List of dicts: [{type, tool_use_id, content}, ...]
+    """
+    result_blocks = []
+    content_blocks = response.get("content_blocks", [])
+
+    # Types we recognize as server tool results
+    server_result_types = {"web_search_tool_result", "web_fetch_tool_result"}
+
+    for block in content_blocks:
+        block_type = getattr(block, "type", None) if hasattr(block, "type") else block.get("type")
+
+        if block_type in server_result_types:
+            if result_type is None or block_type == result_type:
+                result_blocks.append({
+                    "type": block_type,
+                    "tool_use_id": getattr(block, "tool_use_id", None) if hasattr(block, "tool_use_id") else block.get("tool_use_id"),
+                    "content": getattr(block, "content", None) if hasattr(block, "content") else block.get("content"),
+                })
+
+    return result_blocks
+
+
+def has_server_tool_use(response: Dict[str, Any]) -> bool:
+    """
+    Check if response contains server tool usage.
+
+    Args:
+        response: Response dict from claude_service.send_message()
+
+    Returns:
+        True if response contains server_tool_use blocks
+    """
+    return len(extract_server_tool_use_blocks(response)) > 0
+
+
+# =============================================================================
 # Content Block Building - For sending tool results back to Claude
 # =============================================================================
 
@@ -277,6 +389,42 @@ def build_single_tool_result(
 # Content Block Serialization - For storing in JSON (message history, logs)
 # =============================================================================
 
+def _serialize_anthropic_object(obj: Any) -> Any:
+    """
+    Recursively convert Anthropic SDK objects to JSON-serializable dicts.
+
+    Educational Note: Anthropic SDK returns objects with attributes (.type, .url, etc.)
+    that aren't JSON serializable. This helper recursively converts them to plain dicts.
+    Handles nested objects, lists, and primitive types.
+
+    Used for server tool results (web_search_tool_result, web_fetch_tool_result)
+    which contain nested SDK objects like WebSearchResultBlock, WebFetchResult, etc.
+    """
+    # Already a primitive type - return as-is
+    if obj is None or isinstance(obj, (str, int, float, bool)):
+        return obj
+
+    # List - recursively serialize each element
+    if isinstance(obj, list):
+        return [_serialize_anthropic_object(item) for item in obj]
+
+    # Dict - recursively serialize values
+    if isinstance(obj, dict):
+        return {key: _serialize_anthropic_object(value) for key, value in obj.items()}
+
+    # Anthropic SDK object - convert to dict by extracting attributes
+    if hasattr(obj, '__dict__'):
+        result = {}
+        for key, value in vars(obj).items():
+            # Skip private attributes
+            if not key.startswith('_'):
+                result[key] = _serialize_anthropic_object(value)
+        return result
+
+    # Fallback - try to convert to string
+    return str(obj)
+
+
 def serialize_content_blocks(content_blocks: List[Any]) -> List[Dict[str, Any]]:
     """
     Convert Anthropic content block objects to JSON-serializable dicts.
@@ -284,6 +432,9 @@ def serialize_content_blocks(content_blocks: List[Any]) -> List[Dict[str, Any]]:
     Educational Note: Claude API returns content blocks as Anthropic objects
     with attributes (.type, .text, .id). For storing in JSON files (message
     history, debug logs), we need plain dicts.
+
+    Handles both client tools (tool_use) and server tools (server_tool_use,
+    web_search_tool_result, web_fetch_tool_result).
 
     Args:
         content_blocks: List of Anthropic content block objects
@@ -302,6 +453,7 @@ def serialize_content_blocks(content_blocks: List[Any]) -> List[Dict[str, Any]]:
                     "text": block.text
                 })
             elif block.type == "tool_use":
+                # Client tool use - we execute these
                 serialized.append({
                     "type": "tool_use",
                     "id": block.id,
@@ -313,6 +465,30 @@ def serialize_content_blocks(content_blocks: List[Any]) -> List[Dict[str, Any]]:
                     "type": "tool_result",
                     "tool_use_id": getattr(block, 'tool_use_id', ''),
                     "content": getattr(block, 'content', '')
+                })
+            elif block.type == "server_tool_use":
+                # Server tool use - Claude executes these (web_fetch, web_search)
+                serialized.append({
+                    "type": "server_tool_use",
+                    "id": block.id,
+                    "name": block.name,
+                    "input": block.input
+                })
+            elif block.type == "web_search_tool_result":
+                # Server tool result from web_search
+                # Content is a list of WebSearchResultBlock objects - must serialize recursively
+                serialized.append({
+                    "type": "web_search_tool_result",
+                    "tool_use_id": getattr(block, 'tool_use_id', ''),
+                    "content": _serialize_anthropic_object(getattr(block, 'content', None))
+                })
+            elif block.type == "web_fetch_tool_result":
+                # Server tool result from web_fetch
+                # Content is a WebFetchResult object with nested Document - must serialize recursively
+                serialized.append({
+                    "type": "web_fetch_tool_result",
+                    "tool_use_id": getattr(block, 'tool_use_id', ''),
+                    "content": _serialize_anthropic_object(getattr(block, 'content', None))
                 })
         # Already a dict - pass through
         elif isinstance(block, dict):

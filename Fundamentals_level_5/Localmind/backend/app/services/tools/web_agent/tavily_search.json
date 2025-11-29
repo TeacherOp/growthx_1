@@ -2,41 +2,13 @@
   "_comment": "Custom Tool - Tavily Search. We handle execution via Tavily API.",
   "_type": "client_tool",
   "name": "tavily_search",
-  "description": "Search the web using Tavily AI search. Use this as a fallback when web_fetch fails to access a URL, or for general web searches. Returns search results with titles, URLs, and content snippets.",
+  "description": "Search the web using Tavily AI. use in combinatioon with the web search tool to gather better information",
   "input_schema": {
     "type": "object",
     "properties": {
       "query": {
         "type": "string",
-        "description": "The search query. Can be a URL to find information about a specific page, or a general search query."
-      },
-      "search_depth": {
-        "type": "string",
-        "enum": ["basic", "advanced"],
-        "default": "basic",
-        "description": "Search depth. 'advanced' retrieves more relevant content but costs more."
-      },
-      "include_answer": {
-        "type": "boolean",
-        "default": true,
-        "description": "Include an AI-generated answer summarizing the search results."
-      },
-      "include_raw_content": {
-        "type": "boolean",
-        "default": true,
-        "description": "Include the full cleaned HTML content of each result in markdown format."
-      },
-      "max_results": {
-        "type": "integer",
-        "default": 5,
-        "minimum": 1,
-        "maximum": 10,
-        "description": "Maximum number of search results to return."
-      },
-      "include_domains": {
-        "type": "array",
-        "items": {"type": "string"},
-        "description": "Optional list of domains to specifically include in results."
+        "description": "The search query. Should be the URL or topic you want to search for, try to mention the url as well as the topic"
       }
     },
     "required": ["query"]
