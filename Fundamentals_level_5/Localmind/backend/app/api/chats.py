@@ -7,13 +7,13 @@ creating chats, sending messages, and managing conversations within projects.
 Routes are thin - all logic is delegated to services:
 - chat_service: Chat CRUD operations
 - main_chat_service: Message processing and AI responses
-- prompt_service: Prompt management
+- prompt_loader: Prompt management
 """
 from flask import jsonify, request, current_app
 from app.api import api_bp
-from app.services.chat_service import chat_service
-from app.services.main_chat_service import main_chat_service
-from app.services.prompt_service import prompt_service
+from app.services.data_services import chat_service
+from app.services.chat_services import main_chat_service
+from app.config import prompt_loader
 
 
 # =============================================================================
@@ -235,7 +235,7 @@ def get_project_prompt(project_id):
     for all AI conversations in this project.
     """
     try:
-        prompt = prompt_service.get_project_prompt(project_id)
+        prompt = prompt_loader.get_project_prompt(project_id)
 
         return jsonify({
             'success': True,
@@ -274,7 +274,7 @@ def update_project_prompt(project_id):
             custom_prompt = None
 
         # Update via prompt service
-        success = prompt_service.update_project_prompt(project_id, custom_prompt)
+        success = prompt_loader.update_project_prompt(project_id, custom_prompt)
 
         if not success:
             return jsonify({
@@ -283,7 +283,7 @@ def update_project_prompt(project_id):
             }), 404
 
         # Return the current prompt
-        current_prompt = prompt_service.get_project_prompt(project_id)
+        current_prompt = prompt_loader.get_project_prompt(project_id)
 
         return jsonify({
             'success': True,
@@ -308,7 +308,7 @@ def get_default_prompt():
     projects don't have custom prompts.
     """
     try:
-        prompt = prompt_service.get_default_prompt()
+        prompt = prompt_loader.get_default_prompt()
 
         return jsonify({
             'success': True,

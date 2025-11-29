@@ -69,17 +69,18 @@ export const ALLOWED_EXTENSIONS = {
 };
 
 /**
- * Page content returned from citation API
+ * Chunk content returned from citation API
  * Educational Note: This is used for the citation tooltip feature.
- * When Claude cites a source, we fetch the actual page content to display.
+ * When Claude cites a source with [[cite:chunk_id]], we fetch the chunk content to display.
+ * Chunk ID format: {source_id}_page_{page}_chunk_{n}
  */
-export interface PageContent {
+export interface ChunkContent {
   content: string;
-  page_number: number;
-  total_pages: number;
-  source_type: string;
+  chunk_id: string;
   source_id: string;
   source_name: string;
+  page_number: number;
+  chunk_index: number;
 }
 
 class SourcesAPI {
@@ -295,23 +296,22 @@ class SourcesAPI {
   }
 
   /**
-   * Get a specific page's content from a processed source
+   * Get a chunk's content for citation display
    * Educational Note: This enables the citation feature. When Claude cites
-   * a source with [[cite:SOURCE_ID:PAGE]], we fetch the actual page content
-   * to display in a tooltip on hover.
+   * a source with [[cite:CHUNK_ID]], we fetch the chunk content to display
+   * in a tooltip/popover on hover.
    */
-  async getSourcePage(
+  async getCitationContent(
     projectId: string,
-    sourceId: string,
-    pageNum: number
-  ): Promise<PageContent> {
+    chunkId: string
+  ): Promise<ChunkContent> {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/projects/${projectId}/sources/${sourceId}/page/${pageNum}`
+        `${API_BASE_URL}/projects/${projectId}/citations/${chunkId}`
       );
-      return response.data.page;
+      return response.data.chunk;
     } catch (error) {
-      console.error('Error fetching source page:', error);
+      console.error('Error fetching citation content:', error);
       throw error;
     }
   }

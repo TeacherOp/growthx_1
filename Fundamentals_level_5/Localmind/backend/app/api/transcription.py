@@ -7,7 +7,7 @@ The actual transcription happens client-side for lowest latency.
 """
 from flask import jsonify, current_app
 from app.api import api_bp
-from app.services.transcription_service import TranscriptionService
+from app.services.integrations.elevenlabs import TranscriptionService
 
 # Initialize service
 transcription_service = TranscriptionService()

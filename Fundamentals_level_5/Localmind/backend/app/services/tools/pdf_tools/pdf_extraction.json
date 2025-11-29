@@ -11,16 +11,8 @@
             "extracted_text": {
                 "type": "string",
                 "description": "The complete extracted text from this page. Make it self-contained: if this page has content that belongs under a heading/section from a previous page, prepend that heading. If a sentence starts on a previous page, include enough context. If no readable text exists, use [NO TEXT CONTENT]."
-            },
-            "continues_from_previous": {
-                "type": "boolean",
-                "description": "Set to true if this page continues content from the previous page (a sentence, paragraph, list, or section that started earlier). Set to false if this page starts fresh content."
-            },
-            "continues_to_next": {
-                "type": "boolean",
-                "description": "Set to true if content on this page continues onto the next page (incomplete sentence, ongoing section). Set to false if this page ends cleanly."
             }
         },
-        "required": ["page_number", "extracted_text", "continues_from_previous", "continues_to_next"]
+        "required": ["page_number", "extracted_text"]
     }
 }

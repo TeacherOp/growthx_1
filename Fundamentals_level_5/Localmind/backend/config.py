@@ -14,7 +14,7 @@ class Config:
     """Base configuration class with default settings."""
 
     # Application settings
-    APP_NAME = "LocalMind"
+    APP_NAME = "LocalLM"
     VERSION = "1.0.0"
 
     # Flask settings

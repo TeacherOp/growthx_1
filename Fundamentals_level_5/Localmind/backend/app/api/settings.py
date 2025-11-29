@@ -6,8 +6,7 @@ stored in the .env file, with automatic Flask app reload when keys change.
 """
 from flask import jsonify, request, current_app
 from app.api import api_bp
-from app.services.env_service import EnvService
-from app.services.validation_service import ValidationService
+from app.services.app_settings import EnvService, ValidationService
 
 # Initialize services
 env_service = EnvService()
@@ -282,7 +281,7 @@ def validate_api_key():
 # Processing Settings Endpoints
 # ============================================================================
 
-from app.utils.tier_config import (
+from app.config import (
     get_tier,
     get_tier_config,
     get_all_tiers,

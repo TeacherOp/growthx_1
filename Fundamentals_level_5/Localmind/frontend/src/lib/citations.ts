@@ -1,7 +1,8 @@
 /**
  * Citation Parser Utility
  * Educational Note: This utility parses citations from AI responses.
- * Claude uses the format [[cite:SOURCE_ID:PAGE]] to cite sources.
+ * Claude uses the format [[cite:CHUNK_ID]] to cite sources.
+ * Chunk ID format: {source_id}_page_{page}_chunk_{n}
  * We parse these, assign numbers, and prepare data for rendering.
  */
 
@@ -9,12 +10,16 @@
  * Parsed citation data
  */
 export interface Citation {
-  /** The full citation marker (e.g., [[cite:abc123:5]]) */
+  /** The full citation marker (e.g., [[cite:abc123_page_5_chunk_1]]) */
   marker: string;
-  /** The source UUID */
+  /** The full chunk ID */
+  chunkId: string;
+  /** The source UUID (extracted from chunk ID) */
   sourceId: string;
-  /** The page number (1-indexed) */
+  /** The page number (extracted from chunk ID) */
   pageNumber: number;
+  /** The chunk index within the page */
+  chunkIndex: number;
   /** Assigned citation number for display (e.g., [1], [2]) */
   citationNumber: number;
 }
@@ -25,10 +30,14 @@ export interface Citation {
 export interface CitationEntry {
   /** Assigned citation number */
   citationNumber: number;
+  /** The full chunk ID */
+  chunkId: string;
   /** The source UUID */
   sourceId: string;
   /** The page number */
   pageNumber: number;
+  /** The chunk index */
+  chunkIndex: number;
   /** Source name (filled in after fetching) */
   sourceName?: string;
 }
@@ -39,16 +48,32 @@ export interface CitationEntry {
 export interface ParsedContent {
   /** Array of all citations found (in order of appearance) */
   citations: Citation[];
-  /** Unique citation entries for footer (deduplicated) */
+  /** Unique citation entries for footer (deduplicated by chunk_id) */
   uniqueCitations: CitationEntry[];
   /** Map of marker -> citation number for quick lookup */
   markerToNumber: Map<string, number>;
 }
 
-// Regex to match citation format: [[cite:SOURCE_ID:PAGE]]
-// SOURCE_ID can contain alphanumeric chars, hyphens, and underscores
-// PAGE is a positive integer
-const CITATION_REGEX = /\[\[cite:([a-zA-Z0-9_-]+):(\d+)\]\]/g;
+// Regex to match citation format: [[cite:CHUNK_ID]]
+// CHUNK_ID format: {source_id}_page_{page}_chunk_{n}
+// source_id can contain alphanumeric chars and hyphens (UUID format)
+const CITATION_REGEX = /\[\[cite:([a-zA-Z0-9_-]+_page_\d+_chunk_\d+)\]\]/g;
+
+// Regex to parse chunk_id into components
+const CHUNK_ID_REGEX = /^(.+)_page_(\d+)_chunk_(\d+)$/;
+
+/**
+ * Parse a chunk_id into its components
+ */
+function parseChunkId(chunkId: string): { sourceId: string; pageNumber: number; chunkIndex: number } | null {
+  const match = chunkId.match(CHUNK_ID_REGEX);
+  if (!match) return null;
+  return {
+    sourceId: match[1],
+    pageNumber: parseInt(match[2], 10),
+    chunkIndex: parseInt(match[3], 10),
+  };
+}
 
 /**
  * Parse citations from AI response text
@@ -65,8 +90,8 @@ export function parseCitations(text: string): ParsedContent {
   const uniqueCitations: CitationEntry[] = [];
   const markerToNumber = new Map<string, number>();
 
-  // Track unique source+page combinations
-  const seenKeys = new Map<string, number>();
+  // Track unique chunk_ids
+  const seenChunkIds = new Map<string, number>();
 
   let match: RegExpExecArray | null;
   let citationCounter = 1;
@@ -76,27 +101,31 @@ export function parseCitations(text: string): ParsedContent {
 
   while ((match = CITATION_REGEX.exec(text)) !== null) {
     const marker = match[0];
-    const sourceId = match[1];
-    const pageNumber = parseInt(match[2], 10);
+    const chunkId = match[1];
 
-    // Create unique key for this source+page combination
-    const uniqueKey = `${sourceId}:${pageNumber}`;
+    // Parse chunk_id to extract components
+    const parsed = parseChunkId(chunkId);
+    if (!parsed) continue;
+
+    const { sourceId, pageNumber, chunkIndex } = parsed;
 
     let citationNumber: number;
 
-    if (seenKeys.has(uniqueKey)) {
-      // Reuse existing citation number for same source+page
-      citationNumber = seenKeys.get(uniqueKey)!;
+    if (seenChunkIds.has(chunkId)) {
+      // Reuse existing citation number for same chunk
+      citationNumber = seenChunkIds.get(chunkId)!;
     } else {
       // Assign new citation number
       citationNumber = citationCounter++;
-      seenKeys.set(uniqueKey, citationNumber);
+      seenChunkIds.set(chunkId, citationNumber);
 
       // Add to unique citations for footer
       uniqueCitations.push({
         citationNumber,
+        chunkId,
         sourceId,
         pageNumber,
+        chunkIndex,
       });
     }
 
@@ -106,8 +135,10 @@ export function parseCitations(text: string): ParsedContent {
     // Add to citations array
     citations.push({
       marker,
+      chunkId,
       sourceId,
       pageNumber,
+      chunkIndex,
       citationNumber,
     });
   }
@@ -142,10 +173,11 @@ export function hasCitations(text: string): boolean {
  */
 export function splitTextWithCitations(
   text: string
-): Array<{ type: 'text' | 'citation'; content: string; sourceId?: string; pageNumber?: number }> {
+): Array<{ type: 'text' | 'citation'; content: string; chunkId?: string; sourceId?: string; pageNumber?: number }> {
   const segments: Array<{
     type: 'text' | 'citation';
     content: string;
+    chunkId?: string;
     sourceId?: string;
     pageNumber?: number;
   }> = [];
@@ -165,12 +197,17 @@ export function splitTextWithCitations(
       });
     }
 
+    // Parse chunk_id
+    const chunkId = match[1];
+    const parsed = parseChunkId(chunkId);
+
     // Add the citation
     segments.push({
       type: 'citation',
       content: match[0],
-      sourceId: match[1],
-      pageNumber: parseInt(match[2], 10),
+      chunkId,
+      sourceId: parsed?.sourceId,
+      pageNumber: parsed?.pageNumber,
     });
 
     lastIndex = match.index + match[0].length;

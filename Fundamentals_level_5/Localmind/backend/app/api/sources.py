@@ -7,8 +7,8 @@ data files that provide context for AI conversations.
 """
 from flask import jsonify, request, current_app, send_file
 from app.api import api_bp
-from app.services.source_service import SourceService
-from app.services.citation_service import citation_service
+from app.services.source_services import SourceService
+from app.utils.citation_utils import get_chunk_content
 
 # Initialize service
 source_service = SourceService()
@@ -482,62 +482,49 @@ def add_text_source(project_id: str):
         }), 500
 
 
-@api_bp.route('/projects/<project_id>/sources/<source_id>/page/<int:page_num>', methods=['GET'])
-def get_source_page(project_id: str, source_id: str, page_num: int):
+@api_bp.route('/projects/<project_id>/citations/<chunk_id>', methods=['GET'])
+def get_citation_content(project_id: str, chunk_id: str):
     """
-    Get the content of a specific page from a processed source.
+    Get the content of a chunk for citation display.
 
     Educational Note: This endpoint enables the citation feature. When Claude
-    cites a source with [[cite:SOURCE_ID:PAGE]], the frontend can fetch the
-    actual page content to display in a tooltip on hover.
+    cites a source with [[cite:CHUNK_ID]], the frontend fetches the chunk
+    content to display in a tooltip/popover on hover.
+
+    Chunk ID format: {source_id}_page_{page}_chunk_{n}
+    Example: abc123-def456_page_5_chunk_2
 
     Args:
         project_id: The project UUID
-        source_id: The source UUID
-        page_num: The page number (1-indexed)
+        chunk_id: The chunk ID from the citation
 
     Returns:
-        JSON with page content and metadata
+        JSON with chunk content and metadata
     """
     try:
-        # Validate page number
-        if page_num < 1:
+        # Get chunk content
+        chunk_data = get_chunk_content(project_id, chunk_id)
+
+        if not chunk_data:
             return jsonify({
                 'success': False,
-                'error': 'Page number must be at least 1'
-            }), 400
-
-        # Get source metadata for the source name
-        source = source_service.get_source(project_id, source_id)
-        if not source:
-            return jsonify({
-                'success': False,
-                'error': 'Source not found'
-            }), 404
-
-        # Get page content
-        page_data = citation_service.get_page_content(project_id, source_id, page_num)
-
-        if not page_data:
-            return jsonify({
-                'success': False,
-                'error': f'Page {page_num} not found in source'
+                'error': f'Chunk not found: {chunk_id}'
             }), 404
 
         return jsonify({
             'success': True,
-            'page': {
-                'content': page_data['content'],
-                'page_number': page_data['page_number'],
-                'total_pages': page_data['total_pages'],
-                'source_type': page_data['source_type'],
-                'source_id': source_id,
-                'source_name': source.get('name', 'Unknown')
+            'chunk': {
+                'content': chunk_data['content'],
+                'chunk_id': chunk_data['chunk_id'],
+                'source_id': chunk_data['source_id'],
+                'source_name': chunk_data['source_name'],
+                'page_number': chunk_data['page_number'],
+                'chunk_index': chunk_data['chunk_index']
             }
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error getting source page: {e}")
+        current_app.logger.error(f"Error getting citation content: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

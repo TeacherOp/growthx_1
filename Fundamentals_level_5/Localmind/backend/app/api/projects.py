@@ -12,12 +12,9 @@ import uuid
 from pathlib import Path
 
 from app.api import api_bp
-from app.services.project_service import ProjectService
-from app.services.cost_tracking_service import cost_tracking_service
-from app.services.memory_service import memory_service
-
-# Initialize the project service
-project_service = ProjectService()
+from app.services.data_services import project_service
+from app.utils.cost_tracking import get_project_costs
+from app.services.ai_services import memory_service
 
 
 @api_bp.route('/projects', methods=['GET'])
@@ -293,7 +290,7 @@ def get_project_costs(project_id):
             }), 404
 
         # Get cost tracking data
-        costs = cost_tracking_service.get_project_costs(project_id)
+        costs = get_project_costs(project_id)
 
         return jsonify({
             "success": True,

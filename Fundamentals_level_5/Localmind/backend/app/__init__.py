@@ -31,6 +31,10 @@ def create_app(config_name='development'):
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
 
+    # Ensure base directories exist before any routes access them
+    from app.utils.path_utils import ensure_base_directories
+    ensure_base_directories()
+
     # Initialize extensions with app context
     CORS(app, origins=app.config['CORS_ALLOWED_ORIGINS'])
     socketio.init_app(app, async_mode='threading')

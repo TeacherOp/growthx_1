@@ -1,7 +1,8 @@
 /**
  * CitationBadge Component
  * Educational Note: Displays an inline citation number that shows
- * the actual source content on hover. Uses shadcn HoverCard and Card.
+ * the actual chunk content on hover. Uses shadcn HoverCard and Card.
+ * Citation format: [[cite:CHUNK_ID]] where chunk_id = {source_id}_page_{page}_chunk_{n}
  */
 
 import React, { useState } from 'react';
@@ -13,14 +14,16 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { FileText, CircleNotch } from '@phosphor-icons/react';
-import { sourcesAPI, type PageContent } from '../../lib/api/sources';
+import { sourcesAPI, type ChunkContent } from '../../lib/api/sources';
 
 interface CitationBadgeProps {
   /** The citation number to display (e.g., 1, 2, 3) */
   citationNumber: number;
-  /** The source UUID */
+  /** The full chunk ID (format: {source_id}_page_{page}_chunk_{n}) */
+  chunkId: string;
+  /** The source UUID (extracted from chunk_id) */
   sourceId: string;
-  /** The page number to fetch */
+  /** The page number (extracted from chunk_id) */
   pageNumber: number;
   /** The project ID for API calls */
   projectId: string;
@@ -31,23 +34,24 @@ interface CitationBadgeProps {
 /**
  * CitationBadge
  * Educational Note: This component renders an inline superscript citation
- * number using Badge. On hover, it fetches and displays the actual page
+ * number using Badge. On hover, it fetches and displays the actual chunk
  * content from the source document using HoverCard and Card components.
  */
 export const CitationBadge: React.FC<CitationBadgeProps> = ({
   citationNumber,
+  chunkId,
   sourceId,
   pageNumber,
   projectId,
   sourceName,
 }) => {
-  const [pageContent, setPageContent] = useState<PageContent | null>(null);
+  const [chunkContent, setChunkContent] = useState<ChunkContent | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
 
   /**
-   * Fetch page content when hover card opens
+   * Fetch chunk content when hover card opens
    * Educational Note: We only fetch once and cache the result.
    */
   const handleOpenChange = async (open: boolean) => {
@@ -56,12 +60,11 @@ export const CitationBadge: React.FC<CitationBadgeProps> = ({
       setError(null);
 
       try {
-        const content = await sourcesAPI.getSourcePage(
+        const content = await sourcesAPI.getCitationContent(
           projectId,
-          sourceId,
-          pageNumber
+          chunkId
         );
-        setPageContent(content);
+        setChunkContent(content);
         setHasLoaded(true);
       } catch (err) {
         console.error('Error fetching citation content:', err);
@@ -107,11 +110,11 @@ export const CitationBadge: React.FC<CitationBadgeProps> = ({
               <FileText size={16} className="text-primary flex-shrink-0" />
               <div className="min-w-0 flex-1">
                 <CardTitle className="text-sm font-medium truncate">
-                  {pageContent?.source_name || sourceName || 'Source'}
+                  {chunkContent?.source_name || sourceName || 'Source'}
                 </CardTitle>
                 <CardDescription className="text-xs">
                   Page {pageNumber}
-                  {pageContent && ` of ${pageContent.total_pages}`}
+                  {chunkContent && chunkContent.chunk_index > 1 && `, Section ${chunkContent.chunk_index}`}
                 </CardDescription>
               </div>
             </div>
@@ -124,9 +127,9 @@ export const CitationBadge: React.FC<CitationBadgeProps> = ({
               </div>
             ) : error ? (
               <p className="text-xs text-destructive">{error}</p>
-            ) : pageContent ? (
+            ) : chunkContent ? (
               <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                {cleanContent(pageContent.content)}
+                {cleanContent(chunkContent.content)}
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">

@@ -165,10 +165,11 @@ const UserMessage: React.FC<{ content: string }> = ({ content }) => (
 /**
  * AI Message Component
  * Educational Note: Left-aligned with full markdown rendering support.
- * Now handles citations with [[cite:SOURCE_ID:PAGE]] format.
+ * Now handles citations with [[cite:CHUNK_ID]] format.
+ * Chunk ID format: {source_id}_page_{page}_chunk_{n}
  *
  * Citation Strategy:
- * 1. Pre-process content: Convert [[cite:X:Y]] to markdown links [#N](cite:X:Y)
+ * 1. Pre-process content: Convert [[cite:chunk_id]] to markdown links [#N](cite:chunk_id)
  * 2. Render through single ReactMarkdown instance (preserves inline flow)
  * 3. Custom 'a' component detects cite: links and renders CitationBadge
  */
@@ -184,16 +185,17 @@ const AIMessage: React.FC<AIMessageProps> = ({ content, projectId }) => {
     [content]
   );
 
-  // Pre-process content: Convert [[cite:X:Y]] to [N](#cite-X-Y) for inline rendering
+  // Pre-process content: Convert [[cite:chunk_id]] to [N](#cite-chunk_id) for inline rendering
   // Using hash URLs (#cite-...) prevents browser navigation on click
   const processedContent = useMemo(() => {
     // Replace citation markers with markdown hash links
-    // [[cite:SOURCE_ID:PAGE]] -> [N](#cite-SOURCE_ID-PAGE)
+    // [[cite:CHUNK_ID]] -> [N](#cite-CHUNK_ID)
+    // CHUNK_ID format: {source_id}_page_{page}_chunk_{n}
     return content.replace(
-      /\[\[cite:([a-zA-Z0-9_-]+):(\d+)\]\]/g,
-      (match, sourceId, page) => {
+      /\[\[cite:([a-zA-Z0-9_-]+_page_\d+_chunk_\d+)\]\]/g,
+      (match, chunkId) => {
         const citationNumber = markerToNumber.get(match) || 0;
-        return `[${citationNumber}](#cite-${sourceId}-${page})`;
+        return `[${citationNumber}](#cite-${chunkId})`;
       }
     );
   }, [content, markerToNumber]);
@@ -203,18 +205,21 @@ const AIMessage: React.FC<AIMessageProps> = ({ content, projectId }) => {
     ...markdownComponents,
     // Override 'a' to handle citation links
     a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
-      // Check if this is a citation link (#cite-SOURCE_ID-PAGE)
+      // Check if this is a citation link (#cite-CHUNK_ID)
       // Using hash URLs prevents browser navigation
       if (href) {
-        // Match hash citation format: #cite-SOURCE_ID-PAGE
-        const citeMatch = href.match(/#cite-([a-zA-Z0-9_-]+)-(\d+)$/);
+        // Match hash citation format: #cite-{source_id}_page_{page}_chunk_{n}
+        const citeMatch = href.match(/#cite-(.+_page_(\d+)_chunk_\d+)$/);
         if (citeMatch) {
-          const [, sourceId, pageStr] = citeMatch;
-          const pageNumber = parseInt(pageStr, 10);
+          const chunkId = citeMatch[1];
+          const pageNumber = parseInt(citeMatch[2], 10);
+          // Extract source_id from chunk_id (everything before _page_)
+          const sourceId = chunkId.split('_page_')[0];
           const citationNumber = typeof children === 'string' ? parseInt(children, 10) : 0;
           return (
             <CitationBadge
               citationNumber={citationNumber}
+              chunkId={chunkId}
               sourceId={sourceId}
               pageNumber={pageNumber}
               projectId={projectId}
@@ -274,6 +279,7 @@ const AIMessage: React.FC<AIMessageProps> = ({ content, projectId }) => {
                     >
                       <span className="font-medium">[{citation.citationNumber}]</span>
                       {' '}Page {citation.pageNumber}
+                      {citation.chunkIndex > 1 && `, Section ${citation.chunkIndex}`}
                     </div>
                   ))}
                 </div>

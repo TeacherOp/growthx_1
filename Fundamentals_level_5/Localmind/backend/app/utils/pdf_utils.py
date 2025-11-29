@@ -15,7 +15,7 @@ Why split PDFs into pages?
 import io
 import tempfile
 from pathlib import Path
-from typing import Union, Generator, Tuple
+from typing import Union, Generator, Tuple, List
 
 from pypdf import PdfReader, PdfWriter
 
@@ -109,6 +109,23 @@ def iterate_pages(pdf_path: Union[str, Path]) -> Generator[Tuple[int, bytes], No
     for page_num in range(1, total_pages + 1):
         page_bytes = extract_single_page_bytes(pdf_path, page_num)
         yield (page_num, page_bytes)
+
+
+def get_all_page_bytes(pdf_path: Union[str, Path]) -> List[Tuple[int, bytes]]:
+    """
+    Extract all pages from a PDF and return as a list.
+
+    Educational Note: Unlike iterate_pages() which is a generator,
+    this loads all pages into memory at once. Use this when you need
+    all pages upfront (e.g., for batching before parallel processing).
+
+    Args:
+        pdf_path: Path to the PDF file
+
+    Returns:
+        List of (page_number, page_bytes) tuples, 1-indexed
+    """
+    return list(iterate_pages(pdf_path))
 
 
 def get_pdf_metadata(pdf_path: Union[str, Path]) -> dict:

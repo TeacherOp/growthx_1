@@ -12,8 +12,7 @@ Educational Note: This module handles Google OAuth flow and Drive operations:
 
 from flask import jsonify, request, redirect, current_app
 from app.api import api_bp
-from app.services.google_auth_service import google_auth_service
-from app.services.google_drive_service import google_drive_service
+from app.services.integrations.google import google_auth_service, google_drive_service
 
 
 @api_bp.route('/google/status', methods=['GET'])
@@ -213,7 +212,7 @@ def google_import_file(project_id):
     try:
         import uuid
         from pathlib import Path
-        from app.services.source_service import source_service
+        from app.services.source_services import source_service
 
         data = request.get_json()
         if not data or 'file_id' not in data:

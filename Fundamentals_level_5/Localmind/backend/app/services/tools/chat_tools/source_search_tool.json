@@ -1,16 +1,23 @@
 {
   "name": "search_sources",
-  "description": "Search for information in the project's uploaded sources. Use this tool when the user asks questions that require information from their documents, PDFs, audio transcripts, or other uploaded content. Choose the appropriate source based on the user's question and the source names/types available.",
+  "description": "Search for information in the project's uploaded sources. Use this tool when the user asks questions that require information from their documents, PDFs, audio transcripts, or other uploaded content. IMPORTANT: You pass a source_id to search, but the tool returns CHUNKS with chunk_ids. Always cite using the chunk_id from results (format: source_page_chunk), NOT the source_id you passed in.",
   "input_schema": {
     "type": "object",
     "properties": {
       "source_id": {
         "type": "string",
-        "description": "The ID of the source to search. Choose from the available sources listed in your context based on which source is most likely to contain the answer."
+        "description": "The ID of the SOURCE to search (from available sources in your context). This is NOT what you cite - the tool will return chunks with chunk_ids that you use for citations."
+      },
+      "keywords": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Optional keywords (1-2 words each) for fast text matching. Use for finding specific terms, names, concepts, or technical words. Example: ['microservices', 'API gateway', 'Redis']"
       },
       "query": {
         "type": "string",
-        "description": "Optional search query for semantic search. Only used for embedded sources. For non-embedded sources, the full content is returned regardless of this field."
+        "description": "Optional semantic search query phrase for finding conceptually related content. Use natural language questions or descriptive phrases. Example: 'What are the benefits of using a load balancer?'"
       }
     },
     "required": ["source_id"]

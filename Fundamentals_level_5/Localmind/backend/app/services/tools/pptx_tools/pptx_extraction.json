@@ -1,6 +1,6 @@
 {
     "name": "submit_slide_extraction",
-    "description": "Submit extracted content for a single presentation slide. Call this tool ONCE for EACH slide you are given. Use the exact slide numbers provided in the user message. Each extraction should capture all visual and textual content from the slide.",
+    "description": "Submit extracted content for a single presentation slide. Call this tool ONCE for EACH slide you are given. Use the exact slide numbers provided in the user message. Each extraction should capture all visual and textual content from the slide, made self-contained with context from surrounding slides if needed.",
     "input_schema": {
         "type": "object",
         "properties": {
@@ -23,16 +23,8 @@
             "layout_notes": {
                 "type": "string",
                 "description": "Notable layout observations: visual hierarchy, color emphasis, positioning of elements, design patterns. Brief observations only."
-            },
-            "continues_from_previous": {
-                "type": "boolean",
-                "description": "Set to true if this slide continues a topic or section from the previous slide. Set to false if this is a new topic."
-            },
-            "continues_to_next": {
-                "type": "boolean",
-                "description": "Set to true if the topic on this slide continues to the next slide. Set to false if this slide completes its topic."
             }
         },
-        "required": ["slide_number", "slide_title", "text_content", "visual_elements", "layout_notes", "continues_from_previous", "continues_to_next"]
+        "required": ["slide_number", "slide_title", "text_content", "visual_elements", "layout_notes"]
     }
 }
