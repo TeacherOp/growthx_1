@@ -131,6 +131,77 @@ def extract_text(response: Dict[str, Any]) -> str:
     return "\n".join(text_parts)
 
 
+def extract_citations(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Extract citations from web_search text blocks.
+
+    Educational Note: When Claude uses web_search, text blocks can include
+    citations with the source information. Each citation contains:
+    - url: The source URL
+    - title: The page title
+    - encrypted_index: Reference for multi-turn (we can ignore)
+    - cited_text: Up to 150 chars of the cited content
+
+    This is valuable for the research agent to properly cite sources!
+
+    Args:
+        response: Response dict from claude_service.send_message()
+
+    Returns:
+        List of citation dicts: [{url, title, cited_text}, ...]
+    """
+    citations = []
+    content_blocks = response.get("content_blocks", [])
+
+    for block in content_blocks:
+        block_citations = None
+
+        # Handle Anthropic objects
+        if hasattr(block, 'type') and block.type == "text":
+            block_citations = getattr(block, 'citations', None)
+        # Handle dict format
+        elif isinstance(block, dict) and block.get("type") == "text":
+            block_citations = block.get("citations")
+
+        if block_citations:
+            for citation in block_citations:
+                # Extract the useful fields (skip encrypted_index)
+                if hasattr(citation, 'url'):
+                    citations.append({
+                        "url": citation.url,
+                        "title": getattr(citation, 'title', ''),
+                        "cited_text": getattr(citation, 'cited_text', '')
+                    })
+                elif isinstance(citation, dict):
+                    citations.append({
+                        "url": citation.get("url", ""),
+                        "title": citation.get("title", ""),
+                        "cited_text": citation.get("cited_text", "")
+                    })
+
+    return citations
+
+
+def extract_text_with_citations(response: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Extract both text and citations from Claude response.
+
+    Educational Note: Convenience method that returns both the text content
+    and any citations from web_search. Useful for research agents that need
+    to cite their sources.
+
+    Args:
+        response: Response dict from claude_service.send_message()
+
+    Returns:
+        Dict with 'text' and 'citations' keys
+    """
+    return {
+        "text": extract_text(response),
+        "citations": extract_citations(response)
+    }
+
+
 def extract_tool_use_blocks(
     response: Dict[str, Any],
     tool_name: Optional[str] = None
@@ -448,10 +519,21 @@ def serialize_content_blocks(content_blocks: List[Any]) -> List[Dict[str, Any]]:
         # Handle Anthropic objects
         if hasattr(block, 'type'):
             if block.type == "text":
-                serialized.append({
+                text_block = {
                     "type": "text",
                     "text": block.text
-                })
+                }
+                # Include citations if present (from web_search)
+                if hasattr(block, 'citations') and block.citations:
+                    text_block["citations"] = [
+                        {
+                            "url": getattr(c, 'url', ''),
+                            "title": getattr(c, 'title', ''),
+                            "cited_text": getattr(c, 'cited_text', '')
+                        }
+                        for c in block.citations
+                    ]
+                serialized.append(text_block)
             elif block.type == "tool_use":
                 # Client tool use - we execute these
                 serialized.append({

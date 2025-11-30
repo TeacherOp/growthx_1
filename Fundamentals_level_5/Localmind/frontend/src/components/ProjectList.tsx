@@ -2,6 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash, Clock } from '@phosphor-icons/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 import { projectsAPI } from '@/lib/api';
 
 /**
@@ -34,6 +44,8 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
 
   // Fetch projects from API
   useEffect(() => {
@@ -65,17 +77,23 @@ export const ProjectList: React.FC<ProjectListProps> = ({
     }
   };
 
-  const handleDeleteProject = async (e: React.MouseEvent, projectId: string) => {
+  const handleDeleteClick = (e: React.MouseEvent, projectId: string) => {
     e.stopPropagation(); // Prevent card click
+    setProjectToDelete(projectId);
+    setDeleteDialogOpen(true);
+  };
 
-    if (confirm('Are you sure you want to delete this project?')) {
-      try {
-        await projectsAPI.delete(projectId);
-        loadProjects(); // Refresh the list
-      } catch (err) {
-        console.error('Error deleting project:', err);
-        alert('Failed to delete project');
-      }
+  const handleConfirmDelete = async () => {
+    if (!projectToDelete) return;
+
+    try {
+      await projectsAPI.delete(projectToDelete);
+      loadProjects(); // Refresh the list
+    } catch (err) {
+      console.error('Error deleting project:', err);
+    } finally {
+      setDeleteDialogOpen(false);
+      setProjectToDelete(null);
     }
   };
 
@@ -116,7 +134,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {/* Create New Project Card - Always first */}
       <Card
-        className="cursor-pointer hover:shadow-lg transition-shadow border-dashed border-2 border-stone-300 bg-transparent hover:bg-card/50"
+        className="cursor-pointer hover:shadow-lg transition-shadow border-dashed border-2 border-border bg-transparent hover:bg-card/50"
         onClick={onCreateNew}
       >
         <CardContent className="flex flex-col items-center justify-center h-full min-h-[140px] py-8">
@@ -146,7 +164,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={(e) => handleDeleteProject(e, project.id)}
+                onClick={(e) => handleDeleteClick(e, project.id)}
                 className="ml-2"
               >
                 <Trash size={16} />
@@ -161,6 +179,28 @@ export const ProjectList: React.FC<ProjectListProps> = ({
           </CardContent>
         </Card>
       ))}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this project? This action cannot be undone.
+              All sources, chats, and data will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

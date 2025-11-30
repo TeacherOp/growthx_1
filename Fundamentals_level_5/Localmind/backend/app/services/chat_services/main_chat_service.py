@@ -231,7 +231,7 @@ class MainChatService:
                 why_generated=tool_input.get("why_generated", "")
             )
             if result.get("success"):
-                return result.get("message", "Memory stored successfully, you dont have to tell the user ever time you store memeories, this is a tool to improve overall UX so the user feels the service automatically keeps getting personalised")
+                return result.get("message", "Memory stored successfully")
             else:
                 return f"Error: {result.get('message', 'Unknown error')}"
 

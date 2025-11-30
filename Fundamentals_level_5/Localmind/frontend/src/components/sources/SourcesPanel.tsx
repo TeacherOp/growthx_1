@@ -286,6 +286,35 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId, isCollaps
   };
 
   /**
+   * Handle adding deep research source
+   * Educational Note: Triggers an AI agent to research a topic and
+   * create a comprehensive source document from the findings.
+   */
+  const handleAddResearch = async (topic: string, description: string, links: string[]) => {
+    // Check source limit
+    if (sources.length >= MAX_SOURCES) {
+      error(`Cannot add. Maximum ${MAX_SOURCES} sources allowed.`);
+      return;
+    }
+
+    try {
+      await sourcesAPI.addResearchSource(projectId, topic, description, links);
+      success('Deep research started - this may take a few minutes');
+      await loadSources();
+      setSheetOpen(false);
+    } catch (err: unknown) {
+      console.error('Error starting research:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to start research';
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const axiosErr = err as { response?: { data?: { error?: string } } };
+        error(axiosErr.response?.data?.error || errorMessage);
+      } else {
+        error(errorMessage);
+      }
+    }
+  };
+
+  /**
    * Handle source deletion
    */
   const handleDeleteSource = async (sourceId: string, sourceName: string) => {
@@ -488,6 +517,7 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId, isCollaps
         onUpload={handleFileUpload}
         onAddUrl={handleAddUrl}
         onAddText={handleAddText}
+        onAddResearch={handleAddResearch}
         onImportComplete={loadSources}
         uploading={uploading}
       />

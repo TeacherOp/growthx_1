@@ -589,7 +589,7 @@ export const AppSettings: React.FC<AppSettingsProps> = ({ open, onOpenChange }) 
                   <h3 className="text-sm font-semibold mb-3">Google Drive Integration</h3>
                   <div className="space-y-4">
                     <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/30">
-                      <GoogleDriveLogo size={32} weight="duotone" className="text-amber-600" />
+                      <GoogleDriveLogo size={32} weight="duotone" className="text-primary" />
                       <div className="flex-1">
                         {googleStatus.connected ? (
                           <>
@@ -651,7 +651,7 @@ export const AppSettings: React.FC<AppSettingsProps> = ({ open, onOpenChange }) 
                         href="https://console.cloud.google.com/apis/credentials"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-amber-600 hover:underline"
+                        className="text-primary hover:underline"
                       >
                         Google Cloud Console
                       </a>

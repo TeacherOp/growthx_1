@@ -483,6 +483,71 @@ def add_text_source(project_id: str):
         }), 500
 
 
+@api_bp.route('/projects/<project_id>/sources/research', methods=['POST'])
+def add_research_source(project_id: str):
+    """
+    Add a deep research source to a project.
+
+    Educational Note: Accepts JSON with:
+    - topic: The main research topic (required)
+    - description: Focus areas and questions to answer (required, min 50 chars)
+    - links: Optional list of reference URLs to include
+
+    The research is performed by an AI agent with web search capabilities.
+    This is a long-running operation - the source status will be:
+    uploaded -> processing -> embedding -> ready
+    """
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+
+        topic = data.get('topic')
+        description = data.get('description')
+
+        if not topic:
+            return jsonify({
+                'success': False,
+                'error': 'Topic is required'
+            }), 400
+
+        if not description:
+            return jsonify({
+                'success': False,
+                'error': 'Description is required'
+            }), 400
+
+        source = source_service.add_research_source(
+            project_id=project_id,
+            topic=topic,
+            description=description,
+            links=data.get('links', [])
+        )
+
+        return jsonify({
+            'success': True,
+            'source': source,
+            'message': 'Research source created - processing will begin shortly'
+        }), 201
+
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+    except Exception as e:
+        current_app.logger.error(f"Error adding research source: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @api_bp.route('/projects/<project_id>/citations/<chunk_id>', methods=['GET'])
 def get_citation_content(project_id: str, chunk_id: str):
     """

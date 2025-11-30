@@ -74,7 +74,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
       <p className="flex-1 text-sm">{toast.message}</p>
       <button
         onClick={() => onDismiss(toast.id)}
-        className="text-gray-400 hover:text-gray-600"
+        className="text-muted-foreground hover:text-foreground"
       >
         <X size={16} />
       </button>

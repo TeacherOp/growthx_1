@@ -44,7 +44,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             variant="outline"
             size="sm"
             onClick={() => setAppSettingsOpen(true)}
-            className="gap-2 border-stone-300"
+            className="gap-2"
           >
             <Gear size={16} />
             App Settings

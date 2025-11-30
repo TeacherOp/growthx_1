@@ -21,6 +21,7 @@ The actual processing logic lives in the individual processor modules:
 - pptx_processor.py
 - audio_processor.py
 - link_processor.py (also handles YouTube via youtube_processor)
+- research_processor.py (deep research via AI agent)
 """
 from datetime import datetime
 from typing import Dict, Any
@@ -54,6 +55,7 @@ class SourceProcessingService:
         ".aac": "audio",
         ".flac": "audio",
         ".link": "link",  # Handles both website URLs and YouTube
+        ".research": "research",  # Deep research source
     }
 
     def process_source(self, project_id: str, source_id: str) -> Dict[str, Any]:
@@ -123,6 +125,10 @@ class SourceProcessingService:
             elif processor_type == "link":
                 from app.services.source_services.source_processing.link_processor import process_link
                 return process_link(project_id, source_id, source, raw_file_path, source_service)
+
+            elif processor_type == "research":
+                from app.services.source_services.source_processing.research_processor import process_research
+                return process_research(project_id, source_id, source, raw_file_path, source_service)
 
             else:
                 # Unsupported file type

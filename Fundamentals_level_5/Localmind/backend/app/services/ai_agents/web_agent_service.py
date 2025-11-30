@@ -38,7 +38,7 @@ class WebAgentService:
     """
 
     AGENT_NAME = "web_agent"
-    MAX_ITERATIONS = 15
+    MAX_ITERATIONS = 8
 
     def __init__(self):
         """Initialize agent with lazy-loaded config and tools."""
@@ -119,6 +119,7 @@ class WebAgentService:
                 max_tokens=config["max_tokens"],
                 temperature=config["temperature"],
                 tools=all_tools,
+                tool_choice={"type": "any"},
                 extra_headers=extra_headers,
                 project_id=project_id
             )

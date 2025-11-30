@@ -98,7 +98,7 @@ export const CitationBadge: React.FC<CitationBadgeProps> = ({
     <HoverCard openDelay={200} closeDelay={100} onOpenChange={handleOpenChange}>
       <HoverCardTrigger asChild>
         <Badge
-          className="cursor-pointer text-[11px] px-2 py-0.5 h-[18px] align-super -mt-1 bg-amber-600 text-white hover:bg-amber-700 border-0"
+          className="cursor-pointer text-[11px] px-2 py-0.5 h-[18px] align-super -mt-1 bg-primary text-primary-foreground hover:bg-primary/90 border-0"
         >
           {citationNumber}
         </Badge>

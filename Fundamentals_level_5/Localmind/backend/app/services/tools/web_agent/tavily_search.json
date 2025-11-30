@@ -1,6 +1,4 @@
 {
-  "_comment": "Custom Tool - Tavily Search. We handle execution via Tavily API.",
-  "_type": "client_tool",
   "name": "tavily_search",
   "description": "Search the web using Tavily AI. use in combinatioon with the web search tool to gather better information",
   "input_schema": {

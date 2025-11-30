@@ -216,7 +216,7 @@ export const GoogleDriveTab: React.FC<GoogleDriveTabProps> = ({
   if (!loading && !status.connected) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <GoogleDriveLogo size={48} weight="duotone" className="text-amber-600 mb-4" />
+        <GoogleDriveLogo size={48} weight="duotone" className="text-primary mb-4" />
         <h3 className="font-medium mb-2">Connect Google Drive</h3>
         <p className="text-sm text-muted-foreground mb-4 max-w-sm">
           Connect your Google account in App Settings to import files from Google Drive.

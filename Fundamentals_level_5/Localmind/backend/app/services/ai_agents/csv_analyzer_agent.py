@@ -110,6 +110,7 @@ class CSVAnalyzerAgent:
                 max_tokens=config.get("max_tokens"),
                 temperature=config.get("temperature"),
                 tools=tools,
+                tool_choice={"type": "any"},
                 project_id=project_id
             )
 

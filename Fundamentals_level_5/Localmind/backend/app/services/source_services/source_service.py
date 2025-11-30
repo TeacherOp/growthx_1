@@ -18,7 +18,8 @@ from app.services.source_services.source_upload import (
     upload_file,
     create_from_existing_file,
     upload_url,
-    upload_text
+    upload_text,
+    upload_research
 )
 from app.utils.path_utils import (
     get_raw_dir,
@@ -300,6 +301,20 @@ class SourceService:
         Delegates to source_upload.text_upload module.
         """
         return upload_text(project_id, content, name, description)
+
+    def add_research_source(
+        self,
+        project_id: str,
+        topic: str,
+        description: str,
+        links: List[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Add a deep research source to a project.
+
+        Delegates to source_upload.research_upload module.
+        """
+        return upload_research(project_id, topic, description, links)
 
     # =========================================================================
     # Processing Delegation (thin wrappers)

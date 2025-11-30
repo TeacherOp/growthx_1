@@ -1,0 +1,27 @@
+{
+  "name": "write_research_to_file",
+  "description": "Write a research segment to the output file. Call this tool to save your research findings. You can write multiple segments - use 'write' for the first segment and 'append' for subsequent segments. Set is_last_segment to true when you have completed all research.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "segment_number": {
+        "type": "integer",
+        "description": "The sequential number of this research segment (1, 2, 3, etc.)"
+      },
+      "operation": {
+        "type": "string",
+        "enum": ["write", "append"],
+        "description": "Use 'write' for the first segment (creates file), 'append' for subsequent segments"
+      },
+      "is_last_segment": {
+        "type": "boolean",
+        "description": "Set to true when this is the final segment and research is complete"
+      },
+      "research_content": {
+        "type": "string",
+        "description": "The research content to write. Include inline citations as [Source: URL] immediately after the cited content. Format with clear headings using ## and ###. Ensure links are complete URLs and not broken across lines. Additionally inclide any data content that you already have knolwedge off, and if you want to add your own knowledge its good to search about it to also have valid citations"
+      }
+    },
+    "required": ["segment_number", "operation", "is_last_segment", "research_content"]
+  }
+}

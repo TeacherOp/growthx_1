@@ -28,7 +28,7 @@ interface DriveItemProps {
  * Get the appropriate icon for a file based on its MIME type
  */
 const getFileIcon = (file: GoogleFile) => {
-  if (file.is_folder) return <Folder size={20} weight="fill" className="text-amber-500" />;
+  if (file.is_folder) return <Folder size={20} weight="fill" className="text-primary" />;
   if (file.mime_type.includes('document') || file.google_type === 'Google Doc')
     return <FileDoc size={20} weight="fill" className="text-blue-500" />;
   if (file.mime_type.includes('spreadsheet') || file.google_type === 'Google Sheet')
@@ -41,7 +41,7 @@ const getFileIcon = (file: GoogleFile) => {
     return <FileImage size={20} weight="fill" className="text-purple-500" />;
   if (file.mime_type.startsWith('audio/'))
     return <FileAudio size={20} weight="fill" className="text-pink-500" />;
-  return <File size={20} weight="fill" className="text-stone-400" />;
+  return <File size={20} weight="fill" className="text-muted-foreground" />;
 };
 
 /**
@@ -65,7 +65,7 @@ export const DriveItem: React.FC<DriveItemProps> = ({ file, isImporting, onClick
       {/* File/Folder icon */}
       <div className="flex-shrink-0">
         {isImporting ? (
-          <CircleNotch size={20} className="animate-spin text-amber-600" />
+          <CircleNotch size={20} className="animate-spin text-primary" />
         ) : (
           getFileIcon(file)
         )}

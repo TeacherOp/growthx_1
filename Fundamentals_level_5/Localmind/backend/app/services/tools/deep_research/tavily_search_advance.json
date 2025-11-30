@@ -1,0 +1,53 @@
+{
+  "name": "tavily_search_advance",
+  "description": "Advanced Tavily tool for web search or URL content extraction. Use 'search' for researching topics, use 'extract' for getting content from specific URLs.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "type": {
+        "type": "string",
+        "enum": ["search", "extract"],
+        "description": "Operation type: 'search' for web search, 'extract' for extracting content from URLs"
+      },
+      "query": {
+        "type": "string",
+        "description": "Search query (required for type='search')"
+      },
+      "urls": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "List of URLs to extract content from (required for type='extract')"
+      },
+      "topic": {
+        "type": "string",
+        "enum": ["general", "news", "finance"],
+        "description": "Topic category for search (default: general)"
+      },
+      "search_depth": {
+        "type": "string",
+        "enum": ["basic", "advanced"],
+        "description": "Search/extract depth - use 'advanced' for comprehensive results"
+      },
+      "max_results": {
+        "type": "integer",
+        "description": "Maximum number of search results (default: 5, max: 7)"
+      },
+      "include_raw_content": {
+        "type": "boolean",
+        "description": "Include raw page content in search results"
+      },
+      "chunks_per_source": {
+        "type": "integer",
+        "description": "Number of content chunks per source (default: 3)"
+      },
+      "include_domains": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Limit search to these domains only"
+      }
+    },
+    "required": ["type"]
+  }
+}
+
+

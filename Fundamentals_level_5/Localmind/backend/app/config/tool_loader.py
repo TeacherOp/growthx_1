@@ -206,9 +206,11 @@ class ToolLoader:
             with open(tool_file, "r") as f:
                 tool_def = json.load(f)
 
-            tool_type = tool_def.get("_type", "client_tool")
+            # Server tools have a "type" field with server tool identifier (e.g., "web_search_20250305")
+            # Client tools have "input_schema" with type: "object"
+            is_server_tool = "type" in tool_def and tool_def.get("type") != "object"
 
-            if tool_type == "server_tool":
+            if is_server_tool:
                 # Server tools use special format for Claude API
                 server_tool = {
                     "type": tool_def["type"],
@@ -219,12 +221,8 @@ class ToolLoader:
 
                 server_tools.append(server_tool)
 
-                # Collect beta headers
-                if "_beta_header" in tool_def:
-                    beta_headers.append(tool_def["_beta_header"])
-
             else:
-                # Client tools (including termination) use standard format
+                # Client tools use standard format with input_schema
                 self._validate_tool_definition(tool_def, str(tool_file))
                 client_tool = {
                     "name": tool_def["name"],

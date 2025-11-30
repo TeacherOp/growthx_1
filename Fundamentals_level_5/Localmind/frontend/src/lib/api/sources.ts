@@ -265,6 +265,29 @@ class SourcesAPI {
   }
 
   /**
+   * Add a deep research source
+   * Educational Note: Triggers an AI agent to research a topic and
+   * synthesize findings into a comprehensive source document.
+   */
+  async addResearchSource(
+    projectId: string,
+    topic: string,
+    description: string,
+    links?: string[]
+  ): Promise<Source> {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/projects/${projectId}/sources/research`,
+        { topic, description, links: links || [] }
+      );
+      return response.data.source;
+    } catch (error) {
+      console.error('Error adding research source:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Cancel processing for a source
    * Educational Note: This stops any running tasks and sets status back to "uploaded"
    * so user can retry later. Raw file is preserved, only processed data is deleted.

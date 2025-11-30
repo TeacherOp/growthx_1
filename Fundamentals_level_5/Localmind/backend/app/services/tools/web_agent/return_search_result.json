@@ -1,6 +1,4 @@
 {
-  "_comment": "Termination Tool - Signals agent completion and returns structured result.",
-  "_type": "termination_tool",
   "name": "return_search_result",
   "description": "Call this tool when you have successfully gathered all information from the web search or URL fetch. This signals completion and returns the final structured result.",
   "input_schema": {

@@ -252,7 +252,7 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
           variant="outline"
           size="icon"
           onClick={onBack}
-          className="h-8 w-8 border-stone-300"
+          className="h-8 w-8"
         >
           <ArrowLeft size={16} />
         </Button>
@@ -327,7 +327,7 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
           variant="outline"
           size="sm"
           onClick={handleOpenMemory}
-          className="gap-2 border-stone-300"
+          className="gap-2"
         >
           <Brain size={16} />
           Memory
@@ -337,7 +337,7 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
           variant="outline"
           size="sm"
           onClick={handleOpenSettings}
-          className="gap-2 border-stone-300"
+          className="gap-2"
         >
           <Gear size={16} />
           Project Settings
@@ -347,7 +347,7 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
           variant="outline"
           size="sm"
           onClick={handleNewProject}
-          className="gap-2 border-stone-300"
+          className="gap-2"
         >
           <Plus size={16} />
           New Project

@@ -108,52 +108,53 @@ class AnalysisExecutor:
         from matplotlib.figure import Figure
         import seaborn as sns
 
+        # Store original savefig methods BEFORE try block
+        original_plt_savefig = plt.savefig
+        original_fig_savefig = Figure.savefig
+
+        # Track saved plots
+        saved_plots = []
+
         try:
             # Load the DataFrame
             df = self._load_dataframe(project_id, source_id)
 
-            # Setup images directory and track saved plots
+            # Setup images directory
             images_dir = get_ai_images_dir(project_id)
-            saved_plots = []
 
-            # Store original savefig methods
-            original_plt_savefig = plt.savefig
-            original_fig_savefig = Figure.savefig
-
-            def custom_savefig(self_or_fname, fname_or_args=None, *args, **kwargs):
+            def custom_savefig(*args, **kwargs):
                 """
                 Intercept savefig to save plots to ai_outputs/images folder.
 
                 Educational Note: We ALWAYS use auto-generated unique names to avoid
                 conflicts and caching issues. Whatever filename Claude passes is ignored.
-                Format: {source_id}_plot_{uuid}.png
                 """
-                # Determine if called as fig.savefig or plt.savefig
-                if isinstance(self_or_fname, Figure):
-                    save_args = args
-                else:
-                    if fname_or_args is not None:
-                        save_args = (fname_or_args,) + args
-                    else:
-                        save_args = args
-
-                # Always use auto-generated unique name (ignore Claude's filename)
-                plot_id = str(uuid.uuid4())[:8]
+                # Always use auto-generated unique name (full UUID for uniqueness)
+                plot_id = str(uuid.uuid4())
                 plot_filename = f"{source_id}_plot_{plot_id}.png"
                 plot_path = images_dir / plot_filename
 
                 kwargs.setdefault('dpi', 150)
                 kwargs.setdefault('bbox_inches', 'tight')
 
-                # Call the appropriate original savefig
-                if isinstance(self_or_fname, Figure):
-                    original_fig_savefig(self_or_fname, plot_path, *save_args, **kwargs)
-                else:
-                    original_plt_savefig(plot_path, *save_args, **kwargs)
+                try:
+                    # Determine if called as fig.savefig(filename) or plt.savefig(filename)
+                    if args and isinstance(args[0], Figure):
+                        # Called as fig.savefig() - first arg is figure instance
+                        original_fig_savefig(args[0], plot_path, **kwargs)
+                    else:
+                        # Called as plt.savefig() - ignore any filename arg
+                        original_plt_savefig(plot_path, **kwargs)
 
-                # Store just the filename (not full path) for consistency
-                saved_plots.append(plot_filename)
-                print(f"  Plot saved: {plot_filename}")
+                    # Verify file actually exists before claiming success
+                    if plot_path.exists() and plot_path.stat().st_size > 0:
+                        saved_plots.append(plot_filename)
+                        print(f"  Plot saved: {plot_filename}")
+                    else:
+                        print(f"  ERROR: Plot failed to save: {plot_filename}")
+
+                except Exception as save_error:
+                    print(f"  ERROR saving plot: {save_error}")
 
             # Patch both plt.savefig and Figure.savefig
             plt.savefig = custom_savefig
@@ -172,18 +173,8 @@ class AnalysisExecutor:
             # Execute the code
             exec(code, exec_globals)
 
-            # Restore original savefig methods
-            plt.savefig = original_plt_savefig
-            Figure.savefig = original_fig_savefig
-
             # Get the result
             result = exec_globals.get("result")
-
-            # Clean up matplotlib state
-            # Educational Note: We removed auto-save for unsaved plots because
-            # it caused issues across multiple iterations. The agent should
-            # explicitly call savefig() when it wants to save a plot.
-            plt.close('all')
 
             output = {"success": True}
 
@@ -204,11 +195,16 @@ class AnalysisExecutor:
             return output
 
         except Exception as e:
-            plt.close('all')  # Clean up any partial plots
             return {
                 "success": False,
                 "error": f"Execution error: {str(e)}"
             }
+
+        finally:
+            # ALWAYS restore original savefig methods and clean up
+            plt.savefig = original_plt_savefig
+            Figure.savefig = original_fig_savefig
+            plt.close('all')
 
     def _format_result(self, result: Any) -> str:
         """

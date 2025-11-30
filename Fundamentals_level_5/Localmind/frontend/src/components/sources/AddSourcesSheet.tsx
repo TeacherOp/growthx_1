@@ -11,6 +11,7 @@ import { UploadTab } from './UploadTab';
 import { LinkTab } from './LinkTab';
 import { PasteTab } from './PasteTab';
 import { GoogleDriveTab } from './GoogleDriveTab';
+import { ResearchTab } from './ResearchTab';
 import { MAX_SOURCES } from '../../lib/api/sources';
 
 interface AddSourcesSheetProps {
@@ -21,6 +22,7 @@ interface AddSourcesSheetProps {
   onUpload: (files: FileList | File[]) => Promise<void>;
   onAddUrl: (url: string) => Promise<void>;
   onAddText: (content: string, name: string) => Promise<void>;
+  onAddResearch: (topic: string, description: string, links: string[]) => Promise<void>;
   onImportComplete: () => void;
   uploading: boolean;
 }
@@ -33,6 +35,7 @@ export const AddSourcesSheet: React.FC<AddSourcesSheetProps> = ({
   onUpload,
   onAddUrl,
   onAddText,
+  onAddResearch,
   onImportComplete,
   uploading,
 }) => {
@@ -52,11 +55,12 @@ export const AddSourcesSheet: React.FC<AddSourcesSheetProps> = ({
           </p>
 
           <Tabs defaultValue="upload" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="upload">Upload</TabsTrigger>
               <TabsTrigger value="link">Link</TabsTrigger>
               <TabsTrigger value="paste">Paste</TabsTrigger>
               <TabsTrigger value="drive">Drive</TabsTrigger>
+              <TabsTrigger value="research">Research</TabsTrigger>
             </TabsList>
 
             <TabsContent value="upload" className="mt-6">
@@ -82,6 +86,13 @@ export const AddSourcesSheet: React.FC<AddSourcesSheetProps> = ({
                   onImportComplete();
                   onOpenChange(false); // Close sheet after import
                 }}
+                isAtLimit={isAtLimit}
+              />
+            </TabsContent>
+
+            <TabsContent value="research" className="mt-6">
+              <ResearchTab
+                onAddResearch={onAddResearch}
                 isAtLimit={isAtLimit}
               />
             </TabsContent>

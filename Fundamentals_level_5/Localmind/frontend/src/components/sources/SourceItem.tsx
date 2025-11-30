@@ -86,7 +86,7 @@ const getStatusDisplay = (status: Source['status']) => {
     case 'processing':
       return {
         icon: CircleNotch,
-        color: 'text-amber-500',
+        color: 'text-primary',
         animate: true,
         tooltip: 'Processing...',
       };
@@ -249,7 +249,7 @@ export const SourceItem: React.FC<SourceItemProps> = ({
               {/* Spinner - visible by default, hidden on hover */}
               <CircleNotch
                 size={16}
-                className={`${isEmbedding ? 'text-blue-500' : 'text-amber-500'} animate-spin group-hover:hidden`}
+                className={`${isEmbedding ? 'text-blue-500' : 'text-primary'} animate-spin group-hover:hidden`}
               />
               {/* Stop icon - hidden by default, visible on hover */}
               <Stop
@@ -262,20 +262,20 @@ export const SourceItem: React.FC<SourceItemProps> = ({
             // Uploaded/cancelled state: show retry icon to start processing
             <button
               onClick={() => onRetryProcessing(source.id)}
-              className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-amber-100 transition-colors"
+              className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-accent transition-colors"
               title="Click to start processing"
             >
               <ArrowClockwise
                 size={16}
                 weight="bold"
-                className="text-muted-foreground group-hover:text-amber-600"
+                className="text-muted-foreground group-hover:text-primary"
               />
             </button>
           ) : (
             // Error state: show warning icon with retry button
             <button
               onClick={() => onRetryProcessing(source.id)}
-              className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-amber-100 transition-colors"
+              className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-accent transition-colors"
               title="Click to retry processing"
             >
               {/* Warning - visible by default, hidden on hover */}
@@ -287,7 +287,7 @@ export const SourceItem: React.FC<SourceItemProps> = ({
               <ArrowClockwise
                 size={16}
                 weight="bold"
-                className="text-amber-600 hidden group-hover:block"
+                className="text-primary hidden group-hover:block"
               />
             </button>
           )}
