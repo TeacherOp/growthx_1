@@ -55,12 +55,23 @@ class MessageService:
         chat_file = self._get_chat_file(project_id, chat_id)
 
         if not chat_file.exists():
+            print(f"  DEBUG: Chat file does not exist: {chat_file}")
             return None
 
         try:
-            with open(chat_file, 'r') as f:
-                return json.load(f)
-        except json.JSONDecodeError:
+            with open(chat_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data
+        except json.JSONDecodeError as e:
+            print(f"  DEBUG: JSON decode error loading chat {chat_id}: {e}")
+            # Try to read raw content for debugging
+            try:
+                with open(chat_file, 'r', encoding='utf-8') as f:
+                    raw_content = f.read()
+                print(f"  DEBUG: File size: {len(raw_content)} chars")
+                print(f"  DEBUG: First 200 chars: {raw_content[:200]}")
+            except:
+                pass
             return None
 
     def _save_chat_data(self, project_id: str, chat_id: str, data: Dict[str, Any]) -> bool:
@@ -81,7 +92,11 @@ class MessageService:
             with open(chat_file, 'w') as f:
                 json.dump(data, f, indent=2)
             return True
-        except IOError:
+        except IOError as e:
+            print(f"  DEBUG: Failed to save chat {chat_id}: {e}")
+            return False
+        except Exception as e:
+            print(f"  DEBUG: Unexpected error saving chat {chat_id}: {e}")
             return False
 
     def get_messages(self, project_id: str, chat_id: str) -> List[Dict[str, Any]]:
@@ -97,8 +112,10 @@ class MessageService:
         """
         chat_data = self._load_chat_data(project_id, chat_id)
         if not chat_data:
+            print(f"  DEBUG: get_messages - chat_data is None for chat {chat_id}")
             return []
-        return chat_data.get("messages", [])
+        messages = chat_data.get("messages", [])
+        return messages
 
     def add_message(
         self,

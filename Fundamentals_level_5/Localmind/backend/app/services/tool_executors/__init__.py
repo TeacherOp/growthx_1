@@ -12,10 +12,24 @@ Executors:
 - source_search_executor: Handles search_sources tool calls (full content or semantic search)
 - web_agent_executor: Routes tool calls for web agent (tavily_search, return_search_result)
 - deep_research_executor: Routes tool calls for deep research (write_research_to_file, tavily_search_advance)
+- csv_analyzer_agent_executor: Handles CSV analysis agent tool calls (module with execute function)
+- studio_signal_executor: Handles studio_signal tool calls (non-blocking, background task)
+- studio_audio_executor: Handles audio overview tools (read_source_content, write_script_section)
 """
 from app.services.tool_executors.memory_executor import memory_executor
 from app.services.tool_executors.source_search_executor import source_search_executor
 from app.services.tool_executors.web_agent_executor import web_agent_executor
 from app.services.tool_executors.deep_research_executor import deep_research_executor
+from app.services.tool_executors import csv_analyzer_agent_executor  # Module import (has execute function)
+from app.services.tool_executors.studio_signal_executor import studio_signal_executor
+from app.services.tool_executors.studio_audio_executor import studio_audio_executor
 
-__all__ = ["memory_executor", "source_search_executor", "web_agent_executor", "deep_research_executor"]
+__all__ = [
+    "memory_executor",
+    "source_search_executor",
+    "web_agent_executor",
+    "deep_research_executor",
+    "csv_analyzer_agent_executor",
+    "studio_signal_executor",
+    "studio_audio_executor"
+]

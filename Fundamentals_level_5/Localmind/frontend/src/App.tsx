@@ -5,7 +5,7 @@ import { ProjectWorkspace } from './components/ProjectWorkspace';
 import { projectsAPI } from './lib/api';
 
 /**
- * Main App Component for LocalMind
+ * Main App Component for NoobBook
  * Educational Note: This component manages the overall application state
  * and controls which view is shown (project list, create dialog, or project workspace).
  */

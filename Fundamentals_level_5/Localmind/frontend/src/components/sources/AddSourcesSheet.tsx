@@ -50,7 +50,7 @@ export const AddSourcesSheet: React.FC<AddSourcesSheetProps> = ({
 
         <div className="mt-6">
           <p className="text-sm text-muted-foreground mb-4">
-            Sources let LocalMind base its responses on the information that
+            Sources let NoobBook base its responses on the information that
             matters most to you. ({sourcesCount}/{MAX_SOURCES} used)
           </p>
 

@@ -1,30 +1,58 @@
 /**
  * StudioToolsList Component
  * Educational Note: Renders all studio tools organized by category.
+ * Receives signals from chat and passes them to individual tool items.
  */
 
 import React from 'react';
 import { ScrollArea } from '../ui/scroll-area';
 import { StudioToolItem } from './StudioToolItem';
-import { generationOptions, categoryMeta, type GenerationCategory } from './types';
+import {
+  generationOptions,
+  categoryMeta,
+  getSignalsForItem,
+  type GenerationCategory,
+  type StudioSignal,
+  type StudioItemId,
+} from './types';
 
 interface StudioToolsListProps {
-  onGenerate: (optionId: string) => void;
+  signals: StudioSignal[];
+  onGenerate: (optionId: StudioItemId, signals: StudioSignal[]) => void;
 }
 
-export const StudioToolsList: React.FC<StudioToolsListProps> = ({ onGenerate }) => {
+export const StudioToolsList: React.FC<StudioToolsListProps> = ({
+  signals,
+  onGenerate,
+}) => {
   /**
-   * Render tools for a specific category as a grid
+   * Render tools for a specific category in a 2-column grid
    */
   const renderCategoryTools = (category: GenerationCategory) => {
-    const options = generationOptions.filter(opt => opt.category === category);
+    const options = generationOptions.filter((opt) => opt.category === category);
     return (
-      <div className="flex flex-col gap-2">
-        {options.map((option) => (
-          <StudioToolItem key={option.id} option={option} onClick={onGenerate} />
-        ))}
+      <div className="grid grid-cols-2 gap-1.5">
+        {options.map((option) => {
+          const itemSignals = getSignalsForItem(signals, option.id);
+          return (
+            <StudioToolItem
+              key={option.id}
+              option={option}
+              signals={itemSignals}
+              onClick={onGenerate}
+            />
+          );
+        })}
       </div>
     );
+  };
+
+  /**
+   * Check if any item in a category has signals
+   */
+  const categoryHasActiveItems = (category: GenerationCategory): boolean => {
+    const options = generationOptions.filter((opt) => opt.category === category);
+    return options.some((opt) => getSignalsForItem(signals, opt.id).length > 0);
   };
 
   /**
@@ -33,12 +61,20 @@ export const StudioToolsList: React.FC<StudioToolsListProps> = ({ onGenerate }) 
   const renderCategorySection = (category: GenerationCategory) => {
     const meta = categoryMeta[category];
     const Icon = meta.icon;
+    const hasActiveItems = categoryHasActiveItems(category);
 
     return (
       <div key={category}>
-        <div className="flex items-center gap-2 mb-2">
-          <Icon size={14} className="text-muted-foreground" />
-          <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <Icon
+            size={12}
+            className={hasActiveItems ? 'text-primary' : 'text-muted-foreground'}
+          />
+          <h3
+            className={`text-[10px] font-medium uppercase tracking-wider ${
+              hasActiveItems ? 'text-primary' : 'text-muted-foreground'
+            }`}
+          >
             {meta.label}
           </h3>
         </div>
@@ -49,11 +85,10 @@ export const StudioToolsList: React.FC<StudioToolsListProps> = ({ onGenerate }) 
 
   return (
     <ScrollArea className="flex-1">
-      <div className="p-4 space-y-4">
-        {renderCategorySection('documents')}
-        {renderCategorySection('communication')}
-        {renderCategorySection('media')}
-        {renderCategorySection('analysis')}
+      <div className="p-3 space-y-3">
+        {renderCategorySection('learning')}
+        {renderCategorySection('business')}
+        {renderCategorySection('content')}
       </div>
     </ScrollArea>
   );

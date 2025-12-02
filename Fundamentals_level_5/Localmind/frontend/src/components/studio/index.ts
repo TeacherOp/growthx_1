@@ -4,3 +4,4 @@
  */
 
 export { StudioPanel } from './StudioPanel';
+export type { StudioSignal, StudioItemId, GenerationCategory } from './types';

@@ -1,0 +1,39 @@
+{
+  "name": "generate_flash_cards",
+  "description": "Submit generated flash cards. Each card has a front (question/term) and back (answer/definition).",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "cards": {
+        "type": "array",
+        "description": "Array of flash cards to generate",
+        "items": {
+          "type": "object",
+          "properties": {
+            "front": {
+              "type": "string",
+              "description": "The front of the card - a term, question, or prompt (max 15 words)"
+            },
+            "back": {
+              "type": "string",
+              "description": "The back of the card - the answer, definition, or explanation (max 50 words)"
+            },
+            "category": {
+              "type": "string",
+              "enum": ["definition", "concept", "application", "comparison"],
+              "description": "The type of flash card"
+            }
+          },
+          "required": ["front", "back", "category"]
+        },
+        "minItems": 5,
+        "maxItems": 20
+      },
+      "topic_summary": {
+        "type": "string",
+        "description": "A brief 1-2 sentence summary of what these flash cards cover"
+      }
+    },
+    "required": ["cards", "topic_summary"]
+  }
+}

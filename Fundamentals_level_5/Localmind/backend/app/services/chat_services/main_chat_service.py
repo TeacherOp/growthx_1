@@ -12,18 +12,9 @@ Message Flow:
 4. Repeat 2-3 until Claude gives text response
 
 The service uses message_service for all message handling and tool parsing.
-
-Debug Logging:
-Each API call to Claude is logged to:
-    data/projects/{project_id}/chats/{chat_id}/api_1.json, api_2.json, etc.
-This helps debug complex tool chains and message construction.
 """
-import json
-from datetime import datetime
-from pathlib import Path
 from typing import Dict, Any, Tuple, List, Optional
 
-from config import Config
 from app.services.data_services import chat_service
 from app.services.integrations.claude import claude_service
 from app.services.data_services import message_service
@@ -31,6 +22,7 @@ from app.config import prompt_loader, tool_loader, context_loader
 from app.services.tool_executors import source_search_executor
 from app.services.tool_executors import memory_executor
 from app.services.tool_executors import csv_analyzer_agent_executor
+from app.services.tool_executors import studio_signal_executor
 from app.services.ai_services import chat_naming_service
 from app.services.background_services import task_service
 from app.utils import claude_parsing_utils
@@ -53,7 +45,7 @@ class MainChatService:
         self._search_tool = None
         self._memory_tool = None
         self._csv_analyzer_tool = None
-        self.projects_dir = Config.PROJECTS_DIR
+        self._studio_signal_tool = None
 
     def _get_search_tool(self) -> Dict[str, Any]:
         """Load the search_sources tool definition (cached)."""
@@ -73,13 +65,19 @@ class MainChatService:
             self._csv_analyzer_tool = tool_loader.load_tool("chat_tools", "analyze_csv_agent_tool")
         return self._csv_analyzer_tool
 
+    def _get_studio_signal_tool(self) -> Dict[str, Any]:
+        """Load the studio_signal tool definition (cached)."""
+        if self._studio_signal_tool is None:
+            self._studio_signal_tool = tool_loader.load_tool("chat_tools", "studio_signal_tool")
+        return self._studio_signal_tool
+
     def _get_tools(self, has_active_sources: bool, has_csv_sources: bool = False) -> List[Dict[str, Any]]:
         """
         Get tools list for Claude API call.
 
-        Educational Note: Memory tool is always available. Search tool
-        is only available when there are active non-CSV sources. CSV analyzer
-        tool is available when there are CSV sources.
+        Educational Note: Memory and studio_signal tools are always available.
+        Search tool is only available when there are active non-CSV sources.
+        CSV analyzer tool is available when there are CSV sources.
 
         Args:
             has_active_sources: Whether project has active non-CSV sources
@@ -88,7 +86,11 @@ class MainChatService:
         Returns:
             List of tool definitions
         """
-        tools = [self._get_memory_tool()]  # Always include memory tool
+        # Always include memory and studio_signal tools
+        tools = [
+            self._get_memory_tool(),
+            self._get_studio_signal_tool()
+        ]
 
         if has_active_sources:
             tools.append(self._get_search_tool())
@@ -97,96 +99,6 @@ class MainChatService:
             tools.append(self._get_csv_analyzer_tool())
 
         return tools
-
-    # =========================================================================
-    # Debug Logging
-    # =========================================================================
-
-    def _get_chat_logs_dir(self, project_id: str, chat_id: str) -> Path:
-        """Get the debug logs directory for a chat."""
-        logs_dir = self.projects_dir / project_id / "chats" / chat_id
-        logs_dir.mkdir(parents=True, exist_ok=True)
-        return logs_dir
-
-    def _get_next_api_call_number(self, logs_dir: Path) -> int:
-        """
-        Get the next API call number for logging.
-
-        Educational Note: We look at existing api_*.json files and
-        increment to get the next number.
-        """
-        existing = list(logs_dir.glob("api_*.json"))
-        if not existing:
-            return 1
-
-        # Extract numbers from filenames
-        numbers = []
-        for f in existing:
-            try:
-                num = int(f.stem.replace("api_", ""))
-                numbers.append(num)
-            except ValueError:
-                continue
-
-        return max(numbers) + 1 if numbers else 1
-
-    def _log_api_call(
-        self,
-        project_id: str,
-        chat_id: str,
-        system_prompt: str,
-        messages: List[Dict[str, Any]],
-        tools: Optional[List[Dict[str, Any]]],
-        model: str,
-        max_tokens: int,
-        temperature: float,
-        response: Optional[Dict[str, Any]] = None
-    ) -> None:
-        """
-        Log an API call to Claude for debugging.
-
-        Educational Note: This creates a JSON file with the complete
-        request and response for each API call. Helps debug:
-        - System prompt construction
-        - Message chain building
-        - Tool definitions
-        - Response parsing
-        """
-        logs_dir = self._get_chat_logs_dir(project_id, chat_id)
-        call_number = self._get_next_api_call_number(logs_dir)
-
-        log_data = {
-            "call_number": call_number,
-            "timestamp": datetime.now().isoformat(),
-            "request": {
-                "model": model,
-                "max_tokens": max_tokens,
-                "temperature": temperature,
-                "system_prompt": system_prompt,
-                "tools": tools,
-                "messages": messages
-            }
-        }
-
-        # Add response if available
-        if response:
-            log_data["response"] = {
-                "stop_reason": response.get("stop_reason"),
-                "model": response.get("model"),
-                "usage": response.get("usage"),
-                "content": response.get("content"),
-                # Serialize content_blocks for readability
-                "content_blocks": claude_parsing_utils.serialize_content_blocks(
-                    response.get("content_blocks", [])
-                )
-            }
-
-        log_file = logs_dir / f"api_{call_number}.json"
-
-        with open(log_file, 'w', encoding='utf-8') as f:
-            json.dump(log_data, f, indent=2, ensure_ascii=False)
-
-        print(f"Logged API call {call_number} to: {log_file}")
 
     def _build_system_prompt(self, project_id: str, base_prompt: str) -> str:
         """
@@ -201,7 +113,13 @@ class MainChatService:
             return base_prompt + "\n" + full_context
         return base_prompt
 
-    def _execute_tool(self, project_id: str, tool_name: str, tool_input: Dict[str, Any]) -> str:
+    def _execute_tool(
+        self,
+        project_id: str,
+        chat_id: str,
+        tool_name: str,
+        tool_input: Dict[str, Any]
+    ) -> str:
         """
         Execute a tool and return result string.
 
@@ -209,6 +127,7 @@ class MainChatService:
         - search_sources: Searches project sources for information
         - store_memory: Stores user/project memory (non-blocking, queues background task)
         - analyze_csv_agent: Triggers CSV analyzer agent for CSV data questions
+        - studio_signal: Activates studio generation options (non-blocking, queues background task)
         """
         if tool_name == "search_sources":
             result = source_search_executor.execute(
@@ -254,6 +173,18 @@ class MainChatService:
                 return content
             else:
                 return f"Error: {result.get('error', 'Analysis failed')}"
+
+        elif tool_name == "studio_signal":
+            # Studio signal returns immediately, actual storage happens in background
+            result = studio_signal_executor.execute(
+                project_id=project_id,
+                chat_id=chat_id,
+                signals=tool_input.get("signals", [])
+            )
+            if result.get("success"):
+                return result.get("message", "Studio signals activated")
+            else:
+                return f"Error: {result.get('message', 'Unknown error')}"
 
         else:
             return f"Unknown tool: {tool_name}"
@@ -318,23 +249,15 @@ class MainChatService:
                 project_id=project_id
             )
 
-            # Log the API call for debugging
-            self._log_api_call(
-                project_id=project_id,
-                chat_id=chat_id,
-                system_prompt=system_prompt,
-                messages=api_messages,
-                tools=tools,
-                model=prompt_config.get("model"),
-                max_tokens=prompt_config.get("max_tokens"),
-                temperature=prompt_config.get("temperature"),
-                response=response
-            )
-
             # Step 5: Handle tool use loop
             # Educational Note: When Claude wants to use tools, stop_reason is "tool_use".
             # We must execute tools and send back tool_result for each tool_use block.
+            # Important: Claude can respond with text + tool_use together. The text is
+            # the response to the user, the tool_use is for background processing.
+            # We accumulate text from all responses so we don't lose it.
             iteration = 0
+            accumulated_text_parts = []
+
             while claude_parsing_utils.is_tool_use(response) and iteration < self.MAX_TOOL_ITERATIONS:
                 iteration += 1
 
@@ -344,7 +267,14 @@ class MainChatService:
                 if not tool_use_blocks:
                     break
 
-                # First, store the assistant's tool_use response
+                # Extract text from this response BEFORE storing
+                # Educational Note: Claude can respond with text + tool_use together.
+                # The text is the actual response to show the user!
+                response_text = claude_parsing_utils.extract_text(response)
+                if response_text.strip():
+                    accumulated_text_parts.append(response_text)
+
+                # Store the assistant's tool_use response
                 # Educational Note: The message chain must be:
                 # user -> assistant (tool_use[]) -> user (tool_result[]) -> assistant
                 # We must store the tool_use response before the tool_result
@@ -367,7 +297,7 @@ class MainChatService:
                     print(f"Executing tool: {tool_name} for source: {tool_input.get('source_id', 'unknown')}")
 
                     # Execute tool
-                    result = self._execute_tool(project_id, tool_name, tool_input)
+                    result = self._execute_tool(project_id, chat_id, tool_name, tool_input)
 
                     # Add tool result as user message
                     message_service.add_tool_result_message(
@@ -380,6 +310,16 @@ class MainChatService:
                 # Rebuild messages and call Claude again
                 api_messages = message_service.build_api_messages(project_id, chat_id)
 
+                # Debug: Log message count before follow-up API call
+                print(f"Follow-up API call: {len(api_messages)} messages")
+                if not api_messages:
+                    print("ERROR: api_messages is empty!")
+                    # Try reloading messages to debug
+                    debug_messages = message_service.get_messages(project_id, chat_id)
+                    print(f"  Raw messages in chat: {len(debug_messages)}")
+                    for i, m in enumerate(debug_messages):
+                        print(f"  [{i}] role={m.get('role')}, content_type={type(m.get('content')).__name__}")
+
                 response = claude_service.send_message(
                     messages=api_messages,
                     system_prompt=system_prompt,
@@ -390,26 +330,22 @@ class MainChatService:
                     project_id=project_id
                 )
 
-                # Log the follow-up API call
-                self._log_api_call(
-                    project_id=project_id,
-                    chat_id=chat_id,
-                    system_prompt=system_prompt,
-                    messages=api_messages,
-                    tools=tools,
-                    model=prompt_config.get("model"),
-                    max_tokens=prompt_config.get("max_tokens"),
-                    temperature=prompt_config.get("temperature"),
-                    response=response
-                )
-
             # Step 6: Store final text response
-            final_text = claude_parsing_utils.extract_text(response)
+            # Get text from final response (may be empty if Claude sent text + tool_use earlier)
+            final_response_text = claude_parsing_utils.extract_text(response)
+            if final_response_text.strip():
+                accumulated_text_parts.append(final_response_text)
+
+            # Combine all accumulated text
+            # Educational Note: When Claude sends text + tool_use, the text comes first.
+            # After tool execution, Claude may respond with more text OR empty (nothing to add).
+            # We combine all text parts to show the complete response to the user.
+            final_text = "\n\n".join(accumulated_text_parts) if accumulated_text_parts else ""
 
             assistant_msg = message_service.add_assistant_message(
                 project_id=project_id,
                 chat_id=chat_id,
-                content=final_text,
+                content=final_text if final_text.strip() else "I've processed your request.",
                 model=response.get("model"),
                 tokens=response.get("usage")
             )

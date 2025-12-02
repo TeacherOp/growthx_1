@@ -1,13 +1,13 @@
 {
   "projects": [
     {
-      "id": "00ab6095-12cb-446d-8d5f-7cbc2e9f1112",
-      "name": "Learn how to build AI tools and agents",
-      "description": "Growthx Learning Sessions!",
-      "created_at": "2025-11-29T22:29:52.283344",
-      "updated_at": "2025-11-29T22:29:52.283344",
-      "last_accessed": "2025-11-29T22:29:52.283344"
+      "id": "64f8896d-f72a-47c3-9d35-ad28c2471024",
+      "name": "Better Than Google NotebookLM",
+      "description": "This project showcases how NoobBook is better than NoteBook",
+      "created_at": "2025-12-01T02:55:34.496855",
+      "updated_at": "2025-12-01T02:55:34.496855",
+      "last_accessed": "2025-12-01T02:55:34.496855"
     }
   ],
-  "last_updated": "2025-11-29T22:29:52.284128"
+  "last_updated": "2025-12-01T02:55:34.497551"
 }

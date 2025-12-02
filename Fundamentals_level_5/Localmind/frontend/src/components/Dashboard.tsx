@@ -4,7 +4,7 @@ import { AppSettings } from './AppSettings';
 import { Button } from './ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
-import { Gear, Brain, Sparkle, GithubLogo, YoutubeLogo, BookOpen } from '@phosphor-icons/react';
+import { Gear, Ghost, Sparkle, GithubLogo, YoutubeLogo, BookOpen } from '@phosphor-icons/react';
 import { ToastContainer, useToast } from './ui/toast';
 
 /**
@@ -36,8 +36,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <header className="h-14 bg-background">
         <div className="container mx-auto px-4 h-full flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Brain size={24} className="text-primary" />
-            <h1 className="text-lg font-semibold">LocalLM</h1>
+            <Ghost size={24} weight="fill" className="text-primary" />
+            <h1 className="text-lg font-semibold">NoobBook</h1>
           </div>
 
           <Button

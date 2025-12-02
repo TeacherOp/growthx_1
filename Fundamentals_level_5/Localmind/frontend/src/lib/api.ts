@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 /**
- * API Configuration for LocalMind
+ * API Configuration for NoobBook
  * Educational Note: We create an axios instance with base configuration
  * to avoid repeating the base URL and headers in every request.
  */

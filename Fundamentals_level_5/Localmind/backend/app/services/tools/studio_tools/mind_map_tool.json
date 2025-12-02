@@ -1,0 +1,47 @@
+{
+  "name": "generate_mind_map",
+  "description": "Submit a hierarchical mind map structure representing the key concepts and their relationships from the content.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "nodes": {
+        "type": "array",
+        "description": "Array of mind map nodes forming a tree structure. First node must be the root (parent_id: null).",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier for this node (e.g., 'node_1', 'node_2')"
+            },
+            "label": {
+              "type": "string",
+              "description": "Short display label for the node (max 5 words)"
+            },
+            "parent_id": {
+              "type": ["string", "null"],
+              "description": "ID of parent node. Must be null for root node only. All other nodes must reference an existing node."
+            },
+            "node_type": {
+              "type": "string",
+              "enum": ["root", "category", "leaf"],
+              "description": "root=main topic (only 1), category=grouping/subtopic, leaf=specific detail/fact"
+            },
+            "description": {
+              "type": "string",
+              "description": "Brief explanation of this concept (1-2 sentences, max 50 words)"
+            }
+          },
+          "required": ["id", "label", "parent_id", "node_type", "description"]
+        },
+        "minItems": 5,
+        "maxItems": 150
+      },
+      "topic_summary": {
+        "type": "string",
+        "description": "A brief 1-2 sentence summary of what this mind map covers"
+      }
+    },
+    "required": ["nodes", "topic_summary"]
+  }
+}

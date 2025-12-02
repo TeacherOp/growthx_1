@@ -169,11 +169,12 @@ class ChatService:
 
     def get_chat(self, project_id: str, chat_id: str) -> Optional[Dict[str, Any]]:
         """
-        Get full chat data including messages.
+        Get full chat data including messages and studio signals.
 
         Educational Note: Filters out tool_use and tool_result messages
         from the response. These are internal messages used in the tool
-        chain and shouldn't be displayed to users.
+        chain and shouldn't be displayed to users. Studio signals are
+        included as-is for frontend to render active studio items.
 
         Args:
             project_id: The project UUID
@@ -197,6 +198,10 @@ class ChatService:
                 msg for msg in chat_data.get("messages", [])
                 if isinstance(msg.get("content"), str)
             ]
+
+            # Ensure studio_signals exists (even if empty)
+            if "studio_signals" not in chat_data:
+                chat_data["studio_signals"] = []
 
             return chat_data
         except json.JSONDecodeError:

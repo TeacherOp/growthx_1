@@ -39,6 +39,21 @@ export interface ChatMetadata {
 }
 
 /**
+ * Educational Note: Studio signal from AI - activates studio generation options.
+ * Sent by main chat when it identifies content generation opportunities.
+ */
+export interface StudioSignal {
+  id: string;
+  studio_item: string;
+  direction: string;
+  sources: Array<{
+    source_id: string;
+    chunk_ids?: string[];
+  }>;
+  created_at: string;
+}
+
+/**
  * Educational Note: Full chat data including all messages.
  * Loaded when user opens a specific chat.
  */
@@ -49,6 +64,7 @@ export interface Chat {
   created_at: string;
   updated_at: string;
   messages: Message[];
+  studio_signals: StudioSignal[];
   metadata: {
     source_references: unknown[];
     sub_agents: unknown[];

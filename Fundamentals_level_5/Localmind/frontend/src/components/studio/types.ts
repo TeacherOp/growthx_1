@@ -1,29 +1,72 @@
 /**
  * Studio Types
- * Educational Note: Centralized type definitions and data for Studio panel.
+ * Educational Note: Centralized type definitions for Studio panel.
+ * Studio items are activated by signals from the main chat based on context.
  */
 
 import {
   FileText,
-  Envelope,
-  Users,
-  ListChecks,
   Brain,
-  PresentationChart,
   Headphones,
-  Video,
+  Exam,
+  Cards,
+  TreeStructure,
+  ChartBar,
+  Target,
+  Image,
+  Article,
+  ShareNetwork,
+  Globe,
+  EnvelopeSimple,
+  Cube,
+  ChartPieSlice,
 } from '@phosphor-icons/react';
 
 /**
- * Generation option category types
+ * Studio item categories - matches backend enum
  */
-export type GenerationCategory = 'documents' | 'communication' | 'media' | 'analysis';
+export type GenerationCategory = 'learning' | 'business' | 'content';
+
+/**
+ * Studio item IDs - matches backend studio_item enum exactly
+ */
+export type StudioItemId =
+  | 'quiz'
+  | 'flash_cards'
+  | 'audio_overview'
+  | 'mind_map'
+  | 'business_report'
+  | 'marketing_strategy'
+  | 'ads_creative'
+  | 'prd'
+  | 'infographics'
+  | 'blog'
+  | 'social'
+  | 'website'
+  | 'email_templates'
+  | 'components';
+
+/**
+ * Studio signal from backend - sent by main chat AI
+ * Educational Note: These signals activate studio items contextually.
+ * Multiple signals can exist for the same studio_item (different topics).
+ */
+export interface StudioSignal {
+  id: string;
+  studio_item: StudioItemId;
+  direction: string;
+  sources: Array<{
+    source_id: string;
+    chunk_ids?: string[];
+  }>;
+  created_at: string;
+}
 
 /**
  * Single generation option configuration
  */
 export interface GenerationOption {
-  id: string;
+  id: StudioItemId;
   title: string;
   description: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
@@ -32,77 +75,142 @@ export interface GenerationOption {
 
 /**
  * All available generation options
- * Educational Note: Centralized here for easy modification and reuse.
+ * Educational Note: Organized by category - Learning, Business, Content
  */
 export const generationOptions: GenerationOption[] = [
-  // Documents
+  // LEARNING
   {
-    id: 'presentation',
-    title: 'Generate Presentation',
-    description: 'Create slides from your sources',
-    icon: PresentationChart,
-    category: 'documents',
+    id: 'quiz',
+    title: 'Quiz',
+    description: 'Test knowledge retention',
+    icon: Exam,
+    category: 'learning',
+  },
+  {
+    id: 'flash_cards',
+    title: 'Flash Cards',
+    description: 'Memorize key concepts',
+    icon: Cards,
+    category: 'learning',
+  },
+  {
+    id: 'audio_overview',
+    title: 'Audio Overview',
+    description: 'Listen to content summary',
+    icon: Headphones,
+    category: 'learning',
+  },
+  {
+    id: 'mind_map',
+    title: 'Mind Map',
+    description: 'Visualize relationships',
+    icon: TreeStructure,
+    category: 'learning',
+  },
+
+  // BUSINESS
+  {
+    id: 'business_report',
+    title: 'Business Report',
+    description: 'Data insights & metrics',
+    icon: ChartBar,
+    category: 'business',
+  },
+  {
+    id: 'marketing_strategy',
+    title: 'Marketing Strategy',
+    description: 'Growth plans & positioning',
+    icon: Target,
+    category: 'business',
   },
   {
     id: 'prd',
-    title: 'Generate PRD / Docs',
-    description: 'Product requirements document',
+    title: 'PRD',
+    description: 'Product requirements doc',
     icon: FileText,
-    category: 'documents',
+    category: 'business',
   },
   {
-    id: 'todo',
-    title: 'Generate To-Do List',
-    description: 'Action items from your content',
-    icon: ListChecks,
-    category: 'documents',
+    id: 'infographics',
+    title: 'Infographics',
+    description: 'Visual data storytelling',
+    icon: ChartPieSlice,
+    category: 'business',
   },
-  // Communication
+
+  // CONTENT
   {
-    id: 'team-email',
-    title: 'Draft Team Email',
-    description: 'Internal communication draft',
-    icon: Envelope,
-    category: 'communication',
-  },
-  {
-    id: 'stakeholder-email',
-    title: 'Draft Stakeholder Email',
-    description: 'External communication draft',
-    icon: Users,
-    category: 'communication',
-  },
-  // Media
-  {
-    id: 'audio-overview',
-    title: 'Audio Overview',
-    description: 'Podcast-style summary',
-    icon: Headphones,
-    category: 'media',
+    id: 'blog',
+    title: 'Blog Post',
+    description: 'Long-form articles',
+    icon: Article,
+    category: 'content',
   },
   {
-    id: 'video-overview',
-    title: 'Video Overview',
-    description: 'Visual presentation of content',
-    icon: Video,
-    category: 'media',
+    id: 'social',
+    title: 'Social Posts',
+    description: 'LinkedIn/Instagram/X',
+    icon: ShareNetwork,
+    category: 'content',
   },
-  // Analysis
   {
-    id: 'mindmap',
-    title: 'Generate Mind Map',
-    description: 'Visual knowledge structure',
-    icon: Brain,
-    category: 'analysis',
+    id: 'website',
+    title: 'Website',
+    description: 'Landing & product pages',
+    icon: Globe,
+    category: 'content',
+  },
+  {
+    id: 'email_templates',
+    title: 'Email Templates',
+    description: 'Marketing & transactional',
+    icon: EnvelopeSimple,
+    category: 'content',
+  },
+  {
+    id: 'components',
+    title: 'Components',
+    description: 'UI components & patterns',
+    icon: Cube,
+    category: 'content',
+  },
+  {
+    id: 'ads_creative',
+    title: 'Ads Creative',
+    description: 'Instagram/Facebook ads',
+    icon: Image,
+    category: 'content',
   },
 ];
 
 /**
  * Category metadata for section headers
  */
-export const categoryMeta: Record<GenerationCategory, { label: string; icon: React.ComponentType<{ size?: number; className?: string }> }> = {
-  documents: { label: 'Documents', icon: FileText },
-  communication: { label: 'Communication', icon: Envelope },
-  media: { label: 'Media', icon: Video },
-  analysis: { label: 'Analysis', icon: Brain },
+export const categoryMeta: Record<
+  GenerationCategory,
+  { label: string; icon: React.ComponentType<{ size?: number; className?: string }> }
+> = {
+  learning: { label: 'Learning', icon: Brain },
+  business: { label: 'Business', icon: ChartBar },
+  content: { label: 'Content', icon: Article },
+};
+
+/**
+ * Helper to get signals for a specific studio item
+ */
+export const getSignalsForItem = (
+  signals: StudioSignal[],
+  itemId: StudioItemId
+): StudioSignal[] => {
+  return signals.filter((s) => s.studio_item === itemId);
+};
+
+/**
+ * Helper to check if a studio item is active (has signals)
+ */
+export const isItemActive = (
+  signals: StudioSignal[],
+  itemId: StudioItemId
+): boolean => {
+  return signals.some((s) => s.studio_item === itemId);
 };

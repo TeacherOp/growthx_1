@@ -265,7 +265,7 @@ const AIMessage: React.FC<AIMessageProps> = ({ content, projectId }) => {
           </div>
         </div>
         <div className="bg-muted/50 rounded-2xl rounded-tl-sm px-4 py-3 min-w-0 overflow-hidden flex-1">
-          <p className="text-xs font-medium text-muted-foreground mb-2">LocalMind</p>
+          <p className="text-xs font-medium text-muted-foreground mb-2">NoobBook</p>
 
           {/* Single ReactMarkdown instance - preserves inline flow */}
           <div className="prose prose-sm prose-stone max-w-none min-w-0 overflow-hidden prose-pre:bg-stone-900 prose-pre:text-stone-100 prose-code:text-stone-100 prose-code:bg-transparent">
@@ -320,7 +320,7 @@ const LoadingIndicator: React.FC = () => (
         </div>
       </div>
       <div className="bg-muted/50 rounded-2xl rounded-tl-sm px-4 py-3">
-        <p className="text-xs font-medium text-muted-foreground mb-2">LocalMind</p>
+        <p className="text-xs font-medium text-muted-foreground mb-2">NoobBook</p>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <CircleNotch size={16} className="animate-spin" />
           Thinking...

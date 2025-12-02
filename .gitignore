@@ -63,21 +63,10 @@ myvenv/
 *__pycache__/
 
 *.log
-Fundamentals_level_5/Localmind/backend/data/temp
-Fundamentals_level_5/Localmind/frontend/node_modules
-Fundamentals_level_5/Localmind/backend/myvenv
-Fundamentals_level_5/Localmind/backend/samples/
-Fundamentals_level_5/Localmind/backend/.flaskenv
-Fundamentals_level_5/Localmind/backend/.env
-Fundamentals_level_4/simple_presentation_builder/input_output_data/old_samples
-Fundamentals_level_5/Localmind/backend/data/google_tokens.json
-
-
-
 .claude
-Fundamentals_level_5/Localmind/backend/data/
-Fundamentals_level_5/Localmind/backend/data/projects
-Fundamentals_level_5/Localmind/backend/data/tasks
 CLAUDE.md
-Fundamentals_level_5/docs
-Fundamentals_level_5/Localmind/backend/data/user_memory.json
+Fundamentals_level_5/.claude/
+Fundamentals_level_5/docs/
+Fundamentals_level_5/Localmind/backend/data
+Fundamentals_level_5/Localmind/backend/samples
+Fundamentals_level_5/Localmind/backend/.flaskenv

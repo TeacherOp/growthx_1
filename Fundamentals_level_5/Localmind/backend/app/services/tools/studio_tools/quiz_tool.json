@@ -1,0 +1,74 @@
+{
+  "name": "generate_quiz",
+  "description": "Submit a quiz with multiple choice questions. Each question has options, correct answer(s), optional hint, and explanation.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "questions": {
+        "type": "array",
+        "description": "Array of quiz questions",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier for this question (e.g., 'q1', 'q2')"
+            },
+            "question": {
+              "type": "string",
+              "description": "The question text (clear, concise, max 100 words)"
+            },
+            "options": {
+              "type": "array",
+              "description": "Array of answer options (2-6 options)",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "Unique option identifier (e.g., 'a', 'b', 'c', 'd')"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "The option text (max 50 words)"
+                  }
+                },
+                "required": ["id", "text"]
+              },
+              "minItems": 2,
+              "maxItems": 6
+            },
+            "correct_answers": {
+              "type": "array",
+              "description": "Array of correct option IDs. Single item for single-select, multiple items for multi-select.",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "is_multi_select": {
+              "type": "boolean",
+              "description": "True if multiple answers should be selected, false for single-select"
+            },
+            "hint": {
+              "type": "string",
+              "description": "Optional hint to help the user (max 30 words). Leave empty string if no hint needed."
+            },
+            "explanation": {
+              "type": "string",
+              "description": "Explanation shown after answering, explaining why the answer is correct (max 75 words)"
+            }
+          },
+          "required": ["id", "question", "options", "correct_answers", "is_multi_select", "explanation"]
+        },
+        "minItems": 5,
+        "maxItems": 25
+      },
+      "topic_summary": {
+        "type": "string",
+        "description": "A brief 1-2 sentence summary of what this quiz covers"
+      }
+    },
+    "required": ["questions", "topic_summary"]
+  }
+}

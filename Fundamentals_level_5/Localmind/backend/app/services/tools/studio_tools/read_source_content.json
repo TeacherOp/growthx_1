@@ -1,0 +1,18 @@
+{
+  "name": "read_source_content",
+  "description": "Read content from a source. For small sources (under 2000 tokens), returns full content. For larger sources, returns 5 chunks at a time. Use start_chunk to get the next batch. The tool tells you the next start_chunk value.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "source_id": {
+        "type": "string",
+        "description": "The ID of the source to read content from"
+      },
+      "start_chunk": {
+        "type": "integer",
+        "description": "For large sources, which chunk to start reading from (1-indexed). Omit or use 1 for first batch. The tool response tells you the next start_chunk value."
+      }
+    },
+    "required": ["source_id"]
+  }
+}

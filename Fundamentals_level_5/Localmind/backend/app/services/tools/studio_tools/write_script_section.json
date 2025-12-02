@@ -1,0 +1,27 @@
+{
+  "name": "write_script_section",
+  "description": "Write a section of the audio script to the output file. Use 'write' for the first section (creates file), 'append' for subsequent sections. Set is_final to true when the script is complete.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "section_number": {
+        "type": "integer",
+        "description": "The sequential number of this script section (1, 2, 3, etc.)"
+      },
+      "operation": {
+        "type": "string",
+        "enum": ["write", "append"],
+        "description": "Use 'write' for the first section (creates file), 'append' for subsequent sections"
+      },
+      "script_content": {
+        "type": "string",
+        "description": "The script content to write. Write in a conversational tone optimized for text-to-speech. Avoid abbreviations, special characters, and bullet points. Use natural transitions between topics."
+      },
+      "is_final": {
+        "type": "boolean",
+        "description": "Set to true when this is the final section and the script is complete"
+      }
+    },
+    "required": ["section_number", "operation", "script_content", "is_final"]
+  }
+}

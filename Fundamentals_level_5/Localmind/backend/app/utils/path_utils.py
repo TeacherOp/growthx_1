@@ -300,6 +300,64 @@ def get_ai_images_dir(project_id: str) -> Path:
 
 
 # =============================================================================
+# Studio Directories
+# =============================================================================
+
+def get_studio_dir(project_id: str) -> Path:
+    """
+    Get the studio outputs directory for a project.
+
+    Educational Note: Stores all studio-generated content
+    (audio overviews, scripts, documents, etc.)
+
+    Args:
+        project_id: The project UUID
+
+    Returns:
+        Path to studio/ directory (auto-created)
+    """
+    path = get_project_dir(project_id) / "studio"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def get_studio_audio_dir(project_id: str) -> Path:
+    """
+    Get the studio audio directory for a project.
+
+    Educational Note: Stores audio overview files (mp3)
+    and their corresponding script files.
+
+    Args:
+        project_id: The project UUID
+
+    Returns:
+        Path to studio/audio/ directory (auto-created)
+    """
+    path = get_studio_dir(project_id) / "audio"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def get_studio_scripts_dir(project_id: str) -> Path:
+    """
+    Get the studio scripts directory for a project.
+
+    Educational Note: Stores generated script files (txt)
+    that are later converted to audio.
+
+    Args:
+        project_id: The project UUID
+
+    Returns:
+        Path to studio/scripts/ directory (auto-created)
+    """
+    path = get_studio_dir(project_id) / "scripts"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+# =============================================================================
 # Agent Directories
 # =============================================================================
 

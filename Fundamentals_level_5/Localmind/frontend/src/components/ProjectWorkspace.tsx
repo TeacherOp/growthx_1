@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Button } from './ui/button';
 import { SourcesPanel } from './sources';
 import { ChatPanel } from './chat';
-import { StudioPanel } from './studio';
+import { StudioPanel, type StudioSignal } from './studio';
 import { ProjectHeader } from './ProjectHeader';
 import { CaretLeft, CaretRight, Warning } from '@phosphor-icons/react';
 import {
@@ -59,6 +59,13 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
     setCostsVersion(v => v + 1); // Source processing also incurs costs
   }, []);
 
+  // Studio signals state - receives signals from ChatPanel, passes to StudioPanel
+  // Educational Note: Signals are chat-scoped and activate studio generation options
+  const [studioSignals, setStudioSignals] = useState<StudioSignal[]>([]);
+  const handleSignalsChange = useCallback((signals: StudioSignal[]) => {
+    setStudioSignals(signals);
+  }, []);
+
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Project Header - sits on background layer */}
@@ -109,13 +116,14 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
             <ResizableHandle />
 
             {/* Center Panel - Chat */}
-            <ResizablePanel defaultSize={60} minSize={30} className="bg-card overflow-hidden min-w-0">
+            <ResizablePanel defaultSize={55} minSize={30} className="bg-card overflow-hidden min-w-0">
               <div className="h-full min-h-0 min-w-0 w-full flex flex-col overflow-hidden">
                 <ChatPanel
                   projectId={project.id}
                   projectName={project.name}
                   sourcesVersion={sourcesVersion}
                   onCostsChange={handleCostsChange}
+                  onSignalsChange={handleSignalsChange}
                 />
               </div>
             </ResizablePanel>
@@ -125,8 +133,8 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
             {/* Right Panel - Studio (Resizable) */}
             <ResizablePanel
               ref={rightPanelRef}
-              defaultSize={20}
-              minSize={15}
+              defaultSize={25}
+              minSize={18}
               maxSize={40}
               collapsible
               collapsedSize={4}
@@ -137,6 +145,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
               <div className="h-full flex flex-col relative">
                 <StudioPanel
                   projectId={project.id}
+                  signals={studioSignals}
                   isCollapsed={!rightPanelOpen}
                   onExpand={() => rightPanelRef.current?.expand()}
                 />
@@ -158,7 +167,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
         {/* Footer Disclaimer - sits on background layer */}
         <div className="flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground">
           <Warning size={12} />
-          <span>LocalLM can make mistakes. Please verify important information.</span>
+          <span>NoobBook can make mistakes. Please verify important information.</span>
         </div>
       </div>
     </div>

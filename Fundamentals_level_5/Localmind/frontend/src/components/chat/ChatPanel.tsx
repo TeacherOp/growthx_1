@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sparkle, CircleNotch } from '@phosphor-icons/react';
 import { chatsAPI } from '@/lib/api/chats';
-import type { Chat, ChatMetadata } from '@/lib/api/chats';
+import type { Chat, ChatMetadata, StudioSignal } from '@/lib/api/chats';
 import { sourcesAPI, type Source } from '@/lib/api/sources';
 import { useToast, ToastContainer } from '../ui/toast';
 import { useVoiceRecording } from '../hooks/useVoiceRecording';
@@ -23,9 +23,10 @@ interface ChatPanelProps {
   projectName: string;
   sourcesVersion?: number;
   onCostsChange?: () => void; // Called after message sent to trigger cost refresh
+  onSignalsChange?: (signals: StudioSignal[]) => void; // Called when studio signals change
 }
 
-export const ChatPanel: React.FC<ChatPanelProps> = ({ projectId, projectName, sourcesVersion, onCostsChange }) => {
+export const ChatPanel: React.FC<ChatPanelProps> = ({ projectId, projectName, sourcesVersion, onCostsChange, onSignalsChange }) => {
   const { toasts, dismissToast, success, error } = useToast();
 
   // Chat state
@@ -77,6 +78,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ projectId, projectName, so
       loadSources();
     }
   }, [sourcesVersion]);
+
+  /**
+   * Notify parent when studio signals change
+   * Educational Note: Signals are stored in the chat and loaded/updated
+   * when chat is loaded or after messages are sent.
+   */
+  useEffect(() => {
+    if (activeChat) {
+      onSignalsChange?.(activeChat.studio_signals || []);
+    } else {
+      onSignalsChange?.([]);
+    }
+  }, [activeChat, onSignalsChange]);
 
   /**
    * Load sources for the project (for header display)
@@ -173,13 +187,31 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ projectId, projectName, so
       // Trigger cost refresh in header
       onCostsChange?.();
 
-      // Fetch updated chat title after delay (background task may have renamed it)
+      // Fetch updated chat after delay (background tasks may have updated title/signals)
+      // Educational Note: Studio signals are added in background tasks, so we
+      // need to refetch the chat to get them. We do this twice - once quickly
+      // for signals and once later for auto-generated title.
       const chatId = activeChat.id;
+
+      // Quick fetch for signals (1 second delay)
       setTimeout(async () => {
         try {
           const updatedChat = await chatsAPI.getChat(projectId, chatId);
           setActiveChat(prev => prev && prev.id === chatId
-            ? { ...prev, title: updatedChat.title }
+            ? { ...prev, studio_signals: updatedChat.studio_signals || [] }
+            : prev
+          );
+        } catch (e) {
+          // Silently ignore - signal update is non-critical
+        }
+      }, 1000);
+
+      // Delayed fetch for title (4 second delay)
+      setTimeout(async () => {
+        try {
+          const updatedChat = await chatsAPI.getChat(projectId, chatId);
+          setActiveChat(prev => prev && prev.id === chatId
+            ? { ...prev, title: updatedChat.title, studio_signals: updatedChat.studio_signals || [] }
             : prev
           );
           // Also update in chat list
