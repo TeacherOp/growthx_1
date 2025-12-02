@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { ProjectList } from './ProjectList';
+import { ProjectList } from '../project';
 import { AppSettings } from './AppSettings';
-import { Button } from './ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/card';
-import { Badge } from './ui/badge';
+import { Button } from '../ui/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
+import { Badge } from '../ui/badge';
 import { Gear, Ghost, Sparkle, GithubLogo, YoutubeLogo, BookOpen } from '@phosphor-icons/react';
-import { ToastContainer, useToast } from './ui/toast';
+import { ToastContainer, useToast } from '../ui/toast';
 
 /**
  * Dashboard Component

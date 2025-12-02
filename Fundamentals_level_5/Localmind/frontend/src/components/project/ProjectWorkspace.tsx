@@ -1,8 +1,8 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Button } from './ui/button';
-import { SourcesPanel } from './sources';
-import { ChatPanel } from './chat';
-import { StudioPanel, type StudioSignal } from './studio';
+import { Button } from '../ui/button';
+import { SourcesPanel } from '../sources';
+import { ChatPanel } from '../chat';
+import { StudioPanel, type StudioSignal } from '../studio';
 import { ProjectHeader } from './ProjectHeader';
 import { CaretLeft, CaretRight, Warning } from '@phosphor-icons/react';
 import {
@@ -10,7 +10,7 @@ import {
   ResizablePanel,
   ResizableHandle,
   type ImperativePanelHandle,
-} from './ui/resizable';
+} from '../ui/resizable';
 
 /**
  * ProjectWorkspace Component

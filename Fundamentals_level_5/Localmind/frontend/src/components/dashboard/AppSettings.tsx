@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { ScrollArea } from './ui/scroll-area';
-import { Separator } from './ui/separator';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { ScrollArea } from '../ui/scroll-area';
+import { Separator } from '../ui/separator';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog';
+} from '../ui/dialog';
 import {
   Eye,
   EyeSlash,
@@ -26,14 +26,14 @@ import {
 } from '@phosphor-icons/react';
 import { settingsAPI, processingSettingsAPI, googleDriveAPI } from '@/lib/api/settings';
 import type { ApiKey, AvailableTier, GoogleStatus } from '@/lib/api/settings';
-import { useToast } from './ui/toast';
+import { useToast } from '../ui/toast';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from './ui/select';
+} from '../ui/select';
 
 /**
  * AppSettings Component

@@ -1,0 +1,154 @@
+/**
+ * useAudioGeneration Hook
+ * Educational Note: Manages audio overview generation with ElevenLabs TTS.
+ * Includes playback state management with a shared audio element.
+ */
+
+import { useState, useRef } from 'react';
+import { studioAPI, type AudioJob } from '../../../lib/api/studio';
+import type { StudioSignal } from '../types';
+import { useToast } from '../../ui/toast';
+
+export const useAudioGeneration = (projectId: string) => {
+  const { success: showSuccess, error: showError } = useToast();
+
+  const [savedAudioJobs, setSavedAudioJobs] = useState<AudioJob[]>([]);
+  const [currentAudioJob, setCurrentAudioJob] = useState<AudioJob | null>(null);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [playingJobId, setPlayingJobId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const loadSavedJobs = async () => {
+    const audioResponse = await studioAPI.listJobs(projectId);
+    if (audioResponse.success && audioResponse.jobs) {
+      const completedAudio = audioResponse.jobs.filter((job) => job.status === 'ready');
+      setSavedAudioJobs(completedAudio);
+    }
+  };
+
+  const handleAudioGeneration = async (signal: StudioSignal) => {
+    const sourceId = signal.sources[0]?.source_id;
+    if (!sourceId) {
+      showError('No source specified for audio generation.');
+      return;
+    }
+
+    setIsGeneratingAudio(true);
+    setCurrentAudioJob(null);
+
+    try {
+      const ttsStatus = await studioAPI.checkTTSStatus();
+      if (!ttsStatus.configured) {
+        showError('ElevenLabs API key not configured. Please add it in App Settings.');
+        setIsGeneratingAudio(false);
+        return;
+      }
+
+      const startResponse = await studioAPI.startAudioGeneration(
+        projectId,
+        sourceId,
+        signal.direction
+      );
+
+      if (!startResponse.success || !startResponse.job_id) {
+        showError(startResponse.error || 'Failed to start audio generation.');
+        setIsGeneratingAudio(false);
+        return;
+      }
+
+      showSuccess(`Generating audio for ${startResponse.source_name}...`);
+
+      const finalJob = await studioAPI.pollJobStatus(
+        projectId,
+        startResponse.job_id,
+        (job) => setCurrentAudioJob(job)
+      );
+
+      setCurrentAudioJob(finalJob);
+
+      if (finalJob.status === 'ready') {
+        showSuccess('Your audio overview is ready to play!');
+        setSavedAudioJobs((prev) => [finalJob, ...prev]);
+      } else if (finalJob.status === 'error') {
+        showError(finalJob.error || 'Audio generation failed.');
+      }
+    } catch (error) {
+      console.error('Audio generation error:', error);
+      showError(error instanceof Error ? error.message : 'Audio generation failed.');
+    } finally {
+      setIsGeneratingAudio(false);
+      setCurrentAudioJob(null);
+    }
+  };
+
+  /**
+   * Play a specific audio job
+   */
+  const playAudio = (job: AudioJob) => {
+    if (!job.audio_url) return;
+
+    // Stop current playback if different job
+    if (audioRef.current && playingJobId !== job.id) {
+      audioRef.current.pause();
+    }
+
+    // Set the source and play
+    if (audioRef.current) {
+      audioRef.current.src = `http://localhost:5000${job.audio_url}`;
+      audioRef.current.play();
+      setPlayingJobId(job.id);
+    }
+  };
+
+  /**
+   * Pause current playback
+   */
+  const pauseAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    setPlayingJobId(null);
+  };
+
+  /**
+   * Handle audio end
+   */
+  const handleAudioEnd = () => {
+    setPlayingJobId(null);
+  };
+
+  /**
+   * Download audio file
+   */
+  const downloadAudio = (job: AudioJob) => {
+    if (!job.audio_url) return;
+    const link = document.createElement('a');
+    link.href = `http://localhost:5000${job.audio_url}`;
+    link.download = job.audio_filename || 'audio_overview.mp3';
+    link.click();
+  };
+
+  /**
+   * Format duration for display
+   */
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return {
+    savedAudioJobs,
+    currentAudioJob,
+    isGeneratingAudio,
+    playingJobId,
+    audioRef,
+    handleAudioEnd,
+    loadSavedJobs,
+    handleAudioGeneration,
+    playAudio,
+    pauseAudio,
+    downloadAudio,
+    formatDuration,
+  };
+};
