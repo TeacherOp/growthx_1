@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Dashboard } from './components/Dashboard';
-import { CreateProjectDialog } from './components/CreateProjectDialog';
-import { ProjectWorkspace } from './components/ProjectWorkspace';
+import { Dashboard, CreateProjectDialog } from './components/dashboard';
+import { ProjectWorkspace } from './components/project';
 import { projectsAPI } from './lib/api';
 
 /**

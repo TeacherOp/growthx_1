@@ -1,14 +1,14 @@
 import React, { useEffect } from 'react';
-import { Button } from './ui/button';
-import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
+import { Button } from '../ui/button';
+import { Label } from '../ui/label';
+import { Textarea } from '../ui/textarea';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu';
+} from '../ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +18,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from './ui/alert-dialog';
+} from '../ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
@@ -26,17 +26,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog';
+} from '../ui/dialog';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from './ui/tooltip';
+} from '../ui/tooltip';
 import { ArrowLeft, DotsThreeVertical, Plus, Trash, FolderOpen, Gear, CircleNotch, CurrencyDollar, Brain } from '@phosphor-icons/react';
-import { chatsAPI } from '../lib/api/chats';
-import { projectsAPI, type CostTracking, type MemoryData } from '../lib/api';
-import { useToast, ToastContainer } from './ui/toast';
+import { chatsAPI } from '../../lib/api/chats';
+import { projectsAPI, type CostTracking, type MemoryData } from '../../lib/api';
+import { useToast, ToastContainer } from '../ui/toast';
 
 /**
  * ProjectHeader Component

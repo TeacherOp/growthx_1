@@ -1,0 +1,101 @@
+/**
+ * useAdGeneration Hook
+ * Educational Note: Custom hook for ad creative generation logic.
+ * Handles state management, API calls, and polling.
+ */
+
+import { useState } from 'react';
+import { studioAPI, type AdJob } from '../../../lib/api/studio';
+import { useToast } from '../../ui/toast';
+import type { StudioSignal } from '../types';
+
+export const useAdGeneration = (projectId: string) => {
+  const { success: showSuccess, error: showError } = useToast();
+
+  // State
+  const [savedAdJobs, setSavedAdJobs] = useState<AdJob[]>([]);
+  const [currentAdJob, setCurrentAdJob] = useState<AdJob | null>(null);
+  const [isGeneratingAd, setIsGeneratingAd] = useState(false);
+  const [viewingAdJob, setViewingAdJob] = useState<AdJob | null>(null);
+
+  /**
+   * Load saved ad jobs from backend
+   */
+  const loadSavedJobs = async () => {
+    try {
+      const adResponse = await studioAPI.listAdJobs(projectId);
+      if (adResponse.success && adResponse.jobs) {
+        const completedAds = adResponse.jobs.filter((job) => job.status === 'ready');
+        setSavedAdJobs(completedAds);
+      }
+    } catch (error) {
+      console.error('Failed to load saved ad jobs:', error);
+    }
+  };
+
+  /**
+   * Handle ad creative generation
+   */
+  const handleAdGeneration = async (signal: StudioSignal) => {
+    // Extract product name from direction
+    const productName = signal.direction || 'Product';
+
+    setIsGeneratingAd(true);
+    setCurrentAdJob(null);
+
+    try {
+      const geminiStatus = await studioAPI.checkGeminiStatus();
+      if (!geminiStatus.configured) {
+        showError('Gemini API key not configured. Please add it in App Settings.');
+        setIsGeneratingAd(false);
+        return;
+      }
+
+      const startResponse = await studioAPI.startAdGeneration(
+        projectId,
+        productName,
+        signal.direction
+      );
+
+      if (!startResponse.success || !startResponse.job_id) {
+        showError(startResponse.error || 'Failed to start ad generation.');
+        setIsGeneratingAd(false);
+        return;
+      }
+
+      showSuccess(`Generating ad creatives...`);
+
+      const finalJob = await studioAPI.pollAdJobStatus(
+        projectId,
+        startResponse.job_id,
+        (job) => setCurrentAdJob(job)
+      );
+
+      setCurrentAdJob(finalJob);
+
+      if (finalJob.status === 'ready') {
+        showSuccess(`Generated ${finalJob.images.length} ad creatives!`);
+        setSavedAdJobs((prev) => [finalJob, ...prev]);
+        setViewingAdJob(finalJob); // Open modal to view
+      } else if (finalJob.status === 'error') {
+        showError(finalJob.error || 'Ad generation failed.');
+      }
+    } catch (error) {
+      console.error('Ad generation error:', error);
+      showError(error instanceof Error ? error.message : 'Ad generation failed.');
+    } finally {
+      setIsGeneratingAd(false);
+      setCurrentAdJob(null);
+    }
+  };
+
+  return {
+    savedAdJobs,
+    currentAdJob,
+    isGeneratingAd,
+    viewingAdJob,
+    setViewingAdJob,
+    loadSavedJobs,
+    handleAdGeneration,
+  };
+};

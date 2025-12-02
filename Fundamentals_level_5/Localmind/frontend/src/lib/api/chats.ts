@@ -6,6 +6,7 @@
  */
 
 import axios from 'axios';
+import type { StudioSignal } from '../../components/studio/types';
 
 const API_BASE_URL = 'http://localhost:5000/api/v1';
 
@@ -39,23 +40,9 @@ export interface ChatMetadata {
 }
 
 /**
- * Educational Note: Studio signal from AI - activates studio generation options.
- * Sent by main chat when it identifies content generation opportunities.
- */
-export interface StudioSignal {
-  id: string;
-  studio_item: string;
-  direction: string;
-  sources: Array<{
-    source_id: string;
-    chunk_ids?: string[];
-  }>;
-  created_at: string;
-}
-
-/**
  * Educational Note: Full chat data including all messages.
  * Loaded when user opens a specific chat.
+ * Studio signals are imported from studio/types for type consistency.
  */
 export interface Chat {
   id: string;
@@ -296,3 +283,6 @@ class ChatsAPI {
 }
 
 export const chatsAPI = new ChatsAPI();
+
+// Re-export StudioSignal for convenience (single source of truth from studio/types)
+export type { StudioSignal } from '../../components/studio/types';
