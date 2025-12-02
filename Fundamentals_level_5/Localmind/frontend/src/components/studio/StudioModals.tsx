@@ -14,6 +14,7 @@ import { SocialPostViewerModal } from './social';
 import { InfographicViewerModal } from './infographic';
 import { EmailViewerModal } from './email';
 import { ComponentViewerModal } from './components';
+import { VideoViewerModal } from './video';
 import type {
   AdJob,
   FlashCardJob,
@@ -23,7 +24,8 @@ import type {
   SocialPostJob,
   InfographicJob,
   EmailJob,
-  ComponentJob
+  ComponentJob,
+  VideoJob
 } from '../../lib/api/studio';
 
 interface StudioModalsProps {
@@ -64,6 +66,11 @@ interface StudioModalsProps {
   // Components
   viewingComponentJob: ComponentJob | null;
   setViewingComponentJob: (job: ComponentJob | null) => void;
+
+  // Video
+  viewingVideoJob: VideoJob | null;
+  setViewingVideoJob: (job: VideoJob | null) => void;
+  downloadVideo: (jobId: string, filename: string) => void;
 }
 
 export const StudioModals: React.FC<StudioModalsProps> = ({
@@ -86,6 +93,9 @@ export const StudioModals: React.FC<StudioModalsProps> = ({
   setViewingEmailJob,
   viewingComponentJob,
   setViewingComponentJob,
+  viewingVideoJob,
+  setViewingVideoJob,
+  downloadVideo,
 }) => {
   return (
     <>
@@ -144,6 +154,18 @@ export const StudioModals: React.FC<StudioModalsProps> = ({
         projectId={projectId}
         viewingComponentJob={viewingComponentJob}
         onClose={() => setViewingComponentJob(null)}
+      />
+
+      {/* Video Viewer Modal */}
+      <VideoViewerModal
+        projectId={projectId}
+        viewingVideoJob={viewingVideoJob}
+        onClose={() => setViewingVideoJob(null)}
+        onDownload={(filename) => {
+          if (viewingVideoJob) {
+            downloadVideo(viewingVideoJob.id, filename);
+          }
+        }}
       />
     </>
   );

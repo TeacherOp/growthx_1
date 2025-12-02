@@ -20,6 +20,10 @@ import {
   EnvelopeSimple,
   Cube,
   ChartPieSlice,
+  FlowArrow,
+  Layout,
+  PresentationChart,
+  VideoCamera,
 } from '@phosphor-icons/react';
 
 /**
@@ -40,11 +44,15 @@ export type StudioItemId =
   | 'ads_creative'
   | 'prd'
   | 'infographics'
+  | 'flow_diagram'
+  | 'wireframes'
+  | 'presentation'
   | 'blog'
   | 'social'
   | 'website'
   | 'email_templates'
-  | 'components';
+  | 'components'
+  | 'video';
 
 /**
  * Studio signal from backend - sent by main chat AI
@@ -137,6 +145,27 @@ export const generationOptions: GenerationOption[] = [
     icon: ChartPieSlice,
     category: 'business',
   },
+  {
+    id: 'flow_diagram',
+    title: 'Flow Diagram',
+    description: 'Process & system flows',
+    icon: FlowArrow,
+    category: 'business',
+  },
+  {
+    id: 'wireframes',
+    title: 'Wireframes',
+    description: 'UI/UX design mockups',
+    icon: Layout,
+    category: 'business',
+  },
+  {
+    id: 'presentation',
+    title: 'Presentation',
+    description: 'Slide decks & pitches',
+    icon: PresentationChart,
+    category: 'business',
+  },
 
   // CONTENT
   {
@@ -181,6 +210,13 @@ export const generationOptions: GenerationOption[] = [
     icon: Image,
     category: 'content',
   },
+  {
+    id: 'video',
+    title: 'Video',
+    description: 'Video scripts & content',
+    icon: VideoCamera,
+    category: 'content',
+  },
 ];
 
 /**
@@ -191,7 +227,7 @@ export const categoryMeta: Record<
   { label: string; icon: React.ComponentType<{ size?: number; className?: string }> }
 > = {
   learning: { label: 'Learning', icon: Brain },
-  business: { label: 'Business', icon: ChartBar },
+  business: { label: 'Business & Product', icon: ChartBar },
   content: { label: 'Content', icon: Article },
 };
 

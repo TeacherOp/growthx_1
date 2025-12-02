@@ -16,6 +16,7 @@ import { SocialPostListItem } from './social';
 import { InfographicListItem } from './infographic';
 import { EmailListItem } from './email';
 import { ComponentListItem } from './components';
+import { VideoListItem } from './video';
 import type {
   AudioJob,
   AdJob,
@@ -26,7 +27,8 @@ import type {
   SocialPostJob,
   InfographicJob,
   EmailJob,
-  ComponentJob
+  ComponentJob,
+  VideoJob
 } from '../../lib/api/studio';
 import type { StudioSignal } from './types';
 
@@ -76,6 +78,11 @@ interface StudioGeneratedContentProps {
   // Components
   savedComponentJobs: ComponentJob[];
   setViewingComponentJob: (job: ComponentJob) => void;
+
+  // Video
+  savedVideoJobs: VideoJob[];
+  setViewingVideoJob: (job: VideoJob) => void;
+  downloadVideo: (jobId: string, filename: string) => void;
 }
 
 export const StudioGeneratedContent: React.FC<StudioGeneratedContentProps> = ({
@@ -104,6 +111,9 @@ export const StudioGeneratedContent: React.FC<StudioGeneratedContentProps> = ({
   setViewingEmailJob,
   savedComponentJobs,
   setViewingComponentJob,
+  savedVideoJobs,
+  setViewingVideoJob,
+  downloadVideo,
 }) => {
   if (signals.length === 0) {
     return (
@@ -244,6 +254,26 @@ export const StudioGeneratedContent: React.FC<StudioGeneratedContentProps> = ({
             key={job.id}
             job={job}
             onClick={() => setViewingComponentJob(job)}
+          />
+        ))}
+
+      {/* Saved Video Jobs - filter by source_id from signals */}
+      {savedVideoJobs
+        .filter((job) => signals.some((s) =>
+          s.sources.some((src) => src.source_id === job.source_id)
+        ))
+        .map((job) => (
+          <VideoListItem
+            key={job.id}
+            job={job}
+            onOpen={() => setViewingVideoJob(job)}
+            onDownload={(e) => {
+              e.stopPropagation();
+              // Download first video by default
+              if (job.videos.length > 0) {
+                downloadVideo(job.id, job.videos[0].filename);
+              }
+            }}
           />
         ))}
     </>

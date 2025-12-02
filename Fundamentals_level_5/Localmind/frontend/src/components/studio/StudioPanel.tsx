@@ -21,6 +21,7 @@ import { useAudioGeneration } from './audio';
 import { useMindMapGeneration } from './mindmap';
 import { useQuizGeneration } from './quiz';
 import { useComponentGeneration } from './components';
+import { useVideoGeneration } from './video';
 import { StudioCollapsedView } from './StudioCollapsedView';
 import { StudioSignalPicker } from './StudioSignalPicker';
 import { StudioProgressIndicators } from './StudioProgressIndicators';
@@ -163,6 +164,18 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
     handleComponentGeneration,
   } = useComponentGeneration(projectId);
 
+  // Video generation hook
+  const {
+    savedVideoJobs,
+    currentVideoJob,
+    isGeneratingVideo,
+    viewingVideoJob,
+    setViewingVideoJob,
+    loadSavedJobs: loadSavedVideoJobs,
+    handleVideoGeneration,
+    downloadVideo,
+  } = useVideoGeneration(projectId);
+
   // Load saved jobs on mount
   useEffect(() => {
     const loadSavedJobs = async () => {
@@ -196,6 +209,9 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
 
         // Load saved component jobs
         await loadSavedComponentJobs();
+
+        // Load saved video jobs
+        await loadSavedVideoJobs();
 
       } catch (error) {
         console.error('Failed to load saved jobs:', error);
@@ -251,6 +267,8 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
       await handleWebsiteGeneration(signal);
     } else if (optionId === 'components') {
       await handleComponentGeneration(signal);
+    } else if (optionId === 'video') {
+      await handleVideoGeneration(signal);
     } else {
       showSuccess(`${getItemTitle(optionId)} generation is coming soon!`);
     }
@@ -295,7 +313,7 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
       />
 
       {/* TOP HALF: Generation Tools */}
-      <div className="flex-1 min-h-0 border-b">
+      <div className="flex-1 min-h-0 border-b flex flex-col">
         <StudioToolsList signals={signals} onGenerate={handleGenerate} />
       </div>
 
@@ -331,6 +349,8 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
               currentEmailJob={currentEmailJob}
               isGeneratingComponents={isGeneratingComponents}
               currentComponentJob={currentComponentJob}
+              isGeneratingVideo={isGeneratingVideo}
+              currentVideoJob={currentVideoJob}
             />
 
             {/* Generated Content List */}
@@ -360,6 +380,9 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
               setViewingEmailJob={setViewingEmailJob}
               savedComponentJobs={savedComponentJobs}
               setViewingComponentJob={setViewingComponentJob}
+              savedVideoJobs={savedVideoJobs}
+              setViewingVideoJob={setViewingVideoJob}
+              downloadVideo={downloadVideo}
             />
           </div>
         </ScrollArea>
@@ -397,6 +420,9 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
         setViewingEmailJob={setViewingEmailJob}
         viewingComponentJob={viewingComponentJob}
         setViewingComponentJob={setViewingComponentJob}
+        viewingVideoJob={viewingVideoJob}
+        setViewingVideoJob={setViewingVideoJob}
+        downloadVideo={downloadVideo}
       />
     </div>
   );
