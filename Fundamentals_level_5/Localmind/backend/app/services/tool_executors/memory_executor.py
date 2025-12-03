@@ -13,7 +13,7 @@ This design ensures the chat response isn't delayed by memory operations.
 """
 from typing import Dict, Any, Optional
 
-from app.services.ai_services import memory_service
+from app.services.ai_services.memory_service import memory_service
 from app.services.background_services import task_service
 
 

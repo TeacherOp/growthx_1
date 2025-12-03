@@ -14,7 +14,8 @@ from typing import Dict, Any
 
 from app.utils.path_utils import get_processed_dir, get_chunks_dir
 from app.utils.embedding_utils import needs_embedding
-from app.services.ai_services import embedding_service, summary_service
+from app.services.ai_services.embedding_service import embedding_service
+from app.services.ai_services.summary_service import summary_service
 
 
 def process_pptx(
@@ -37,7 +38,7 @@ def process_pptx(
     Returns:
         Dict with success status
     """
-    from app.services.ai_services import pptx_service
+    from app.services.ai_services.pptx_service import pptx_service
 
     # Extract content using PPTX service (handles conversion + vision analysis)
     result = pptx_service.extract_content_from_pptx(

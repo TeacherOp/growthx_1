@@ -1,31 +1,50 @@
 """
-Project management API endpoints.
+Project CRUD endpoints.
 
-Educational Note: This module handles all project-related operations:
-create, list, open, rename, and delete projects.
-We use RESTful conventions for clear, predictable API design.
+Educational Note: These endpoints demonstrate RESTful API design principles:
+
+HTTP Methods and Their Meanings:
+- GET: Retrieve data (safe, idempotent, cacheable)
+- POST: Create new resource (not idempotent)
+- PUT: Update/replace resource (idempotent)
+- DELETE: Remove resource (idempotent)
+
+Idempotent = calling multiple times has same effect as calling once.
+
+Status Codes Used:
+- 200: OK (successful GET, PUT, DELETE)
+- 201: Created (successful POST)
+- 400: Bad Request (validation failed)
+- 404: Not Found (resource doesn't exist)
+- 500: Internal Server Error (unexpected failure)
+
+Routes:
+- GET    /projects           - List all projects
+- POST   /projects           - Create new project
+- GET    /projects/<id>      - Get project details
+- PUT    /projects/<id>      - Update project
+- DELETE /projects/<id>      - Delete project
+- POST   /projects/<id>/open - Mark project as opened
 """
 from flask import request, jsonify
-from datetime import datetime
-import json
-import uuid
-from pathlib import Path
-
-from app.api import api_bp
+from app.api.projects import projects_bp
 from app.services.data_services import project_service
-from app.utils.cost_tracking import get_project_costs
-from app.services.ai_services import memory_service
 
 
-@api_bp.route('/projects', methods=['GET'])
+@projects_bp.route('/projects', methods=['GET'])
 def list_projects():
     """
     List all available projects.
 
-    Returns:
-        JSON array of project objects with id, name, created_at, updated_at
-
     Educational Note: GET requests should never modify data, only retrieve it.
+    This is a "safe" HTTP method.
+
+    Returns:
+        {
+            "success": true,
+            "projects": [...],
+            "count": 5
+        }
     """
     try:
         projects = project_service.list_all_projects()
@@ -41,19 +60,26 @@ def list_projects():
         }), 500
 
 
-@api_bp.route('/projects', methods=['POST'])
+@projects_bp.route('/projects', methods=['POST'])
 def create_project():
     """
     Create a new project.
 
+    Educational Note: POST creates new resources.
+    Always validate input data before processing!
+
     Request Body:
-        - name: string (required) - The project name
-        - description: string (optional) - Project description
+        {
+            "name": "My Project",        # required
+            "description": "Optional"    # optional
+        }
 
     Returns:
-        JSON object with project details including generated ID
-
-    Educational Note: POST creates new resources. Always validate input data!
+        {
+            "success": true,
+            "project": { ... },
+            "message": "Project 'My Project' created successfully"
+        }
     """
     try:
         data = request.get_json()
@@ -97,19 +123,22 @@ def create_project():
         }), 500
 
 
-@api_bp.route('/projects/<project_id>', methods=['GET'])
+@projects_bp.route('/projects/<project_id>', methods=['GET'])
 def get_project(project_id):
     """
     Get details of a specific project.
 
+    Educational Note: Use URL parameters for resource identifiers.
+    This follows RESTful design: /resource/{id}
+
     URL Parameters:
-        - project_id: string - The project UUID
+        project_id: The project UUID
 
     Returns:
-        JSON object with full project details
-
-    Educational Note: Use URL parameters for resource identifiers.
-    This follows RESTful design: /resource/id
+        {
+            "success": true,
+            "project": { id, name, description, created_at, ... }
+        }
     """
     try:
         project = project_service.get_project(project_id)
@@ -132,23 +161,30 @@ def get_project(project_id):
         }), 500
 
 
-@api_bp.route('/projects/<project_id>', methods=['PUT'])
+@projects_bp.route('/projects/<project_id>', methods=['PUT'])
 def update_project(project_id):
     """
     Update a project (rename, update description, etc.).
 
+    Educational Note: PUT is traditionally for full replacement,
+    PATCH for partial updates. We use PUT but only update provided
+    fields for flexibility (a common pragmatic choice).
+
     URL Parameters:
-        - project_id: string - The project UUID
+        project_id: The project UUID
 
     Request Body:
-        - name: string (optional) - New project name
-        - description: string (optional) - New description
+        {
+            "name": "New Name",           # optional
+            "description": "New desc"     # optional
+        }
 
     Returns:
-        JSON object with updated project details
-
-    Educational Note: PUT is for full updates, PATCH for partial updates.
-    We use PUT here but only update provided fields for flexibility.
+        {
+            "success": true,
+            "project": { ... updated ... },
+            "message": "Project updated successfully"
+        }
     """
     try:
         data = request.get_json()
@@ -190,19 +226,28 @@ def update_project(project_id):
         }), 500
 
 
-@api_bp.route('/projects/<project_id>', methods=['DELETE'])
+@projects_bp.route('/projects/<project_id>', methods=['DELETE'])
 def delete_project(project_id):
     """
-    Delete a project.
-
-    URL Parameters:
-        - project_id: string - The project UUID
-
-    Returns:
-        Success message or error
+    Delete a project and all its data.
 
     Educational Note: DELETE operations should be idempotent -
-    calling DELETE multiple times should have the same effect as calling it once.
+    calling DELETE multiple times should have the same effect
+    as calling it once. Deleting a non-existent resource returns 404.
+
+    WARNING: This deletes all project data including:
+    - All sources (files, embeddings in Pinecone)
+    - All chats and messages
+    - Project memory
+
+    URL Parameters:
+        project_id: The project UUID
+
+    Returns:
+        {
+            "success": true,
+            "message": "Project {id} deleted successfully"
+        }
     """
     try:
         success = project_service.delete_project(project_id)
@@ -225,19 +270,29 @@ def delete_project(project_id):
         }), 500
 
 
-@api_bp.route('/projects/<project_id>/open', methods=['POST'])
+@projects_bp.route('/projects/<project_id>/open', methods=['POST'])
 def open_project(project_id):
     """
     Mark a project as opened (update last accessed time).
 
+    Educational Note: This is an "action" endpoint - sometimes REST
+    needs endpoints that don't fit pure CRUD. Using POST for actions
+    is a common pattern. The verb is in the URL (/open) which some
+    consider non-RESTful, but it's pragmatic and clear.
+
+    Alternative designs:
+    - PATCH /projects/{id} with { "last_accessed": "now" }
+    - POST /projects/{id}/events with { "type": "open" }
+
     URL Parameters:
-        - project_id: string - The project UUID
+        project_id: The project UUID
 
     Returns:
-        Project details with updated access time
-
-    Educational Note: This endpoint demonstrates an "action" endpoint.
-    Sometimes REST needs action-specific endpoints beyond CRUD.
+        {
+            "success": true,
+            "project": { ... with updated last_accessed ... },
+            "message": "Project opened successfully"
+        }
     """
     try:
         project = project_service.open_project(project_id)
@@ -258,91 +313,4 @@ def open_project(project_id):
         return jsonify({
             "success": False,
             "error": f"Failed to open project: {str(e)}"
-        }), 500
-
-
-@api_bp.route('/projects/<project_id>/costs', methods=['GET'])
-def get_project_costs_endpoint(project_id):
-    """
-    Get cost tracking data for a project.
-
-    URL Parameters:
-        - project_id: string - The project UUID
-
-    Returns:
-        JSON object with cost tracking data:
-        - total_cost: float - Total cost in USD
-        - by_model: dict - Breakdown by model (sonnet/haiku)
-            - input_tokens: int
-            - output_tokens: int
-            - cost: float
-
-    Educational Note: Cost tracking helps monitor API usage and
-    provides transparency about resource consumption per project.
-    """
-    try:
-        # Verify project exists
-        project = project_service.get_project(project_id)
-        if not project:
-            return jsonify({
-                "success": False,
-                "error": "Project not found"
-            }), 404
-
-        # Get cost tracking data
-        costs = get_project_costs(project_id)
-
-        return jsonify({
-            "success": True,
-            "costs": costs
-        }), 200
-
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": f"Failed to get project costs: {str(e)}"
-        }), 500
-
-
-@api_bp.route('/projects/<project_id>/memory', methods=['GET'])
-def get_project_memory(project_id):
-    """
-    Get memory data for a project (user memory + project memory).
-
-    URL Parameters:
-        - project_id: string - The project UUID
-
-    Returns:
-        JSON object with memory data:
-        - user_memory: string | null - Global user memory
-        - project_memory: string | null - Project-specific memory
-
-    Educational Note: Memory helps the AI maintain context across conversations.
-    User memory persists across all projects, project memory is specific to this project.
-    """
-    try:
-        # Verify project exists
-        project = project_service.get_project(project_id)
-        if not project:
-            return jsonify({
-                "success": False,
-                "error": "Project not found"
-            }), 404
-
-        # Get memory data
-        user_memory = memory_service.get_user_memory()
-        project_memory = memory_service.get_project_memory(project_id)
-
-        return jsonify({
-            "success": True,
-            "memory": {
-                "user_memory": user_memory,
-                "project_memory": project_memory
-            }
-        }), 200
-
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": f"Failed to get memory: {str(e)}"
         }), 500

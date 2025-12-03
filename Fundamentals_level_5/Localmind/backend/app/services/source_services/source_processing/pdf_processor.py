@@ -11,7 +11,8 @@ from typing import Dict, Any
 
 from app.utils.path_utils import get_processed_dir, get_chunks_dir
 from app.utils.embedding_utils import needs_embedding
-from app.services.ai_services import embedding_service, summary_service
+from app.services.ai_services.embedding_service import embedding_service
+from app.services.ai_services.summary_service import summary_service
 
 
 def process_pdf(
@@ -34,7 +35,7 @@ def process_pdf(
     Returns:
         Dict with success status and processing info
     """
-    from app.services.ai_services import pdf_service
+    from app.services.ai_services.pdf_service import pdf_service
 
     result = pdf_service.extract_text_from_pdf(
         project_id=project_id,

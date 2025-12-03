@@ -19,13 +19,20 @@ These services typically:
 - Use Haiku model for speed and cost efficiency
 - Have simple input/output patterns
 - Load prompts via prompt_loader.get_prompt_config()
-"""
-from app.services.ai_services.chat_naming_service import chat_naming_service
-from app.services.ai_services.summary_service import summary_service
-from app.services.ai_services.memory_service import memory_service
-from app.services.ai_services.image_service import image_service
-from app.services.ai_services.pdf_service import pdf_service
-from app.services.ai_services.pptx_service import pptx_service
-from app.services.ai_services.embedding_service import embedding_service
 
-__all__ = ["chat_naming_service", "summary_service", "memory_service", "image_service", "pdf_service", "pptx_service", "embedding_service"]
+Import Pattern:
+Services are NOT imported at module level to avoid circular imports.
+Import directly from the specific module:
+    from app.services.ai_services.memory_service import memory_service
+    from app.services.ai_services.image_service import image_service
+"""
+
+__all__ = [
+    "chat_naming_service",
+    "summary_service",
+    "memory_service",
+    "image_service",
+    "pdf_service",
+    "pptx_service",
+    "embedding_service"
+]
