@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { SpinnerGap } from '@phosphor-icons/react';
-import type { WebsiteJob } from '../../../lib/api/studio';
+import type { WebsiteJob } from '@/lib/api/studio';
 
 interface WebsiteProgressIndicatorProps {
   currentWebsiteJob: WebsiteJob | null;

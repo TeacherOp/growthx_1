@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { ChartPieSlice } from '@phosphor-icons/react';
-import type { InfographicJob } from '../../../lib/api/studio';
+import type { InfographicJob } from '@/lib/api/studio';
 
 interface InfographicListItemProps {
   job: InfographicJob;

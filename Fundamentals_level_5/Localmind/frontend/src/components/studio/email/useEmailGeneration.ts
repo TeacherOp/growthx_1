@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { studioAPI, type EmailJob } from '../../../lib/api/studio';
+import { emailsAPI, checkGeminiStatus, type EmailJob } from '@/lib/api/studio';
 import { useToast } from '../../ui/toast';
 import type { StudioSignal } from '../types';
 
@@ -23,7 +23,7 @@ export const useEmailGeneration = (projectId: string) => {
    */
   const loadSavedJobs = async () => {
     try {
-      const emailResponse = await studioAPI.listEmailJobs(projectId);
+      const emailResponse = await emailsAPI.listJobs(projectId);
       if (emailResponse.success && emailResponse.jobs) {
         const completedEmails = emailResponse.jobs.filter((job) => job.status === 'ready');
         setSavedEmailJobs(completedEmails);
@@ -48,14 +48,14 @@ export const useEmailGeneration = (projectId: string) => {
 
     try {
       // Check Gemini status (email agent uses Gemini for images)
-      const geminiStatus = await studioAPI.checkGeminiStatus();
+      const geminiStatus = await checkGeminiStatus();
       if (!geminiStatus.configured) {
         showError('Gemini API key not configured. Please add it in App Settings.');
         setIsGeneratingEmail(false);
         return;
       }
 
-      const startResponse = await studioAPI.startEmailGeneration(
+      const startResponse = await emailsAPI.startGeneration(
         projectId,
         sourceId,
         signal.direction
@@ -69,7 +69,7 @@ export const useEmailGeneration = (projectId: string) => {
 
       showSuccess(`Generating email template...`);
 
-      const finalJob = await studioAPI.pollEmailJobStatus(
+      const finalJob = await emailsAPI.pollJobStatus(
         projectId,
         startResponse.job_id,
         (job) => setCurrentEmailJob(job)

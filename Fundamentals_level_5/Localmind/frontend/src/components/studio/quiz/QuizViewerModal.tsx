@@ -14,7 +14,7 @@ import {
 } from '../../ui/dialog';
 import { Exam } from '@phosphor-icons/react';
 import { QuizViewer } from './QuizViewer';
-import type { QuizJob } from '../../../lib/api/studio';
+import type { QuizJob } from '@/lib/api/studio';
 
 interface QuizViewerModalProps {
   viewingQuizJob: QuizJob | null;

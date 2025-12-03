@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { SpinnerGap } from '@phosphor-icons/react';
-import type { QuizJob } from '../../../lib/api/studio';
+import type { QuizJob } from '@/lib/api/studio';
 
 interface QuizProgressIndicatorProps {
   currentQuizJob: QuizJob | null;

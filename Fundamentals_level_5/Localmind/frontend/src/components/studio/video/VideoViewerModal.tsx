@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../ui/dialog';
-import type { VideoJob } from '../../../lib/api/studio';
+import type { VideoJob } from '@/lib/api/studio';
 
 interface VideoViewerModalProps {
   projectId: string;

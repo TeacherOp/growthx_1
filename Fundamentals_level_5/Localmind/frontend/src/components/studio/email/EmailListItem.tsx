@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { ShareNetwork } from '@phosphor-icons/react';
-import type { EmailJob } from '../../../lib/api/studio';
+import type { EmailJob } from '@/lib/api/studio';
 
 interface EmailListItemProps {
   job: EmailJob;

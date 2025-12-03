@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { studioAPI, type InfographicJob } from '../../../lib/api/studio';
+import { infographicsAPI, checkGeminiStatus, type InfographicJob } from '@/lib/api/studio';
 import { useToast } from '../../ui/toast';
 import type { StudioSignal } from '../types';
 
@@ -23,7 +23,7 @@ export const useInfographicGeneration = (projectId: string) => {
    */
   const loadSavedJobs = async () => {
     try {
-      const infographicResponse = await studioAPI.listInfographicJobs(projectId);
+      const infographicResponse = await infographicsAPI.listJobs(projectId);
       if (infographicResponse.success && infographicResponse.jobs) {
         const completedInfographics = infographicResponse.jobs.filter((job) => job.status === 'ready');
         setSavedInfographicJobs(completedInfographics);
@@ -47,14 +47,14 @@ export const useInfographicGeneration = (projectId: string) => {
     setCurrentInfographicJob(null);
 
     try {
-      const geminiStatus = await studioAPI.checkGeminiStatus();
+      const geminiStatus = await checkGeminiStatus();
       if (!geminiStatus.configured) {
         showError('Gemini API key not configured. Please add it in App Settings.');
         setIsGeneratingInfographic(false);
         return;
       }
 
-      const startResponse = await studioAPI.startInfographicGeneration(
+      const startResponse = await infographicsAPI.startGeneration(
         projectId,
         sourceId,
         signal.direction
@@ -68,7 +68,7 @@ export const useInfographicGeneration = (projectId: string) => {
 
       showSuccess(`Generating infographic for ${startResponse.source_name}...`);
 
-      const finalJob = await studioAPI.pollInfographicJobStatus(
+      const finalJob = await infographicsAPI.pollJobStatus(
         projectId,
         startResponse.job_id,
         (job) => setCurrentInfographicJob(job)

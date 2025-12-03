@@ -15,7 +15,7 @@ import {
 import { Button } from '../../ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { SquaresFour, Copy, DownloadSimple, Check } from '@phosphor-icons/react';
-import { studioAPI, type ComponentJob } from '../../../lib/api/studio';
+import { componentsAPI, type ComponentJob } from '@/lib/api/studio';
 import { useToast } from '../../ui/toast';
 
 interface ComponentViewerModalProps {

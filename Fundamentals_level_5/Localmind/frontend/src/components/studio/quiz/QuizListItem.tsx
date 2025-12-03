@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Exam } from '@phosphor-icons/react';
-import type { QuizJob } from '../../../lib/api/studio';
+import type { QuizJob } from '@/lib/api/studio';
 
 interface QuizListItemProps {
   job: QuizJob;

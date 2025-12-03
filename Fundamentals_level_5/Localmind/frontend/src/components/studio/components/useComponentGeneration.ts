@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { studioAPI, type ComponentJob } from '../../../lib/api/studio';
+import { componentsAPI, type ComponentJob } from '@/lib/api/studio';
 import { useToast } from '../../ui/toast';
 import type { StudioSignal } from '../types';
 
@@ -23,7 +23,7 @@ export const useComponentGeneration = (projectId: string) => {
    */
   const loadSavedJobs = async () => {
     try {
-      const componentResponse = await studioAPI.listComponentJobs(projectId);
+      const componentResponse = await componentsAPI.listJobs(projectId);
       if (componentResponse.success && componentResponse.jobs) {
         const completedComponents = componentResponse.jobs.filter((job) => job.status === 'ready');
         setSavedComponentJobs(completedComponents);
@@ -47,7 +47,7 @@ export const useComponentGeneration = (projectId: string) => {
     setCurrentComponentJob(null);
 
     try {
-      const startResponse = await studioAPI.startComponentGeneration(
+      const startResponse = await componentsAPI.startGeneration(
         projectId,
         sourceId,
         signal.direction
@@ -61,7 +61,7 @@ export const useComponentGeneration = (projectId: string) => {
 
       showSuccess(`Generating components...`);
 
-      const finalJob = await studioAPI.pollComponentJobStatus(
+      const finalJob = await componentsAPI.pollJobStatus(
         projectId,
         startResponse.job_id,
         (job) => setCurrentComponentJob(job)

@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { SpinnerGap } from '@phosphor-icons/react';
-import type { SocialPostJob } from '../../../lib/api/studio';
+import type { SocialPostJob } from '@/lib/api/studio';
 
 interface SocialPostProgressIndicatorProps {
   currentSocialPostJob: SocialPostJob | null;

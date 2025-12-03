@@ -14,7 +14,7 @@ import {
 } from '../../ui/dialog';
 import { TreeStructure } from '@phosphor-icons/react';
 import { MindMapViewer } from './MindMapViewer';
-import type { MindMapJob } from '../../../lib/api/studio';
+import type { MindMapJob } from '@/lib/api/studio';
 
 interface MindMapViewerModalProps {
   viewingMindMapJob: MindMapJob | null;

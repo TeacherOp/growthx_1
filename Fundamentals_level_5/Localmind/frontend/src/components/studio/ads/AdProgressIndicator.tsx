@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { SpinnerGap } from '@phosphor-icons/react';
-import type { AdJob } from '../../../lib/api/studio';
+import type { AdJob } from '@/lib/api/studio';
 
 interface AdProgressIndicatorProps {
   currentAdJob: AdJob | null;

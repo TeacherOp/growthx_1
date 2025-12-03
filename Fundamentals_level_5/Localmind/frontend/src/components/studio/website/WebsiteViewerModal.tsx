@@ -13,8 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../ui/dialog';
-import type { WebsiteJob } from '../../../lib/api/studio';
-import { studioAPI } from '../../../lib/api/studio';
+import { websitesAPI, type WebsiteJob } from '@/lib/api/studio';
 
 interface WebsiteViewerModalProps {
   projectId: string;
@@ -29,8 +28,8 @@ export const WebsiteViewerModal: React.FC<WebsiteViewerModalProps> = ({
 }) => {
   if (!viewingWebsiteJob) return null;
 
-  const previewUrl = studioAPI.getWebsitePreviewUrl(projectId, viewingWebsiteJob.id);
-  const downloadUrl = studioAPI.getWebsiteDownloadUrl(projectId, viewingWebsiteJob.id);
+  const previewUrl = websitesAPI.getPreviewUrl(projectId, viewingWebsiteJob.id);
+  const downloadUrl = websitesAPI.getDownloadUrl(projectId, viewingWebsiteJob.id);
 
   const handleDownload = () => {
     const link = document.createElement('a');

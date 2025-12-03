@@ -16,7 +16,7 @@ import { InfographicProgressIndicator } from './infographic';
 import { EmailProgressIndicator } from './email';
 import { ComponentProgressIndicator } from './components';
 import { VideoProgressIndicator } from './video';
-import type { AudioJob, AdJob, FlashCardJob, MindMapJob, WebsiteJob, QuizJob, SocialPostJob, InfographicJob, EmailJob, ComponentJob, VideoJob } from '../../lib/api/studio';
+import type { AudioJob, AdJob, FlashCardJob, MindMapJob, WebsiteJob, QuizJob, SocialPostJob, InfographicJob, EmailJob, ComponentJob, VideoJob } from '@/lib/api/studio';
 
 interface StudioProgressIndicatorsProps {
   // Audio

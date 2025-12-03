@@ -5,7 +5,7 @@
  */
 
 import { useState, useRef } from 'react';
-import { studioAPI, type AudioJob } from '../../../lib/api/studio';
+import { audioAPI, type AudioJob } from '@/lib/api/studio';
 import type { StudioSignal } from '../types';
 import { useToast } from '../../ui/toast';
 
@@ -19,7 +19,7 @@ export const useAudioGeneration = (projectId: string) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const loadSavedJobs = async () => {
-    const audioResponse = await studioAPI.listJobs(projectId);
+    const audioResponse = await audioAPI.listJobs(projectId);
     if (audioResponse.success && audioResponse.jobs) {
       const completedAudio = audioResponse.jobs.filter((job) => job.status === 'ready');
       setSavedAudioJobs(completedAudio);
@@ -37,14 +37,14 @@ export const useAudioGeneration = (projectId: string) => {
     setCurrentAudioJob(null);
 
     try {
-      const ttsStatus = await studioAPI.checkTTSStatus();
+      const ttsStatus = await audioAPI.checkTTSStatus();
       if (!ttsStatus.configured) {
         showError('ElevenLabs API key not configured. Please add it in App Settings.');
         setIsGeneratingAudio(false);
         return;
       }
 
-      const startResponse = await studioAPI.startAudioGeneration(
+      const startResponse = await audioAPI.startGeneration(
         projectId,
         sourceId,
         signal.direction
@@ -58,7 +58,7 @@ export const useAudioGeneration = (projectId: string) => {
 
       showSuccess(`Generating audio for ${startResponse.source_name}...`);
 
-      const finalJob = await studioAPI.pollJobStatus(
+      const finalJob = await audioAPI.pollJobStatus(
         projectId,
         startResponse.job_id,
         (job) => setCurrentAudioJob(job)

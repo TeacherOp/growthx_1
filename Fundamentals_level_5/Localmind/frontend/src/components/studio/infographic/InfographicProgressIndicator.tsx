@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { SpinnerGap } from '@phosphor-icons/react';
-import type { InfographicJob } from '../../../lib/api/studio';
+import type { InfographicJob } from '@/lib/api/studio';
 
 interface InfographicProgressIndicatorProps {
   currentInfographicJob: InfographicJob | null;

@@ -7,7 +7,7 @@
 import React from 'react';
 import { SpeakerHigh, Play, Pause, DownloadSimple } from '@phosphor-icons/react';
 import { Button } from '../../ui/button';
-import type { AudioJob } from '../../../lib/api/studio';
+import type { AudioJob } from '@/lib/api/studio';
 
 interface AudioListItemProps {
   job: AudioJob;

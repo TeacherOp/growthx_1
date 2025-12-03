@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { PlayCircle, DownloadSimple } from '@phosphor-icons/react';
-import type { VideoJob } from '../../../lib/api/studio';
+import type { VideoJob } from '@/lib/api/studio';
 
 interface VideoListItemProps {
   job: VideoJob;

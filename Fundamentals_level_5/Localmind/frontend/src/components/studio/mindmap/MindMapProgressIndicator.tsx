@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { SpinnerGap } from '@phosphor-icons/react';
-import type { MindMapJob } from '../../../lib/api/studio';
+import type { MindMapJob } from '@/lib/api/studio';
 
 interface MindMapProgressIndicatorProps {
   currentMindMapJob: MindMapJob | null;

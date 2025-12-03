@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { studioAPI, type AdJob } from '../../../lib/api/studio';
+import { adsAPI, checkGeminiStatus, type AdJob } from '@/lib/api/studio';
 import { useToast } from '../../ui/toast';
 import type { StudioSignal } from '../types';
 
@@ -23,7 +23,7 @@ export const useAdGeneration = (projectId: string) => {
    */
   const loadSavedJobs = async () => {
     try {
-      const adResponse = await studioAPI.listAdJobs(projectId);
+      const adResponse = await adsAPI.listJobs(projectId);
       if (adResponse.success && adResponse.jobs) {
         const completedAds = adResponse.jobs.filter((job) => job.status === 'ready');
         setSavedAdJobs(completedAds);
@@ -44,14 +44,14 @@ export const useAdGeneration = (projectId: string) => {
     setCurrentAdJob(null);
 
     try {
-      const geminiStatus = await studioAPI.checkGeminiStatus();
+      const geminiStatus = await checkGeminiStatus();
       if (!geminiStatus.configured) {
         showError('Gemini API key not configured. Please add it in App Settings.');
         setIsGeneratingAd(false);
         return;
       }
 
-      const startResponse = await studioAPI.startAdGeneration(
+      const startResponse = await adsAPI.startGeneration(
         projectId,
         productName,
         signal.direction
@@ -65,7 +65,7 @@ export const useAdGeneration = (projectId: string) => {
 
       showSuccess(`Generating ad creatives...`);
 
-      const finalJob = await studioAPI.pollAdJobStatus(
+      const finalJob = await adsAPI.pollJobStatus(
         projectId,
         startResponse.job_id,
         (job) => setCurrentAdJob(job)

@@ -20,7 +20,7 @@ import {
 } from '../../ui/tooltip';
 import { Button } from '../../ui/button';
 import { ShareNetwork, DownloadSimple } from '@phosphor-icons/react';
-import { studioAPI, type EmailJob } from '../../../lib/api/studio';
+import { emailsAPI, type EmailJob } from '@/lib/api/studio';
 
 interface EmailViewerModalProps {
   projectId: string;
@@ -104,7 +104,7 @@ export const EmailViewerModal: React.FC<EmailViewerModalProps> = ({
                 variant="default"
                 className="gap-1 flex-1"
                 onClick={() => {
-                  const downloadUrl = studioAPI.getEmailDownloadUrl(projectId, viewingEmailJob.id);
+                  const downloadUrl = emailsAPI.getDownloadUrl(projectId, viewingEmailJob.id);
                   const link = document.createElement('a');
                   link.href = `http://localhost:5000${downloadUrl}`;
                   link.click();

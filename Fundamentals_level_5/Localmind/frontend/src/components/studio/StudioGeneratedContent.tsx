@@ -29,7 +29,7 @@ import type {
   EmailJob,
   ComponentJob,
   VideoJob
-} from '../../lib/api/studio';
+} from '@/lib/api/studio';
 import type { StudioSignal } from './types';
 
 interface StudioGeneratedContentProps {

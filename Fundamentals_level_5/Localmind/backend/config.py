@@ -14,7 +14,7 @@ class Config:
     """Base configuration class with default settings."""
 
     # Application settings
-    APP_NAME = "LocalLM"
+    APP_NAME = "NoobBook"
     VERSION = "1.0.0"
 
     # Flask settings

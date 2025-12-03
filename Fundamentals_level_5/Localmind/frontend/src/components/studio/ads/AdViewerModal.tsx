@@ -14,7 +14,7 @@ import {
 } from '../../ui/dialog';
 import { Button } from '../../ui/button';
 import { Image, DownloadSimple } from '@phosphor-icons/react';
-import type { AdJob } from '../../../lib/api/studio';
+import type { AdJob } from '@/lib/api/studio';
 
 interface AdViewerModalProps {
   viewingAdJob: AdJob | null;

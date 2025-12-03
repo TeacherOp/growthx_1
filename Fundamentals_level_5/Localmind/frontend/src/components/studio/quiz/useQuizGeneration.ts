@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { studioAPI, type QuizJob } from '../../../lib/api/studio';
+import { quizzesAPI, type QuizJob } from '@/lib/api/studio';
 import type { StudioSignal } from '../types';
 import { useToast } from '../../ui/toast';
 
@@ -18,7 +18,7 @@ export const useQuizGeneration = (projectId: string) => {
   const [viewingQuizJob, setViewingQuizJob] = useState<QuizJob | null>(null);
 
   const loadSavedJobs = async () => {
-    const quizResponse = await studioAPI.listQuizJobs(projectId);
+    const quizResponse = await quizzesAPI.listJobs(projectId);
     if (quizResponse.success && quizResponse.jobs) {
       const completedQuizzes = quizResponse.jobs.filter((job) => job.status === 'ready');
       setSavedQuizJobs(completedQuizzes);
@@ -36,7 +36,7 @@ export const useQuizGeneration = (projectId: string) => {
     setCurrentQuizJob(null);
 
     try {
-      const startResponse = await studioAPI.startQuizGeneration(
+      const startResponse = await quizzesAPI.startGeneration(
         projectId,
         sourceId,
         signal.direction
@@ -50,7 +50,7 @@ export const useQuizGeneration = (projectId: string) => {
 
       showSuccess(`Generating quiz for ${startResponse.source_name}...`);
 
-      const finalJob = await studioAPI.pollQuizJobStatus(
+      const finalJob = await quizzesAPI.pollJobStatus(
         projectId,
         startResponse.job_id,
         (job) => setCurrentQuizJob(job)

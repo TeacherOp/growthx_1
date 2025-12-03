@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Cards } from '@phosphor-icons/react';
-import type { FlashCardJob } from '../../../lib/api/studio';
+import type { FlashCardJob } from '@/lib/api/studio';
 
 interface FlashCardListItemProps {
   job: FlashCardJob;

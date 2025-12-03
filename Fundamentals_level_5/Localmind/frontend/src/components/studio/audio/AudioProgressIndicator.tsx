@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { SpinnerGap } from '@phosphor-icons/react';
-import type { AudioJob } from '../../../lib/api/studio';
+import type { AudioJob } from '@/lib/api/studio';
 
 interface AudioProgressIndicatorProps {
   currentAudioJob: AudioJob | null;

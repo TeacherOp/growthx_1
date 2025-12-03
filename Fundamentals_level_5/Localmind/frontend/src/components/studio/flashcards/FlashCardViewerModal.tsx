@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '../../ui/dialog';
 import { Cards, CaretLeft, CaretRight, ArrowsClockwise } from '@phosphor-icons/react';
-import type { FlashCardJob } from '../../../lib/api/studio';
+import type { FlashCardJob } from '@/lib/api/studio';
 
 interface FlashCardViewerModalProps {
   viewingFlashCardJob: FlashCardJob | null;

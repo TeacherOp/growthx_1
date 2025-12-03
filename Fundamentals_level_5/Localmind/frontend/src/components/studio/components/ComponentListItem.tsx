@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { SquaresFour } from '@phosphor-icons/react';
-import type { ComponentJob } from '../../../lib/api/studio';
+import type { ComponentJob } from '@/lib/api/studio';
 
 interface ComponentListItemProps {
   job: ComponentJob;

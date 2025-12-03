@@ -26,7 +26,7 @@ import type {
   EmailJob,
   ComponentJob,
   VideoJob
-} from '../../lib/api/studio';
+} from '@/lib/api/studio';
 
 interface StudioModalsProps {
   projectId: string;

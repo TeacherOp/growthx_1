@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Image } from '@phosphor-icons/react';
-import type { AdJob } from '../../../lib/api/studio';
+import type { AdJob } from '@/lib/api/studio';
 
 interface AdListItemProps {
   job: AdJob;

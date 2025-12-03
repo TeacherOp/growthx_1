@@ -14,7 +14,7 @@ import {
 } from '../../ui/dialog';
 import { Button } from '../../ui/button';
 import { ChartPieSlice, DownloadSimple } from '@phosphor-icons/react';
-import type { InfographicJob } from '../../../lib/api/studio';
+import type { InfographicJob } from '@/lib/api/studio';
 
 interface InfographicViewerModalProps {
   viewingInfographicJob: InfographicJob | null;

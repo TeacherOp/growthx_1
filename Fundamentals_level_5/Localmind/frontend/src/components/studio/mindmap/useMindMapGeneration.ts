@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { studioAPI, type MindMapJob } from '../../../lib/api/studio';
+import { mindMapsAPI, type MindMapJob } from '@/lib/api/studio';
 import type { StudioSignal } from '../types';
 import { useToast } from '../../ui/toast';
 
@@ -18,7 +18,7 @@ export const useMindMapGeneration = (projectId: string) => {
   const [viewingMindMapJob, setViewingMindMapJob] = useState<MindMapJob | null>(null);
 
   const loadSavedJobs = async () => {
-    const mindMapResponse = await studioAPI.listMindMapJobs(projectId);
+    const mindMapResponse = await mindMapsAPI.listJobs(projectId);
     if (mindMapResponse.success && mindMapResponse.jobs) {
       const completedMindMaps = mindMapResponse.jobs.filter((job) => job.status === 'ready');
       setSavedMindMapJobs(completedMindMaps);
@@ -36,7 +36,7 @@ export const useMindMapGeneration = (projectId: string) => {
     setCurrentMindMapJob(null);
 
     try {
-      const startResponse = await studioAPI.startMindMapGeneration(
+      const startResponse = await mindMapsAPI.startGeneration(
         projectId,
         sourceId,
         signal.direction
@@ -50,7 +50,7 @@ export const useMindMapGeneration = (projectId: string) => {
 
       showSuccess(`Generating mind map for ${startResponse.source_name}...`);
 
-      const finalJob = await studioAPI.pollMindMapJobStatus(
+      const finalJob = await mindMapsAPI.pollJobStatus(
         projectId,
         startResponse.job_id,
         (job) => setCurrentMindMapJob(job)

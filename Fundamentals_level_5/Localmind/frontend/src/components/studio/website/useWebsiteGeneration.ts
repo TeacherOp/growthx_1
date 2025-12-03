@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { studioAPI, type WebsiteJob } from '../../../lib/api/studio';
+import { websitesAPI, type WebsiteJob } from '@/lib/api/studio';
 import { useToast } from '../../ui/toast';
 import type { StudioSignal } from '../types';
 
@@ -23,7 +23,7 @@ export const useWebsiteGeneration = (projectId: string) => {
    */
   const loadSavedJobs = async () => {
     try {
-      const websiteResponse = await studioAPI.listWebsiteJobs(projectId);
+      const websiteResponse = await websitesAPI.listJobs(projectId);
       if (websiteResponse.success && websiteResponse.jobs) {
         const completedWebsites = websiteResponse.jobs.filter((job) => job.status === 'ready');
         setSavedWebsiteJobs(completedWebsites);
@@ -49,7 +49,7 @@ export const useWebsiteGeneration = (projectId: string) => {
       }
 
       // Start website generation
-      const startResponse = await studioAPI.startWebsiteGeneration(
+      const startResponse = await websitesAPI.startGeneration(
         projectId,
         sourceId,
         signal.direction
@@ -61,7 +61,7 @@ export const useWebsiteGeneration = (projectId: string) => {
       }
 
       // Poll for completion
-      const finalJob = await studioAPI.pollWebsiteJobStatus(
+      const finalJob = await websitesAPI.pollJobStatus(
         projectId,
         startResponse.job_id,
         (job) => setCurrentWebsiteJob(job)
@@ -98,7 +98,7 @@ export const useWebsiteGeneration = (projectId: string) => {
    * Download website as ZIP
    */
   const downloadWebsite = (jobId: string) => {
-    const downloadUrl = studioAPI.getWebsiteDownloadUrl(projectId, jobId);
+    const downloadUrl = websitesAPI.getDownloadUrl(projectId, jobId);
     const link = document.createElement('a');
     link.href = `http://localhost:5000${downloadUrl}`;
     link.click();

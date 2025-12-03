@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { TreeStructure } from '@phosphor-icons/react';
-import type { MindMapJob } from '../../../lib/api/studio';
+import type { MindMapJob } from '@/lib/api/studio';
 
 interface MindMapListItemProps {
   job: MindMapJob;

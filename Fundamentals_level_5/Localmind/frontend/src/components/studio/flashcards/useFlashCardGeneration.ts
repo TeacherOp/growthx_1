@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { studioAPI, type FlashCardJob } from '../../../lib/api/studio';
+import { flashCardsAPI, type FlashCardJob } from '@/lib/api/studio';
 import { useToast } from '../../ui/toast';
 import type { StudioSignal } from '../types';
 
@@ -23,7 +23,7 @@ export const useFlashCardGeneration = (projectId: string) => {
    */
   const loadSavedJobs = async () => {
     try {
-      const flashCardResponse = await studioAPI.listFlashCardJobs(projectId);
+      const flashCardResponse = await flashCardsAPI.listJobs(projectId);
       if (flashCardResponse.success && flashCardResponse.jobs) {
         const completedFlashCards = flashCardResponse.jobs.filter((job) => job.status === 'ready');
         setSavedFlashCardJobs(completedFlashCards);
@@ -47,7 +47,7 @@ export const useFlashCardGeneration = (projectId: string) => {
     setCurrentFlashCardJob(null);
 
     try {
-      const startResponse = await studioAPI.startFlashCardGeneration(
+      const startResponse = await flashCardsAPI.startGeneration(
         projectId,
         sourceId,
         signal.direction
@@ -61,7 +61,7 @@ export const useFlashCardGeneration = (projectId: string) => {
 
       showSuccess(`Generating flash cards for ${startResponse.source_name}...`);
 
-      const finalJob = await studioAPI.pollFlashCardJobStatus(
+      const finalJob = await flashCardsAPI.pollJobStatus(
         projectId,
         startResponse.job_id,
         (job) => setCurrentFlashCardJob(job)

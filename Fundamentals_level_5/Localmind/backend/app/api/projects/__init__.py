@@ -1,7 +1,7 @@
 """
 Projects API Blueprint.
 
-Educational Note: Projects are the top-level organizational unit in LocalMind.
+Educational Note: Projects are the top-level organizational unit in NoobBook.
 Each project contains:
 - Sources (documents, images, audio, URLs)
 - Chats (conversations with the AI)

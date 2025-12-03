@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { studioAPI, type VideoJob } from '../../../lib/api/studio';
+import { videosAPI, type VideoJob } from '@/lib/api/studio';
 import { useToast } from '../../ui/toast';
 import type { StudioSignal } from '../types';
 
@@ -24,7 +24,7 @@ export const useVideoGeneration = (projectId: string) => {
    */
   const loadSavedJobs = async () => {
     try {
-      const videoResponse = await studioAPI.listVideoJobs(projectId);
+      const videoResponse = await videosAPI.listJobs(projectId);
       if (videoResponse.success && videoResponse.jobs) {
         const completedVideos = videoResponse.jobs.filter((job) => job.status === 'ready');
         setSavedVideoJobs(completedVideos);
@@ -56,7 +56,7 @@ export const useVideoGeneration = (projectId: string) => {
       }
 
       // Start video generation
-      const startResponse = await studioAPI.startVideoGeneration(
+      const startResponse = await videosAPI.startGeneration(
         projectId,
         sourceId,
         signal.direction,
@@ -71,7 +71,7 @@ export const useVideoGeneration = (projectId: string) => {
       }
 
       // Poll for completion (can take 10-20 minutes)
-      const finalJob = await studioAPI.pollVideoJobStatus(
+      const finalJob = await videosAPI.pollJobStatus(
         projectId,
         startResponse.job_id,
         (job) => setCurrentVideoJob(job)
@@ -108,7 +108,7 @@ export const useVideoGeneration = (projectId: string) => {
    * Download video file
    */
   const downloadVideo = (jobId: string, filename: string) => {
-    const downloadUrl = studioAPI.getVideoDownloadUrl(projectId, jobId, filename);
+    const downloadUrl = videosAPI.getDownloadUrl(projectId, jobId, filename);
     const link = document.createElement('a');
     link.href = downloadUrl;
     link.download = filename;

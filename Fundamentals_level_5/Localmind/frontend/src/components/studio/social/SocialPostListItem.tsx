@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { ShareNetwork } from '@phosphor-icons/react';
-import type { SocialPostJob } from '../../../lib/api/studio';
+import type { SocialPostJob } from '@/lib/api/studio';
 
 interface SocialPostListItemProps {
   job: SocialPostJob;

@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { SpinnerGap } from '@phosphor-icons/react';
-import type { ComponentJob } from '../../../lib/api/studio';
+import type { ComponentJob } from '@/lib/api/studio';
 
 interface ComponentProgressIndicatorProps {
   currentComponentJob: ComponentJob | null;

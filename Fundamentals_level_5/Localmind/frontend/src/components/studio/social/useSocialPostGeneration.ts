@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { studioAPI, type SocialPostJob } from '../../../lib/api/studio';
+import { socialPostsAPI, checkGeminiStatus, type SocialPostJob } from '@/lib/api/studio';
 import { useToast } from '../../ui/toast';
 import type { StudioSignal } from '../types';
 
@@ -23,7 +23,7 @@ export const useSocialPostGeneration = (projectId: string) => {
    */
   const loadSavedJobs = async () => {
     try {
-      const socialPostResponse = await studioAPI.listSocialPostJobs(projectId);
+      const socialPostResponse = await socialPostsAPI.listJobs(projectId);
       if (socialPostResponse.success && socialPostResponse.jobs) {
         const completedSocialPosts = socialPostResponse.jobs.filter((job) => job.status === 'ready');
         setSavedSocialPostJobs(completedSocialPosts);
@@ -44,14 +44,14 @@ export const useSocialPostGeneration = (projectId: string) => {
     setCurrentSocialPostJob(null);
 
     try {
-      const geminiStatus = await studioAPI.checkGeminiStatus();
+      const geminiStatus = await checkGeminiStatus();
       if (!geminiStatus.configured) {
         showError('Gemini API key not configured. Please add it in App Settings.');
         setIsGeneratingSocialPosts(false);
         return;
       }
 
-      const startResponse = await studioAPI.startSocialPostGeneration(
+      const startResponse = await socialPostsAPI.startGeneration(
         projectId,
         topic,
         signal.direction
@@ -65,7 +65,7 @@ export const useSocialPostGeneration = (projectId: string) => {
 
       showSuccess(`Generating social posts...`);
 
-      const finalJob = await studioAPI.pollSocialPostJobStatus(
+      const finalJob = await socialPostsAPI.pollJobStatus(
         projectId,
         startResponse.job_id,
         (job) => setCurrentSocialPostJob(job)

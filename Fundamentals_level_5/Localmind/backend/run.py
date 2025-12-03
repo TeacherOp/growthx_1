@@ -1,5 +1,5 @@
 """
-Main entry point for LocalMind backend.
+Main entry point for NoobBook backend.
 
 Educational Note: This file creates and runs the Flask application.
 We keep it separate from the app factory to maintain clean separation
@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
     print(f"""
     ╔════════════════════════════════════════╗
-    ║       LocalMind Backend Server         ║
+    ║       NoobBook Backend Server         ║
     ╠════════════════════════════════════════╣
     ║  Running on: http://localhost:{port}     ║
     ║  Environment: {config_name:<24} ║

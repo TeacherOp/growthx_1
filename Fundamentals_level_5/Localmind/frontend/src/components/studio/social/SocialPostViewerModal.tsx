@@ -15,7 +15,7 @@ import {
 import { Button } from '../../ui/button';
 import { ShareNetwork, DownloadSimple } from '@phosphor-icons/react';
 import { useToast } from '../../ui/toast';
-import type { SocialPostJob } from '../../../lib/api/studio';
+import type { SocialPostJob } from '@/lib/api/studio';
 
 interface SocialPostViewerModalProps {
   viewingSocialPostJob: SocialPostJob | null;

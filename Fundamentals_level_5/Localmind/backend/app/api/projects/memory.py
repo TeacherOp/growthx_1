@@ -4,7 +4,7 @@ Project memory endpoint.
 Educational Note: Memory is a key concept in LLM applications that
 allows the AI to maintain context across conversations.
 
-Memory Types in LocalMind:
+Memory Types in NoobBook:
 
 1. User Memory (data/user_memory.json)
    - Global preferences that apply to ALL projects

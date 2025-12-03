@@ -64,7 +64,7 @@ def validate_pinecone_key(api_key: str) -> Tuple[bool, str, Optional[Dict[str, s
                 deletion_protection="disabled",
                 tags={
                     "environment": "development",
-                    "created_by": "localmind"
+                    "created_by": "NoobBook"
                 }
             )
 
