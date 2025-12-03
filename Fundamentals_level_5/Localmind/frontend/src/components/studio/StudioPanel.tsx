@@ -22,6 +22,8 @@ import { useMindMapGeneration } from './mindmap';
 import { useQuizGeneration } from './quiz';
 import { useComponentGeneration } from './components';
 import { useVideoGeneration } from './video';
+import { useFlowDiagramGeneration } from './flow-diagrams';
+import { useWireframeGeneration } from './wireframes';
 import { StudioCollapsedView } from './StudioCollapsedView';
 import { StudioSignalPicker } from './StudioSignalPicker';
 import { StudioProgressIndicators } from './StudioProgressIndicators';
@@ -176,6 +178,28 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
     downloadVideo,
   } = useVideoGeneration(projectId);
 
+  // Flow diagram generation hook
+  const {
+    savedFlowDiagramJobs,
+    currentFlowDiagramJob,
+    isGeneratingFlowDiagram,
+    viewingFlowDiagramJob,
+    setViewingFlowDiagramJob,
+    loadSavedJobs: loadSavedFlowDiagramJobs,
+    handleFlowDiagramGeneration,
+  } = useFlowDiagramGeneration(projectId);
+
+  // Wireframe generation hook
+  const {
+    savedWireframeJobs,
+    currentWireframeJob,
+    isGeneratingWireframe,
+    viewingWireframeJob,
+    setViewingWireframeJob,
+    loadSavedJobs: loadSavedWireframeJobs,
+    handleWireframeGeneration,
+  } = useWireframeGeneration(projectId);
+
   // Load saved jobs on mount
   useEffect(() => {
     const loadSavedJobs = async () => {
@@ -212,6 +236,12 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
 
         // Load saved video jobs
         await loadSavedVideoJobs();
+
+        // Load saved flow diagram jobs
+        await loadSavedFlowDiagramJobs();
+
+        // Load saved wireframe jobs
+        await loadSavedWireframeJobs();
 
       } catch (error) {
         console.error('Failed to load saved jobs:', error);
@@ -269,6 +299,10 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
       await handleComponentGeneration(signal);
     } else if (optionId === 'video') {
       await handleVideoGeneration(signal);
+    } else if (optionId === 'flow_diagram') {
+      await handleFlowDiagramGeneration(signal);
+    } else if (optionId === 'wireframes') {
+      await handleWireframeGeneration(signal);
     } else {
       showSuccess(`${getItemTitle(optionId)} generation is coming soon!`);
     }
@@ -351,6 +385,10 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
               currentComponentJob={currentComponentJob}
               isGeneratingVideo={isGeneratingVideo}
               currentVideoJob={currentVideoJob}
+              isGeneratingFlowDiagram={isGeneratingFlowDiagram}
+              currentFlowDiagramJob={currentFlowDiagramJob}
+              isGeneratingWireframe={isGeneratingWireframe}
+              currentWireframeJob={currentWireframeJob}
             />
 
             {/* Generated Content List */}
@@ -383,6 +421,10 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
               savedVideoJobs={savedVideoJobs}
               setViewingVideoJob={setViewingVideoJob}
               downloadVideo={downloadVideo}
+              savedFlowDiagramJobs={savedFlowDiagramJobs}
+              setViewingFlowDiagramJob={setViewingFlowDiagramJob}
+              savedWireframeJobs={savedWireframeJobs}
+              setViewingWireframeJob={setViewingWireframeJob}
             />
           </div>
         </ScrollArea>
@@ -423,6 +465,10 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
         viewingVideoJob={viewingVideoJob}
         setViewingVideoJob={setViewingVideoJob}
         downloadVideo={downloadVideo}
+        viewingFlowDiagramJob={viewingFlowDiagramJob}
+        setViewingFlowDiagramJob={setViewingFlowDiagramJob}
+        viewingWireframeJob={viewingWireframeJob}
+        setViewingWireframeJob={setViewingWireframeJob}
       />
     </div>
   );

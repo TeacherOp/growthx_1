@@ -16,7 +16,9 @@ import { InfographicProgressIndicator } from './infographic';
 import { EmailProgressIndicator } from './email';
 import { ComponentProgressIndicator } from './components';
 import { VideoProgressIndicator } from './video';
-import type { AudioJob, AdJob, FlashCardJob, MindMapJob, WebsiteJob, QuizJob, SocialPostJob, InfographicJob, EmailJob, ComponentJob, VideoJob } from '@/lib/api/studio';
+import { FlowDiagramProgressIndicator } from './flow-diagrams';
+import { WireframeProgressIndicator } from './wireframes';
+import type { AudioJob, AdJob, FlashCardJob, MindMapJob, WebsiteJob, QuizJob, SocialPostJob, InfographicJob, EmailJob, ComponentJob, VideoJob, FlowDiagramJob, WireframeJob } from '@/lib/api/studio';
 
 interface StudioProgressIndicatorsProps {
   // Audio
@@ -62,6 +64,14 @@ interface StudioProgressIndicatorsProps {
   // Video
   isGeneratingVideo: boolean;
   currentVideoJob: VideoJob | null;
+
+  // Flow Diagram
+  isGeneratingFlowDiagram: boolean;
+  currentFlowDiagramJob: FlowDiagramJob | null;
+
+  // Wireframe
+  isGeneratingWireframe: boolean;
+  currentWireframeJob: WireframeJob | null;
 }
 
 export const StudioProgressIndicators: React.FC<StudioProgressIndicatorsProps> = ({
@@ -87,6 +97,10 @@ export const StudioProgressIndicators: React.FC<StudioProgressIndicatorsProps> =
   currentComponentJob,
   isGeneratingVideo,
   currentVideoJob,
+  isGeneratingFlowDiagram,
+  currentFlowDiagramJob,
+  isGeneratingWireframe,
+  currentWireframeJob,
 }) => {
   return (
     <>
@@ -143,6 +157,16 @@ export const StudioProgressIndicators: React.FC<StudioProgressIndicatorsProps> =
       {/* Video Generation Progress */}
       {isGeneratingVideo && (
         <VideoProgressIndicator currentVideoJob={currentVideoJob} />
+      )}
+
+      {/* Flow Diagram Generation Progress */}
+      {isGeneratingFlowDiagram && (
+        <FlowDiagramProgressIndicator currentFlowDiagramJob={currentFlowDiagramJob} />
+      )}
+
+      {/* Wireframe Generation Progress */}
+      {isGeneratingWireframe && (
+        <WireframeProgressIndicator currentWireframeJob={currentWireframeJob} />
       )}
     </>
   );

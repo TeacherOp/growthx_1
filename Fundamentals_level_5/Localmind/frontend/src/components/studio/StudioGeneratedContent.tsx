@@ -17,6 +17,8 @@ import { InfographicListItem } from './infographic';
 import { EmailListItem } from './email';
 import { ComponentListItem } from './components';
 import { VideoListItem } from './video';
+import { FlowDiagramListItem } from './flow-diagrams';
+import { WireframeListItem } from './wireframes';
 import type {
   AudioJob,
   AdJob,
@@ -28,7 +30,9 @@ import type {
   InfographicJob,
   EmailJob,
   ComponentJob,
-  VideoJob
+  VideoJob,
+  FlowDiagramJob,
+  WireframeJob
 } from '@/lib/api/studio';
 import type { StudioSignal } from './types';
 
@@ -83,6 +87,14 @@ interface StudioGeneratedContentProps {
   savedVideoJobs: VideoJob[];
   setViewingVideoJob: (job: VideoJob) => void;
   downloadVideo: (jobId: string, filename: string) => void;
+
+  // Flow Diagram
+  savedFlowDiagramJobs: FlowDiagramJob[];
+  setViewingFlowDiagramJob: (job: FlowDiagramJob) => void;
+
+  // Wireframe
+  savedWireframeJobs: WireframeJob[];
+  setViewingWireframeJob: (job: WireframeJob) => void;
 }
 
 export const StudioGeneratedContent: React.FC<StudioGeneratedContentProps> = ({
@@ -114,6 +126,10 @@ export const StudioGeneratedContent: React.FC<StudioGeneratedContentProps> = ({
   savedVideoJobs,
   setViewingVideoJob,
   downloadVideo,
+  savedFlowDiagramJobs,
+  setViewingFlowDiagramJob,
+  savedWireframeJobs,
+  setViewingWireframeJob,
 }) => {
   if (signals.length === 0) {
     return (
@@ -274,6 +290,32 @@ export const StudioGeneratedContent: React.FC<StudioGeneratedContentProps> = ({
                 downloadVideo(job.id, job.videos[0].filename);
               }
             }}
+          />
+        ))}
+
+      {/* Saved Flow Diagram Jobs - filter by source_id from signals */}
+      {savedFlowDiagramJobs
+        .filter((job) => signals.some((s) =>
+          s.sources.some((src) => src.source_id === job.source_id)
+        ))
+        .map((job) => (
+          <FlowDiagramListItem
+            key={job.id}
+            job={job}
+            onClick={() => setViewingFlowDiagramJob(job)}
+          />
+        ))}
+
+      {/* Saved Wireframe Jobs - filter by source_id from signals */}
+      {savedWireframeJobs
+        .filter((job) => signals.some((s) =>
+          s.sources.some((src) => src.source_id === job.source_id)
+        ))
+        .map((job) => (
+          <WireframeListItem
+            key={job.id}
+            job={job}
+            onClick={() => setViewingWireframeJob(job)}
           />
         ))}
     </>

@@ -1,0 +1,27 @@
+{
+  "name": "generate_flow_diagram",
+  "description": "Generate a Mermaid diagram representing processes, workflows, sequences, or relationships from the content. Supports flowcharts, sequence diagrams, state diagrams, ER diagrams, and more.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "mermaid_syntax": {
+        "type": "string",
+        "description": "Valid Mermaid diagram syntax. Must start with diagram type declaration (graph, flowchart, sequenceDiagram, stateDiagram-v2, erDiagram, pie, gantt, classDiagram, etc.)"
+      },
+      "diagram_type": {
+        "type": "string",
+        "enum": ["flowchart", "sequence", "state", "er", "class", "pie", "gantt", "journey", "mindmap"],
+        "description": "The type of Mermaid diagram being generated"
+      },
+      "title": {
+        "type": "string",
+        "description": "A short descriptive title for the diagram (max 10 words)"
+      },
+      "description": {
+        "type": "string",
+        "description": "A brief explanation of what the diagram represents (1-2 sentences)"
+      }
+    },
+    "required": ["mermaid_syntax", "diagram_type", "title", "description"]
+  }
+}

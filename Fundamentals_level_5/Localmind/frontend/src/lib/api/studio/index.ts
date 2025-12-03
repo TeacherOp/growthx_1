@@ -47,3 +47,5 @@ export * from './emails';
 export * from './components';
 export * from './videos';
 export * from './websites';
+export * from './flow-diagrams';
+export * from './wireframes';

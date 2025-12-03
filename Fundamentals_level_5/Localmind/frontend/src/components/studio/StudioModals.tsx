@@ -15,6 +15,8 @@ import { InfographicViewerModal } from './infographic';
 import { EmailViewerModal } from './email';
 import { ComponentViewerModal } from './components';
 import { VideoViewerModal } from './video';
+import { FlowDiagramViewerModal } from './flow-diagrams';
+import { WireframeViewerModal } from './wireframes';
 import type {
   AdJob,
   FlashCardJob,
@@ -25,7 +27,9 @@ import type {
   InfographicJob,
   EmailJob,
   ComponentJob,
-  VideoJob
+  VideoJob,
+  FlowDiagramJob,
+  WireframeJob
 } from '@/lib/api/studio';
 
 interface StudioModalsProps {
@@ -71,6 +75,14 @@ interface StudioModalsProps {
   viewingVideoJob: VideoJob | null;
   setViewingVideoJob: (job: VideoJob | null) => void;
   downloadVideo: (jobId: string, filename: string) => void;
+
+  // Flow Diagram
+  viewingFlowDiagramJob: FlowDiagramJob | null;
+  setViewingFlowDiagramJob: (job: FlowDiagramJob | null) => void;
+
+  // Wireframe
+  viewingWireframeJob: WireframeJob | null;
+  setViewingWireframeJob: (job: WireframeJob | null) => void;
 }
 
 export const StudioModals: React.FC<StudioModalsProps> = ({
@@ -96,6 +108,10 @@ export const StudioModals: React.FC<StudioModalsProps> = ({
   viewingVideoJob,
   setViewingVideoJob,
   downloadVideo,
+  viewingFlowDiagramJob,
+  setViewingFlowDiagramJob,
+  viewingWireframeJob,
+  setViewingWireframeJob,
 }) => {
   return (
     <>
@@ -166,6 +182,18 @@ export const StudioModals: React.FC<StudioModalsProps> = ({
             downloadVideo(viewingVideoJob.id, filename);
           }
         }}
+      />
+
+      {/* Flow Diagram Viewer Modal */}
+      <FlowDiagramViewerModal
+        job={viewingFlowDiagramJob}
+        onClose={() => setViewingFlowDiagramJob(null)}
+      />
+
+      {/* Wireframe Viewer Modal */}
+      <WireframeViewerModal
+        job={viewingWireframeJob}
+        onClose={() => setViewingWireframeJob(null)}
       />
     </>
   );

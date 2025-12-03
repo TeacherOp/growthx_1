@@ -1,5 +1,5 @@
 """
-Configuration management for LocalMind backend.
+Configuration management for NooBook backend.
 
 Educational Note: Centralized configuration helps maintain consistency
 and makes it easy to switch between development and production settings.

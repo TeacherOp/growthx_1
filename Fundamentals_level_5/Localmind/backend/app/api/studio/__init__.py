@@ -29,6 +29,8 @@ Content Types Generated:
 - Website: Multi-page HTML/CSS/JS sites (Claude)
 - Component: Reusable UI components (Claude)
 - Video: AI-generated video clips (Google Veo)
+- Flow Diagram: Mermaid diagrams for processes/relationships (Claude)
+- Wireframe: UI/UX wireframes with Excalidraw (Claude)
 
 Routes:
 - POST /projects/<id>/studio/<type>           - Start generation
@@ -53,6 +55,8 @@ from app.api.studio import emails  # noqa: F401
 from app.api.studio import websites  # noqa: F401
 from app.api.studio import components  # noqa: F401
 from app.api.studio import videos  # noqa: F401
+from app.api.studio import flow_diagrams  # noqa: F401
+from app.api.studio import wireframes  # noqa: F401
 
 # Educational Note: The noqa comments tell flake8 to ignore the
 # "imported but unused" warning. We import to register routes,

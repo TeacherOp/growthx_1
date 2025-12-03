@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@elevenlabs/react": "^0.11.3",
+    "@excalidraw/excalidraw": "^0.18.0",
     "@hookform/resolvers": "^5.2.2",
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -49,6 +50,7 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
+    "mermaid": "^11.12.2",
     "next-themes": "^0.4.6",
     "react": "^19.2.0",
     "react-day-picker": "^9.11.2",
