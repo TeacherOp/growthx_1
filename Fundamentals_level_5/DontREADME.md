@@ -46,10 +46,10 @@ And you can't even code this, buddy forget VibeCode
 │                   │                                     │                            │
 │  - PDF            │  AI searches your sources           │  - Audio Overview          │
 │  - DOCX/PPTX      │  and cites them (fancy!)            │  - Ad Creatives            │
-│  - Images         │                                     │  - More coming...          │
-│  - Audio          │  Memory system remembers            │                            │
-│  - YouTube        │  you (creepy but useful)            │                            │
-│  - URLs           │                                     │                            │
+│  - Images         │                                     │  - Video Generation        │
+│  - Audio          │  Memory system remembers            │  - Flash Cards             │
+│  - YouTube        │  you (creepy but useful)            │  - Mind Maps               │
+│  - URLs           │                                     │  - Quiz, Social, Emails... │
 └───────────────────┴─────────────────────────────────────┴────────────────────────────┘
 ```
 
@@ -67,6 +67,7 @@ And you can't even code this, buddy forget VibeCode
 | **Vector DB** | Pinecone |
 | **Audio** | ElevenLabs (TTS + Transcription) |
 | **Image Gen** | Google Gemini |
+| **Video Gen** | Google Veo 2.0 (10-20 min wait, worth it) |
 | **Storage** | JSON files (databases are for pros) |
 
 ---
@@ -111,6 +112,7 @@ PINECONE_INDEX_NAME=noobbooklm
 # Optional (for extra features)
 ELEVENLABS_API_KEY=...          # Audio overview, voice input
 NANO_BANANA_API_KEY=...         # Ad creatives (Gemini)
+VEO_API_KEY=...                 # Video generation (make AI movies!)
 TAVILY_API_KEY=...              # Web search
 GOOGLE_CLIENT_ID=...            # Google Drive import
 GOOGLE_CLIENT_SECRET=...
@@ -164,6 +166,21 @@ Open http://localhost:5173 and prepare to be underwhelmed.
 - Remember user preferences
 - Remember project context
 - Merge memories with AI (fancy)
+
+### 6. Two-Step AI Pipelines
+- Claude reads your docs and crafts a movie script (well, a 2-4 sentence prompt)
+- Google Veo turns it into an actual 5-8 second video
+- Wait 10-20 minutes (go touch grass)
+- Get a sick video you didn't make yourself
+- Pretend you're Steven Spielberg
+
+**Real talk**: Video generation uses a dual-AI approach:
+1. Claude analyzes your source and generates an optimized prompt with cinematography details
+2. Google Veo 2.0 uses that prompt to generate actual video (aspect ratio, duration, lighting, the works)
+3. Background task handles the long wait so you can keep working
+4. Download MP4s when ready
+
+This pattern shows how to chain different AI services for complex outputs. Also shows how to handle *really* long-running tasks (because video generation is S L O W).
 
 ---
 

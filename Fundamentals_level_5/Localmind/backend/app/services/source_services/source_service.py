@@ -169,7 +169,7 @@ class SourceService:
         # Delete embeddings and chunk files (if any)
         if source.get("embedding_info", {}).get("is_embedded"):
             try:
-                from app.services.ai_services import embedding_service
+                from app.services.ai_services.embedding_service import embedding_service
                 chunks_dir = get_chunks_dir(project_id)
                 embedding_service.delete_embeddings(
                     project_id=project_id,

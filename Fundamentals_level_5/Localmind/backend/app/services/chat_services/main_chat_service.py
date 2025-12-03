@@ -23,7 +23,7 @@ from app.services.tool_executors import source_search_executor
 from app.services.tool_executors import memory_executor
 from app.services.tool_executors import csv_analyzer_agent_executor
 from app.services.tool_executors import studio_signal_executor
-from app.services.ai_services import chat_naming_service
+from app.services.ai_services.chat_naming_service import chat_naming_service
 from app.services.background_services import task_service
 from app.utils import claude_parsing_utils
 

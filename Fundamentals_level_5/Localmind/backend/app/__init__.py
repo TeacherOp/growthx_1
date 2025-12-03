@@ -1,5 +1,5 @@
 """
-Flask application factory for LocalMind.
+Flask application factory for NoobBook.
 
 Educational Note: The application factory pattern allows us to create
 multiple app instances with different configurations (dev, test, prod).

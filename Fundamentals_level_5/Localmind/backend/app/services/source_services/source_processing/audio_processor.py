@@ -13,7 +13,8 @@ from typing import Dict, Any
 
 from app.utils.path_utils import get_processed_dir, get_chunks_dir
 from app.utils.embedding_utils import needs_embedding
-from app.services.ai_services import embedding_service, summary_service
+from app.services.ai_services.embedding_service import embedding_service
+from app.services.ai_services.summary_service import summary_service
 
 
 def process_audio(
