@@ -19,6 +19,7 @@ import { ComponentListItem } from './components';
 import { VideoListItem } from './video';
 import { FlowDiagramListItem } from './flow-diagrams';
 import { WireframeListItem } from './wireframes';
+import { PresentationListItem } from './presentations';
 import type {
   AudioJob,
   AdJob,
@@ -32,7 +33,8 @@ import type {
   ComponentJob,
   VideoJob,
   FlowDiagramJob,
-  WireframeJob
+  WireframeJob,
+  PresentationJob
 } from '@/lib/api/studio';
 import type { StudioSignal } from './types';
 
@@ -95,6 +97,11 @@ interface StudioGeneratedContentProps {
   // Wireframe
   savedWireframeJobs: WireframeJob[];
   setViewingWireframeJob: (job: WireframeJob) => void;
+
+  // Presentation
+  savedPresentationJobs: PresentationJob[];
+  setViewingPresentationJob: (job: PresentationJob) => void;
+  downloadPresentation: (jobId: string) => void;
 }
 
 export const StudioGeneratedContent: React.FC<StudioGeneratedContentProps> = ({
@@ -130,6 +137,9 @@ export const StudioGeneratedContent: React.FC<StudioGeneratedContentProps> = ({
   setViewingFlowDiagramJob,
   savedWireframeJobs,
   setViewingWireframeJob,
+  savedPresentationJobs,
+  setViewingPresentationJob,
+  downloadPresentation,
 }) => {
   if (signals.length === 0) {
     return (
@@ -316,6 +326,23 @@ export const StudioGeneratedContent: React.FC<StudioGeneratedContentProps> = ({
             key={job.id}
             job={job}
             onClick={() => setViewingWireframeJob(job)}
+          />
+        ))}
+
+      {/* Saved Presentation Jobs - filter by source_id from signals */}
+      {savedPresentationJobs
+        .filter((job) =>
+          signals.some((s) => s.sources.some((src) => src.source_id === job.source_id))
+        )
+        .map((job) => (
+          <PresentationListItem
+            key={job.id}
+            job={job}
+            onOpen={() => setViewingPresentationJob(job)}
+            onDownload={(e) => {
+              e.stopPropagation();
+              downloadPresentation(job.id);
+            }}
           />
         ))}
     </>

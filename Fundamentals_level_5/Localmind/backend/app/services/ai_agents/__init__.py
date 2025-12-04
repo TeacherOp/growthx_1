@@ -22,6 +22,12 @@ Agents:
     update_file_lines, insert_code, finalize_website
   - Orchestrates planning → image generation → iterative file creation/editing
 
+- presentation_agent_service: Generates PowerPoint presentations
+  - Uses agentic loop with MAX_ITERATIONS limit (40)
+  - Tools: plan_presentation, create_base_styles, create_slide, finalize_presentation
+  - Orchestrates planning → styling → slide creation → PPTX export
+  - Export pipeline: HTML slides → Playwright screenshots → python-pptx
+
 Key patterns:
 - Agent loop with iteration limit
 - Tool executor for routing tool calls
@@ -31,5 +37,11 @@ Key patterns:
 from app.services.ai_agents.web_agent_service import web_agent_service
 from app.services.ai_agents.email_agent_service import email_agent_service
 from app.services.ai_agents.website_agent_service import website_agent_service
+from app.services.ai_agents.presentation_agent_service import presentation_agent_service
 
-__all__ = ["web_agent_service", "email_agent_service", "website_agent_service"]
+__all__ = [
+    "web_agent_service",
+    "email_agent_service",
+    "website_agent_service",
+    "presentation_agent_service"
+]

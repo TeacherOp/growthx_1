@@ -18,7 +18,8 @@ import { ComponentProgressIndicator } from './components';
 import { VideoProgressIndicator } from './video';
 import { FlowDiagramProgressIndicator } from './flow-diagrams';
 import { WireframeProgressIndicator } from './wireframes';
-import type { AudioJob, AdJob, FlashCardJob, MindMapJob, WebsiteJob, QuizJob, SocialPostJob, InfographicJob, EmailJob, ComponentJob, VideoJob, FlowDiagramJob, WireframeJob } from '@/lib/api/studio';
+import { PresentationProgressIndicator } from './presentations';
+import type { AudioJob, AdJob, FlashCardJob, MindMapJob, WebsiteJob, QuizJob, SocialPostJob, InfographicJob, EmailJob, ComponentJob, VideoJob, FlowDiagramJob, WireframeJob, PresentationJob } from '@/lib/api/studio';
 
 interface StudioProgressIndicatorsProps {
   // Audio
@@ -72,6 +73,10 @@ interface StudioProgressIndicatorsProps {
   // Wireframe
   isGeneratingWireframe: boolean;
   currentWireframeJob: WireframeJob | null;
+
+  // Presentation
+  isGeneratingPresentation: boolean;
+  currentPresentationJob: PresentationJob | null;
 }
 
 export const StudioProgressIndicators: React.FC<StudioProgressIndicatorsProps> = ({
@@ -101,6 +106,8 @@ export const StudioProgressIndicators: React.FC<StudioProgressIndicatorsProps> =
   currentFlowDiagramJob,
   isGeneratingWireframe,
   currentWireframeJob,
+  isGeneratingPresentation,
+  currentPresentationJob,
 }) => {
   return (
     <>
@@ -167,6 +174,11 @@ export const StudioProgressIndicators: React.FC<StudioProgressIndicatorsProps> =
       {/* Wireframe Generation Progress */}
       {isGeneratingWireframe && (
         <WireframeProgressIndicator currentWireframeJob={currentWireframeJob} />
+      )}
+
+      {/* Presentation Generation Progress */}
+      {isGeneratingPresentation && (
+        <PresentationProgressIndicator currentPresentationJob={currentPresentationJob} />
       )}
     </>
   );

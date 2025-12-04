@@ -17,6 +17,7 @@ Executors:
 - studio_audio_executor: Handles audio overview tools (read_source_content, write_script_section)
 - email_agent_executor: Handles email template generation (background task)
 - website_agent_executor: Handles website generation (background task)
+- presentation_agent_executor: Handles presentation generation (background task)
 """
 from app.services.tool_executors.memory_executor import memory_executor
 from app.services.tool_executors.source_search_executor import source_search_executor
@@ -27,6 +28,7 @@ from app.services.tool_executors.studio_signal_executor import studio_signal_exe
 from app.services.tool_executors.studio_audio_executor import studio_audio_executor
 from app.services.tool_executors.email_agent_executor import email_agent_executor
 from app.services.tool_executors.website_agent_executor import website_agent_executor
+from app.services.tool_executors.presentation_agent_executor import presentation_agent_executor
 
 __all__ = [
     "memory_executor",
@@ -37,5 +39,6 @@ __all__ = [
     "studio_signal_executor",
     "studio_audio_executor",
     "email_agent_executor",
-    "website_agent_executor"
+    "website_agent_executor",
+    "presentation_agent_executor"
 ]
