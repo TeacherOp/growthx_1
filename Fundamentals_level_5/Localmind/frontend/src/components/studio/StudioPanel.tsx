@@ -24,6 +24,7 @@ import { useComponentGeneration } from './components';
 import { useVideoGeneration } from './video';
 import { useFlowDiagramGeneration } from './flow-diagrams';
 import { useWireframeGeneration } from './wireframes';
+import { usePresentationGeneration } from './presentations';
 import { StudioCollapsedView } from './StudioCollapsedView';
 import { StudioSignalPicker } from './StudioSignalPicker';
 import { StudioProgressIndicators } from './StudioProgressIndicators';
@@ -200,6 +201,18 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
     handleWireframeGeneration,
   } = useWireframeGeneration(projectId);
 
+  // Presentation generation hook
+  const {
+    savedPresentationJobs,
+    currentPresentationJob,
+    isGeneratingPresentation,
+    viewingPresentationJob,
+    setViewingPresentationJob,
+    loadSavedJobs: loadSavedPresentationJobs,
+    handlePresentationGeneration,
+    downloadPresentation,
+  } = usePresentationGeneration(projectId);
+
   // Load saved jobs on mount
   useEffect(() => {
     const loadSavedJobs = async () => {
@@ -242,6 +255,9 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
 
         // Load saved wireframe jobs
         await loadSavedWireframeJobs();
+
+        // Load saved presentation jobs
+        await loadSavedPresentationJobs();
 
       } catch (error) {
         console.error('Failed to load saved jobs:', error);
@@ -303,6 +319,8 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
       await handleFlowDiagramGeneration(signal);
     } else if (optionId === 'wireframes') {
       await handleWireframeGeneration(signal);
+    } else if (optionId === 'presentation') {
+      await handlePresentationGeneration(signal);
     } else {
       showSuccess(`${getItemTitle(optionId)} generation is coming soon!`);
     }
@@ -389,6 +407,8 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
               currentFlowDiagramJob={currentFlowDiagramJob}
               isGeneratingWireframe={isGeneratingWireframe}
               currentWireframeJob={currentWireframeJob}
+              isGeneratingPresentation={isGeneratingPresentation}
+              currentPresentationJob={currentPresentationJob}
             />
 
             {/* Generated Content List */}
@@ -425,6 +445,9 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
               setViewingFlowDiagramJob={setViewingFlowDiagramJob}
               savedWireframeJobs={savedWireframeJobs}
               setViewingWireframeJob={setViewingWireframeJob}
+              savedPresentationJobs={savedPresentationJobs}
+              setViewingPresentationJob={setViewingPresentationJob}
+              downloadPresentation={downloadPresentation}
             />
           </div>
         </ScrollArea>
@@ -469,6 +492,9 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
         setViewingFlowDiagramJob={setViewingFlowDiagramJob}
         viewingWireframeJob={viewingWireframeJob}
         setViewingWireframeJob={setViewingWireframeJob}
+        viewingPresentationJob={viewingPresentationJob}
+        setViewingPresentationJob={setViewingPresentationJob}
+        downloadPresentation={downloadPresentation}
       />
     </div>
   );

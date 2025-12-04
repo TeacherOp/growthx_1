@@ -1,0 +1,46 @@
+{
+  "name": "finalize_presentation",
+  "description": "TERMINATION TOOL: Call this when all slides have been created and the presentation is complete. This signals that presentation generation is finished. base-styles.css and all slides must be created before calling this. Do not call until everything is production-ready.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "summary": {
+        "type": "string",
+        "description": "Brief summary of the completed presentation including topic, number of slides, and key sections covered"
+      },
+      "total_slides": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 20,
+        "description": "Total number of slides created"
+      },
+      "slides_created": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "filename": {
+              "type": "string",
+              "description": "The slide filename (e.g., 'slide_01.html')"
+            },
+            "title": {
+              "type": "string",
+              "description": "The slide title/heading"
+            },
+            "type": {
+              "type": "string",
+              "description": "The slide layout type"
+            }
+          },
+          "required": ["filename", "title", "type"]
+        },
+        "description": "List of all slides created with their titles and types"
+      },
+      "design_notes": {
+        "type": "string",
+        "description": "Notes about the design choices made (colors, fonts, style)"
+      }
+    },
+    "required": ["summary", "total_slides", "slides_created"]
+  }
+}

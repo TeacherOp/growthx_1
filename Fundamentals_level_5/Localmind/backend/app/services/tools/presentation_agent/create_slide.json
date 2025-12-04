@@ -1,0 +1,25 @@
+{
+  "name": "create_slide",
+  "description": "Create an individual slide as an HTML file. Each slide must use the exact HTML structure with Tailwind CDN, link to base-styles.css, and fit all content within the safebox area (1920x1080 viewport with p-20 padding = ~1760x920 usable area). Use only Tailwind classes and brand utility classes from base-styles.css. NO inline styles, NO hex colors in HTML.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "slide_number": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 20,
+        "description": "The slide number (1-20). Will create file named slide_01.html, slide_02.html, etc."
+      },
+      "slide_type": {
+        "type": "string",
+        "enum": ["title", "section_divider", "bullet_points", "two_column", "quote", "statistics", "image_focus", "comparison", "timeline", "closing"],
+        "description": "The layout type for this slide"
+      },
+      "content": {
+        "type": "string",
+        "description": "Complete HTML content for the slide. MUST include: 1) Full <!DOCTYPE html> structure, 2) Tailwind CDN and Font Awesome in head, 3) Link to base-styles.css, 4) Body with 'm-0 p-0 w-screen h-screen overflow-hidden', 5) Inner div with 'w-full h-full overflow-hidden flex items-center justify-center p-20', 6) All slide content inside the inner div using only Tailwind + brand utility classes."
+      }
+    },
+    "required": ["slide_number", "slide_type", "content"]
+  }
+}

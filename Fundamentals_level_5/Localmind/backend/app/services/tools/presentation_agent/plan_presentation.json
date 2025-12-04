@@ -1,0 +1,91 @@
+{
+  "name": "plan_presentation",
+  "description": "Plan the complete presentation structure including slides, content distribution, and design system. This is the first step - analyze the source content and create a comprehensive plan before creating any files.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "presentation_title": {
+        "type": "string",
+        "description": "The main title of the presentation"
+      },
+      "presentation_type": {
+        "type": "string",
+        "enum": ["business", "educational", "pitch", "report", "training", "marketing", "technical"],
+        "description": "The type/purpose of the presentation"
+      },
+      "target_audience": {
+        "type": "string",
+        "description": "Brief description of the intended audience (e.g., 'executives', 'developers', 'students')"
+      },
+      "slides": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "slide_number": {
+              "type": "integer",
+              "description": "Sequential slide number (1, 2, 3, ...)"
+            },
+            "slide_type": {
+              "type": "string",
+              "enum": ["title", "section_divider", "bullet_points", "two_column", "quote", "statistics", "image_focus", "comparison", "timeline", "closing"],
+              "description": "The layout type for this slide"
+            },
+            "title": {
+              "type": "string",
+              "description": "The slide title/heading"
+            },
+            "key_points": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 6,
+              "description": "Main points to cover on this slide (max 6)"
+            }
+          },
+          "required": ["slide_number", "slide_type", "title"]
+        },
+        "minItems": 3,
+        "maxItems": 20,
+        "description": "Array of slides to create (3-20 slides typical)"
+      },
+      "design_system": {
+        "type": "object",
+        "properties": {
+          "primary_color": {
+            "type": "string",
+            "description": "Primary brand color (hex code, e.g., '#2563eb')"
+          },
+          "secondary_color": {
+            "type": "string",
+            "description": "Secondary color (hex code)"
+          },
+          "accent_color": {
+            "type": "string",
+            "description": "Accent color for highlights and CTAs (hex code)"
+          },
+          "background_color": {
+            "type": "string",
+            "description": "Slide background color (hex code, e.g., '#ffffff')"
+          },
+          "text_color": {
+            "type": "string",
+            "description": "Primary text color (hex code, e.g., '#1f2937')"
+          },
+          "font_family": {
+            "type": "string",
+            "description": "Google Font family name (e.g., 'Inter', 'Poppins', 'Montserrat')"
+          }
+        },
+        "required": ["primary_color", "secondary_color", "text_color", "background_color"],
+        "description": "Color scheme and typography"
+      },
+      "style_notes": {
+        "type": "string",
+        "description": "Additional notes about style, tone, or specific requirements from the user"
+      }
+    },
+    "required": ["presentation_title", "presentation_type", "slides", "design_system"]
+  }
+}

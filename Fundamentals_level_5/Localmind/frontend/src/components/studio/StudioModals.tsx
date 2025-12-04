@@ -17,6 +17,7 @@ import { ComponentViewerModal } from './components';
 import { VideoViewerModal } from './video';
 import { FlowDiagramViewerModal } from './flow-diagrams';
 import { WireframeViewerModal } from './wireframes';
+import { PresentationViewerModal } from './presentations';
 import type {
   AdJob,
   FlashCardJob,
@@ -29,7 +30,8 @@ import type {
   ComponentJob,
   VideoJob,
   FlowDiagramJob,
-  WireframeJob
+  WireframeJob,
+  PresentationJob
 } from '@/lib/api/studio';
 
 interface StudioModalsProps {
@@ -83,6 +85,11 @@ interface StudioModalsProps {
   // Wireframe
   viewingWireframeJob: WireframeJob | null;
   setViewingWireframeJob: (job: WireframeJob | null) => void;
+
+  // Presentation
+  viewingPresentationJob: PresentationJob | null;
+  setViewingPresentationJob: (job: PresentationJob | null) => void;
+  downloadPresentation: (jobId: string) => void;
 }
 
 export const StudioModals: React.FC<StudioModalsProps> = ({
@@ -112,6 +119,9 @@ export const StudioModals: React.FC<StudioModalsProps> = ({
   setViewingFlowDiagramJob,
   viewingWireframeJob,
   setViewingWireframeJob,
+  viewingPresentationJob,
+  setViewingPresentationJob,
+  downloadPresentation,
 }) => {
   return (
     <>
@@ -194,6 +204,14 @@ export const StudioModals: React.FC<StudioModalsProps> = ({
       <WireframeViewerModal
         job={viewingWireframeJob}
         onClose={() => setViewingWireframeJob(null)}
+      />
+
+      {/* Presentation Viewer Modal */}
+      <PresentationViewerModal
+        projectId={projectId}
+        viewingPresentationJob={viewingPresentationJob}
+        onClose={() => setViewingPresentationJob(null)}
+        onDownloadPptx={downloadPresentation}
       />
     </>
   );

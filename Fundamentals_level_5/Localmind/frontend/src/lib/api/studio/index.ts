@@ -49,3 +49,4 @@ export * from './videos';
 export * from './websites';
 export * from './flow-diagrams';
 export * from './wireframes';
+export * from './presentations';

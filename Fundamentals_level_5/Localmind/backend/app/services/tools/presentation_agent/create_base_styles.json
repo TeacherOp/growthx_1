@@ -1,0 +1,14 @@
+{
+  "name": "create_base_styles",
+  "description": "Create the base-styles.css file with brand colors as CSS variables and utility classes. This MUST be created BEFORE any slides. Contains only brand identity - no layout styles.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "content": {
+        "type": "string",
+        "description": "Complete CSS content for base-styles.css. Must include: 1) Google Font import, 2) CSS variables in :root for all brand colors (--brand-primary, --brand-secondary, --brand-accent, --brand-text, --brand-bg, --brand-light), 3) Body reset with font-family, 4) Utility classes that reference the variables (.text-brand-primary, .bg-brand-primary, etc.). NO layout classes - use Tailwind for that."
+      }
+    },
+    "required": ["content"]
+  }
+}
