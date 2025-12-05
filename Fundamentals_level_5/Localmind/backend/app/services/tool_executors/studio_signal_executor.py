@@ -73,13 +73,34 @@ class StudioSignalExecutor:
                 print(f"Invalid studio_item: {studio_item}, skipping")
                 continue
 
-            valid_signals.append({
+            # Build base signal
+            valid_signal = {
                 "id": str(uuid.uuid4()),
                 "studio_item": studio_item,
                 "direction": signal.get("direction", ""),
                 "sources": signal.get("sources", []),
                 "created_at": datetime.now().isoformat()
-            })
+            }
+
+            # Add blog-specific fields if present
+            if studio_item == "blog":
+                if signal.get("target_keyword"):
+                    valid_signal["target_keyword"] = signal.get("target_keyword")
+                if signal.get("blog_type"):
+                    valid_signal["blog_type"] = signal.get("blog_type")
+
+            # Add business_report-specific fields if present
+            if studio_item == "business_report":
+                if signal.get("report_type"):
+                    valid_signal["report_type"] = signal.get("report_type")
+                if signal.get("csv_source_ids"):
+                    valid_signal["csv_source_ids"] = signal.get("csv_source_ids")
+                if signal.get("context_source_ids"):
+                    valid_signal["context_source_ids"] = signal.get("context_source_ids")
+                if signal.get("focus_areas"):
+                    valid_signal["focus_areas"] = signal.get("focus_areas")
+
+            valid_signals.append(valid_signal)
 
         if not valid_signals:
             return {

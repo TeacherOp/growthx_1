@@ -1,0 +1,32 @@
+{
+  "name": "generate_blog_image",
+  "description": "Generate an image for use in the blog post. Use this for hero images, concept illustrations, or section visuals. You can call this multiple times for different sections (recommended: 2-4 images per post).",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "purpose": {
+        "type": "string",
+        "description": "The purpose of this image (e.g., 'hero_image', 'section_illustration', 'concept_visual', 'infographic_style')"
+      },
+      "section_heading": {
+        "type": "string",
+        "description": "The section heading this image relates to (from your outline)"
+      },
+      "image_prompt": {
+        "type": "string",
+        "description": "Detailed image generation prompt describing the visual style, subject, composition, and mood. Be specific and descriptive for best results."
+      },
+      "alt_text": {
+        "type": "string",
+        "description": "Accessibility-friendly alt text describing the image for screen readers"
+      },
+      "aspect_ratio": {
+        "type": "string",
+        "enum": ["1:1", "16:9", "4:3", "3:2", "21:9"],
+        "description": "Aspect ratio for the image. 16:9 for hero images, 4:3 for inline content images, 1:1 for square visuals, 21:9 for ultra-wide banners",
+        "default": "16:9"
+      }
+    },
+    "required": ["purpose", "section_heading", "image_prompt", "alt_text", "aspect_ratio"]
+  }
+}

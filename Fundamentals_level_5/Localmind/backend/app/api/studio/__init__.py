@@ -31,6 +31,8 @@ Content Types Generated:
 - Video: AI-generated video clips (Google Veo)
 - Flow Diagram: Mermaid diagrams for processes/relationships (Claude)
 - Wireframe: UI/UX wireframes with Excalidraw (Claude)
+- PRD: Product Requirements Documents in Markdown (Claude)
+- Marketing Strategy: Marketing strategy documents in Markdown (Claude)
 
 Routes:
 - POST /projects/<id>/studio/<type>           - Start generation
@@ -58,6 +60,10 @@ from app.api.studio import videos  # noqa: F401
 from app.api.studio import flow_diagrams  # noqa: F401
 from app.api.studio import wireframes  # noqa: F401
 from app.api.studio import presentations  # noqa: F401
+from app.api.studio import prds  # noqa: F401
+from app.api.studio import marketing_strategies  # noqa: F401
+from app.api.studio import blogs  # noqa: F401
+from app.api.studio import business_reports  # noqa: F401
 
 # Educational Note: The noqa comments tell flake8 to ignore the
 # "imported but unused" warning. We import to register routes,

@@ -1,0 +1,19 @@
+{
+  "name": "write_business_report",
+  "description": "Write the final business report in Markdown format. This is the TERMINATION tool - call it when ready to produce the final report.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "markdown_content": {
+        "type": "string",
+        "description": "REQUIRED: The complete business report in Markdown format (500-1000 words). Include:\n- Title and key findings\n- Chart references: ![Description](chart_filename.png)\n- Data tables if relevant\n- Recommendations"
+      },
+      "charts_included": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Chart filenames referenced in the report"
+      }
+    },
+    "required": ["markdown_content"]
+  }
+}

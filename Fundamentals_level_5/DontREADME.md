@@ -1,57 +1,191 @@
 # NoobBook
 
-**NotebookLM, but make it noob-friendly.**
-
-> **Codebase Cleanup In-progress** - Live demo sessions completed. Code cleanup in progress. Do not use current code - its incomplete - wait for commit - "NoobBook now Live"
+An educational NotebookLM clone built to teach AI/LLM integration patterns.
 
 ---
 
 ## What is NoobBook?
-Gugal's Dream
-NoobBook is an educational project designed to teach **all possible AI/LLM API use cases** through building a full-featured NotebookLM clone. Built by noobs, for noobs. Every service, every file demonstrates a real AI/LLM concept - not generic web development patterns.
-Not a single line of code write by hand only enter enter because tab is for developers, we love ClaudeCode Pro Max
-And you can't even code this, buddy forget VibeCode
 
-## What You'll Learn
+LocalMind is a learning project that demonstrates real-world AI/LLM use cases. Every service and file demonstrates an AI concept - not generic web development patterns.
 
-| Concept | Implementation |
-|---------|----------------|
-| **LLM API Integration** | Claude, OpenAI, Gemini API patterns |
-| **Prompt Engineering** | System prompts, tool definitions, JSON configs |
-| **Tool Use & Agents** | Agentic loops, tool execution, multi-step reasoning |
-| **RAG Pipeline** | Embeddings, vector search, chunk-based citations |
-| **Multi-Modal AI** | Vision (PDF/Image), Audio transcription, Text-to-Speech |
-| **Real-time AI** | WebSocket streaming, background task processing |
+**What you'll learn:**
+- LLM API integration (Claude, OpenAI, Gemini)
+- Prompt engineering and tool definitions
+- Agentic loops and multi-step reasoning
+- RAG pipeline with embeddings and citations
+- Multi-modal AI (vision, audio, text-to-speech)
+- Background task processing
 
-## What We Intentionally Skip
-
-- User authentication (you can't login on my http://localhost:5173/ now we understand that joke ok )
-- Database systems (JSON go brrr)
-- Payment/billing (we're broke)
-- Production security (YOLO)
-- Horizontal scaling (what even is that)
-
-**Why?** Because we're here to learn LLMs, not to build the next startup.
+**What we intentionally skip:** Authentication, databases, payments, production security. This is purely for learning LLMs.
 
 ---
 
-## Application Overview
+## How It Works
+
+LocalMind has 4 main concepts:
+
+### 1. Projects
+
+Everything is organized into projects. Each project has its own sources, chats, and studio outputs. Projects are stored as JSON files in `data/projects/`.
+
+### 2. Sources (Left Panel)
+
+Upload documents and the system processes them for AI understanding:
+
+| Source Type | Processing |
+|-------------|------------|
+| PDF | AI vision extracts text page by page |
+| DOCX | Python extraction |
+| PPTX | Convert to PDF, then vision extraction |
+| Images | AI vision describes content |
+| Audio | ElevenLabs transcription |
+| YouTube | Transcript API |
+| URLs | Web agent fetches and extracts content |
+| Text | Direct input |
+
+**Processing Pipeline:**
+```
+Upload -> Raw file saved -> AI extracts text -> Chunked for RAG -> Embedded in Pinecone
+```
+
+Sources with 2500+ tokens get embeddings for semantic search. Smaller sources are searched directly.
+
+### 3. Chat (Center Panel)
+
+RAG-powered Q&A with your sources:
 
 ```
-┌───────────────────┬─────────────────────────────────────┬────────────────────────────┐
-│  SOURCES          │  CHAT                               │  STUDIO                    │
-│                   │                                     │                            │
-│  Throw your       │  Ask dumb questions,                │  Generate stuff from       │
-│  docs here        │  get smart answers                  │  your sources              │
-│                   │                                     │                            │
-│  - PDF            │  AI searches your sources           │  - Audio Overview          │
-│  - DOCX/PPTX      │  and cites them (fancy!)            │  - Ad Creatives            │
-│  - Images         │                                     │  - Video Generation        │
-│  - Audio          │  Memory system remembers            │  - Flash Cards             │
-│  - YouTube        │  you (creepy but useful)            │  - Mind Maps               │
-│  - URLs           │                                     │  - Quiz, Social, Emails... │
-└───────────────────┴─────────────────────────────────────┴────────────────────────────┘
+User question
+    -> AI searches relevant sources (hybrid: keyword + semantic)
+    -> AI generates response with citations
+    -> Citations link to specific chunks
 ```
+
+**Key features:**
+- Chunk-based citations `[[cite:source_chunk_id]]`
+- Memory system (user preferences + project context)
+- Voice input via ElevenLabs WebSocket
+- Conversation history per chat
+
+### 4. Studio (Right Panel)
+
+Generate content from your sources using AI agents:
+
+| Category | Studio Items |
+|----------|--------------|
+| **Audio/Video** | Audio Overview, Video Generation |
+| **Learning** | Flash Cards, Mind Maps, Quizzes |
+| **Documents** | PRD, Blog Posts, Business Reports, Presentations |
+| **Marketing** | Ad Creatives, Social Posts, Email Templates, Marketing Strategy |
+| **Design** | Websites, Components, Wireframes, Flow Diagrams, Infographics |
+
+**How Studio works:**
+1. Main chat AI detects when to trigger studio generation
+2. Sends a "signal" with context (source_ids, direction, etc.)
+3. Specialized agent generates the content
+4. Output saved and displayed in Studio panel
+
+---
+
+## Architecture Overview
+
+```
+Frontend (React + Vite)
+    |
+    v
+Backend API (Flask)
+    |
+    ├── Source Processing (upload, extract, chunk, embed)
+    ├── Chat Service (RAG search, Claude API, citations)
+    ├── Studio Services (content generation agents)
+    └── Integrations (Claude, OpenAI, Pinecone, ElevenLabs, Gemini)
+    |
+    v
+Data Storage (JSON files in /data)
+```
+
+**AI Services Used:**
+- **Claude** - Main LLM for chat, agents, content generation
+- **OpenAI** - Embeddings for vector search
+- **Pinecone** - Vector database for RAG
+- **ElevenLabs** - Text-to-speech and transcription
+- **Gemini** - Image generation (ads, infographics)
+- **Google Veo** - Video generation
+
+---
+
+## Running the Project
+
+### Prerequisites
+
+Install these system dependencies:
+
+```bash
+# macOS
+brew install libreoffice
+brew install ffmpeg
+npx playwright install
+
+# Ubuntu/Debian
+sudo apt install libreoffice ffmpeg
+npx playwright install
+
+# Windows
+# Download and install LibreOffice, FFmpeg manually
+npx playwright install
+```
+
+### Backend Setup
+
+```bash
+cd Localmind/backend
+
+# Create virtual environment
+python -m venv venv
+
+# Activate it
+source venv/bin/activate  # macOS/Linux
+# or
+venv\Scripts\activate     # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run backend
+python run.py
+```
+
+### Frontend Setup
+
+```bash
+cd Localmind/frontend
+
+# Install dependencies
+npm install
+
+# Run frontend
+npm run dev
+```
+
+### API Keys
+
+API keys are configured directly from the **Dashboard -> Project Settings** in the app.
+
+Required keys:
+- `ANTHROPIC_API_KEY` - Claude API
+- `OPENAI_API_KEY` - Embeddings
+- `PINECONE_API_KEY` + `PINECONE_INDEX_NAME` - Vector database
+
+Optional keys (for extra features):
+- `ELEVENLABS_API_KEY` - Audio overview, voice input
+- `NANO_BANANA_API_KEY` - Gemini image generation
+- `VEO_API_KEY` - Video generation
+- `TAVILY_API_KEY` - Web search fallback
+- `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` - Google Drive import
+
+### Access the App
+
+Open http://localhost:5173
 
 ---
 
@@ -59,151 +193,19 @@ And you can't even code this, buddy forget VibeCode
 
 | Layer | Technology |
 |-------|------------|
-| **Frontend** | React + Vite + TypeScript |
-| **UI** | shadcn/ui + Tailwind CSS |
-| **Icons** | Phosphor Icons |
-| **Backend** | Python Flask |
-| **AI/LLM** | Claude (Anthropic), OpenAI Embeddings |
-| **Vector DB** | Pinecone |
-| **Audio** | ElevenLabs (TTS + Transcription) |
-| **Image Gen** | Google Gemini |
-| **Video Gen** | Google Veo 2.0 (10-20 min wait, worth it) |
-| **Storage** | JSON files (databases are for pros) |
+| Frontend | React + Vite + TypeScript |
+| UI | shadcn/ui + Tailwind CSS |
+| Icons | Phosphor Icons |
+| Backend | Python Flask |
+| AI/LLM | Claude (Anthropic), OpenAI Embeddings |
+| Vector DB | Pinecone |
+| Audio | ElevenLabs (TTS + Transcription) |
+| Image Gen | Google Gemini |
+| Video Gen | Google Veo 2.0 |
+| Storage | JSON files |
 
 ---
-
-## Quick Start (for fellow noobs)
-
-### Prerequisites
-
-- Python 3.10+ (yes, you need Python)
-- Node.js 18+ (JavaScript things)
-- API Keys (the expensive part)
-
-### 1. Clone & Install
-
-```bash
-# Clone it
-git clone https://github.com/anthropics/noobbooklm.git
-cd noobbooklm
-
-# Backend stuff
-cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-# Frontend stuff
-cd ../frontend
-npm install
-```
-
-### 2. API Keys (the pay-to-play part)
-
-Create `backend/.env`:
-
-```env
-# Required (sorry, not free)
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-...
-PINECONE_API_KEY=...
-PINECONE_INDEX_NAME=noobbooklm
-
-# Optional (for extra features)
-ELEVENLABS_API_KEY=...          # Audio overview, voice input
-NANO_BANANA_API_KEY=...         # Ad creatives (Gemini)
-VEO_API_KEY=...                 # Video generation (make AI movies!)
-TAVILY_API_KEY=...              # Web search
-GOOGLE_CLIENT_ID=...            # Google Drive import
-GOOGLE_CLIENT_SECRET=...
-
-# Rate limiting tier (1-4, pick your wallet size)
-ANTHROPIC_TIER=2
-```
-
-### 3. Run It
-
-```bash
-# Terminal 1: Backend
-cd backend
-source venv/bin/activate
-python run.py
-
-# Terminal 2: Frontend
-cd frontend
-npm run dev
-```
-
-Open http://localhost:5173 and prepare to be underwhelmed.
-
----
-
-## Key AI Patterns (the actual learning part)
-
-### 1. RAG (Retrieval Augmented Generation)
-- Chunk documents into bite-sized pieces
-- Turn text into numbers (embeddings)
-- Find relevant chunks when asked
-- Make AI cite its sources like a good student
-
-### 2. Tool Use / Function Calling
-- Tell AI what tools exist
-- AI decides when to use them
-- We run the tools, send results back
-- Repeat until AI is satisfied
-
-### 3. Agentic Loops
-- AI thinks, acts, observes, repeats
-- Like a toddler learning, but faster
-
-### 4. Multi-Modal Processing
-- PDFs: Look at them with AI eyes
-- Audio: Turn speech into text
-- Images: Describe what's in them
-- YouTube: Steal their transcripts
-
-### 5. Memory System
-- Remember user preferences
-- Remember project context
-- Merge memories with AI (fancy)
-
-### 6. Two-Step AI Pipelines
-- Claude reads your docs and crafts a movie script (well, a 2-4 sentence prompt)
-- Google Veo turns it into an actual 5-8 second video
-- Wait 10-20 minutes (go touch grass)
-- Get a sick video you didn't make yourself
-- Pretend you're Steven Spielberg
-
-**Real talk**: Video generation uses a dual-AI approach:
-1. Claude analyzes your source and generates an optimized prompt with cinematography details
-2. Google Veo 2.0 uses that prompt to generate actual video (aspect ratio, duration, lighting, the works)
-3. Background task handles the long wait so you can keep working
-4. Download MP4s when ready
-
-This pattern shows how to chain different AI services for complex outputs. Also shows how to handle *really* long-running tasks (because video generation is S L O W).
-
----
-
-## Learning Sessions
-
-This masterpiece was built across live coding sessions:
-
-1. **Session 1**: API Basics - "Hello Claude"
-2. **Session 2**: Chat & Agents - "Claude does things"
-3. **Session 3**: The Full Thing - "It actually works?!"
-
----
-
-## Contributing
-
-Found a bug? That's a feature.
-
-But seriously, contributions welcome. We're all noobs here.
 
 ## License
 
-MIT (do whatever you want, we don't care)
-
----
-
-**Built with Claude Code by noobs, for noobs.**
+Only for learning purposes, if you plan to commercialise a copy or ideas from the project best of luck, enjoy

@@ -25,6 +25,10 @@ import { useVideoGeneration } from './video';
 import { useFlowDiagramGeneration } from './flow-diagrams';
 import { useWireframeGeneration } from './wireframes';
 import { usePresentationGeneration } from './presentations';
+import { usePRDGeneration } from './prd';
+import { useMarketingStrategyGeneration } from './marketingStrategy';
+import { useBlogGeneration } from './blog';
+import { useBusinessReportGeneration } from './businessReport';
 import { StudioCollapsedView } from './StudioCollapsedView';
 import { StudioSignalPicker } from './StudioSignalPicker';
 import { StudioProgressIndicators } from './StudioProgressIndicators';
@@ -213,6 +217,54 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
     downloadPresentation,
   } = usePresentationGeneration(projectId);
 
+  // PRD generation hook
+  const {
+    savedPRDJobs,
+    currentPRDJob,
+    isGeneratingPRD,
+    viewingPRDJob,
+    setViewingPRDJob,
+    loadSavedJobs: loadSavedPRDJobs,
+    handlePRDGeneration,
+    downloadPRD,
+  } = usePRDGeneration(projectId);
+
+  // Marketing Strategy generation hook
+  const {
+    savedMarketingStrategyJobs,
+    currentMarketingStrategyJob,
+    isGeneratingMarketingStrategy,
+    viewingMarketingStrategyJob,
+    setViewingMarketingStrategyJob,
+    loadSavedJobs: loadSavedMarketingStrategyJobs,
+    handleMarketingStrategyGeneration,
+    downloadMarketingStrategy,
+  } = useMarketingStrategyGeneration(projectId);
+
+  // Blog generation hook
+  const {
+    savedBlogJobs,
+    currentBlogJob,
+    isGeneratingBlog,
+    viewingBlogJob,
+    setViewingBlogJob,
+    loadSavedJobs: loadSavedBlogJobs,
+    handleBlogGeneration,
+    downloadBlog,
+  } = useBlogGeneration(projectId);
+
+  // Business Report generation hook
+  const {
+    savedBusinessReportJobs,
+    currentBusinessReportJob,
+    isGeneratingBusinessReport,
+    viewingBusinessReportJob,
+    setViewingBusinessReportJob,
+    loadSavedJobs: loadSavedBusinessReportJobs,
+    handleBusinessReportGeneration,
+    downloadBusinessReport,
+  } = useBusinessReportGeneration(projectId);
+
   // Load saved jobs on mount
   useEffect(() => {
     const loadSavedJobs = async () => {
@@ -258,6 +310,18 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
 
         // Load saved presentation jobs
         await loadSavedPresentationJobs();
+
+        // Load saved PRD jobs
+        await loadSavedPRDJobs();
+
+        // Load saved marketing strategy jobs
+        await loadSavedMarketingStrategyJobs();
+
+        // Load saved blog jobs
+        await loadSavedBlogJobs();
+
+        // Load saved business report jobs
+        await loadSavedBusinessReportJobs();
 
       } catch (error) {
         console.error('Failed to load saved jobs:', error);
@@ -321,6 +385,14 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
       await handleWireframeGeneration(signal);
     } else if (optionId === 'presentation') {
       await handlePresentationGeneration(signal);
+    } else if (optionId === 'prd') {
+      await handlePRDGeneration(signal);
+    } else if (optionId === 'marketing_strategy') {
+      await handleMarketingStrategyGeneration(signal);
+    } else if (optionId === 'blog') {
+      await handleBlogGeneration(signal);
+    } else if (optionId === 'business_report') {
+      await handleBusinessReportGeneration(signal);
     } else {
       showSuccess(`${getItemTitle(optionId)} generation is coming soon!`);
     }
@@ -409,6 +481,14 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
               currentWireframeJob={currentWireframeJob}
               isGeneratingPresentation={isGeneratingPresentation}
               currentPresentationJob={currentPresentationJob}
+              isGeneratingPRD={isGeneratingPRD}
+              currentPRDJob={currentPRDJob}
+              isGeneratingMarketingStrategy={isGeneratingMarketingStrategy}
+              currentMarketingStrategyJob={currentMarketingStrategyJob}
+              isGeneratingBlog={isGeneratingBlog}
+              currentBlogJob={currentBlogJob}
+              isGeneratingBusinessReport={isGeneratingBusinessReport}
+              currentBusinessReportJob={currentBusinessReportJob}
             />
 
             {/* Generated Content List */}
@@ -448,6 +528,18 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
               savedPresentationJobs={savedPresentationJobs}
               setViewingPresentationJob={setViewingPresentationJob}
               downloadPresentation={downloadPresentation}
+              savedPRDJobs={savedPRDJobs}
+              setViewingPRDJob={setViewingPRDJob}
+              downloadPRD={downloadPRD}
+              savedMarketingStrategyJobs={savedMarketingStrategyJobs}
+              setViewingMarketingStrategyJob={setViewingMarketingStrategyJob}
+              downloadMarketingStrategy={downloadMarketingStrategy}
+              savedBlogJobs={savedBlogJobs}
+              setViewingBlogJob={setViewingBlogJob}
+              downloadBlog={downloadBlog}
+              savedBusinessReportJobs={savedBusinessReportJobs}
+              setViewingBusinessReportJob={setViewingBusinessReportJob}
+              downloadBusinessReport={downloadBusinessReport}
             />
           </div>
         </ScrollArea>
@@ -495,6 +587,18 @@ export const StudioPanel: React.FC<StudioPanelProps> = ({
         viewingPresentationJob={viewingPresentationJob}
         setViewingPresentationJob={setViewingPresentationJob}
         downloadPresentation={downloadPresentation}
+        viewingPRDJob={viewingPRDJob}
+        setViewingPRDJob={setViewingPRDJob}
+        downloadPRD={downloadPRD}
+        viewingMarketingStrategyJob={viewingMarketingStrategyJob}
+        setViewingMarketingStrategyJob={setViewingMarketingStrategyJob}
+        downloadMarketingStrategy={downloadMarketingStrategy}
+        viewingBlogJob={viewingBlogJob}
+        setViewingBlogJob={setViewingBlogJob}
+        downloadBlog={downloadBlog}
+        viewingBusinessReportJob={viewingBusinessReportJob}
+        setViewingBusinessReportJob={setViewingBusinessReportJob}
+        downloadBusinessReport={downloadBusinessReport}
       />
     </div>
   );

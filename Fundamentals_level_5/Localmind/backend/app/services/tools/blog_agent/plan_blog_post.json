@@ -1,0 +1,71 @@
+{
+  "name": "plan_blog_post",
+  "description": "Plan the structure, outline, and content strategy for the blog post. Call this first to establish the post structure before generating images or writing content.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string",
+        "description": "SEO-optimized blog post title that includes the target keyword (60-70 characters ideal)"
+      },
+      "meta_description": {
+        "type": "string",
+        "description": "Compelling meta description for search engines (150-160 characters) that includes the target keyword"
+      },
+      "tone": {
+        "type": "string",
+        "enum": ["professional", "conversational", "educational", "persuasive", "casual", "authoritative"],
+        "description": "The writing tone/voice for this blog post"
+      },
+      "target_audience": {
+        "type": "string",
+        "description": "Who is this blog post written for? (e.g., 'marketing professionals', 'small business owners', 'beginners')"
+      },
+      "outline": {
+        "type": "array",
+        "description": "Detailed outline of blog sections with descriptions",
+        "items": {
+          "type": "object",
+          "properties": {
+            "heading": {
+              "type": "string",
+              "description": "Section heading (will be H2 in the blog)"
+            },
+            "content_description": {
+              "type": "string",
+              "description": "What content will be covered in this section"
+            },
+            "subsections": {
+              "type": "array",
+              "description": "Optional subsection headings (will be H3)",
+              "items": {
+                "type": "string"
+              }
+            },
+            "needs_image": {
+              "type": "boolean",
+              "description": "True if this section would benefit from a generated image"
+            },
+            "image_description": {
+              "type": "string",
+              "description": "Description of the image needed (if needs_image is true)"
+            }
+          },
+          "required": ["heading", "content_description", "needs_image"]
+        }
+      },
+      "key_takeaways": {
+        "type": "array",
+        "description": "3-5 key takeaways readers should get from this post",
+        "items": {
+          "type": "string"
+        }
+      },
+      "estimated_word_count": {
+        "type": "integer",
+        "description": "Estimated word count for the complete post (should be 3000+)"
+      }
+    },
+    "required": ["title", "meta_description", "tone", "target_audience", "outline", "key_takeaways", "estimated_word_count"]
+  }
+}

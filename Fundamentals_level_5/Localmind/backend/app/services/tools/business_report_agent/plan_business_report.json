@@ -1,0 +1,35 @@
+{
+  "name": "plan_business_report",
+  "description": "Plan a brief outline for the business report. Call this first to organize your approach.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string",
+        "description": "Report title (e.g., 'Q3 Sales Analysis')"
+      },
+      "report_type": {
+        "type": "string",
+        "enum": ["executive_summary", "financial_report", "performance_analysis", "market_research", "operations_report", "sales_report", "quarterly_review", "annual_report"],
+        "description": "Type of business report"
+      },
+      "sections": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "title": {"type": "string", "description": "Section heading"},
+            "data_analysis": {"type": "string", "description": "What data/chart is needed (optional)"}
+          },
+          "required": ["title"]
+        },
+        "description": "2-3 main sections for the report"
+      },
+      "key_question": {
+        "type": "string",
+        "description": "The main question this report should answer"
+      }
+    },
+    "required": ["title", "report_type", "sections"]
+  }
+}

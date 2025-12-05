@@ -253,6 +253,41 @@ class PromptLoader:
         except (FileNotFoundError, json.JSONDecodeError):
             return None
 
+    def list_all_prompts(self) -> list[Dict[str, Any]]:
+        """
+        List all prompt configurations from the prompts directory.
+
+        Educational Note: This dynamically reads all *_prompt.json files
+        from the prompts directory, making it easy to add new prompts
+        without code changes.
+
+        Returns:
+            List of prompt config dicts with all fields
+        """
+        prompts = []
+
+        # Get all prompt JSON files
+        prompt_files = sorted(self.prompts_dir.glob("*_prompt.json"))
+
+        for prompt_file in prompt_files:
+            try:
+                with open(prompt_file, 'r') as f:
+                    prompt_data = json.load(f)
+
+                    # Handle legacy format where "prompt" was used instead of "system_prompt"
+                    if "prompt" in prompt_data and "system_prompt" not in prompt_data:
+                        prompt_data["system_prompt"] = prompt_data.pop("prompt")
+
+                    # Add filename for reference
+                    prompt_data["filename"] = prompt_file.name
+
+                    prompts.append(prompt_data)
+            except (json.JSONDecodeError, IOError) as e:
+                print(f"Error loading prompt {prompt_file}: {e}")
+                continue
+
+        return prompts
+
 
 # Singleton instance for easy import
 prompt_loader = PromptLoader()

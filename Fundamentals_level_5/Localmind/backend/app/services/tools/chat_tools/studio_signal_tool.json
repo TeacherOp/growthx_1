@@ -58,6 +58,55 @@
                 },
                 "required": ["source_id"]
               }
+            },
+            "target_keyword": {
+              "type": "string",
+              "description": "BLOG ONLY: SEO keyword or phrase to target in the blog post. Should be a specific term or phrase that represents the main topic for search optimization. Example: 'how to build a startup', 'machine learning for beginners', 'best productivity apps 2025'"
+            },
+            "blog_type": {
+              "type": "string",
+              "enum": [
+                "case_study",
+                "listicle",
+                "how_to_guide",
+                "opinion",
+                "product_review",
+                "news",
+                "tutorial",
+                "comparison",
+                "interview",
+                "roundup"
+              ],
+              "description": "BLOG ONLY: The type/format of blog post to generate. Options:\n- case_study: Real-world examples with problem, solution, results\n- listicle: Numbered lists with detailed explanations\n- how_to_guide: Step-by-step instructions (default)\n- opinion: Expert perspectives and thought leadership\n- product_review: Objective analysis with pros/cons\n- news: Breaking news with context\n- tutorial: Educational deep-dive\n- comparison: Side-by-side analysis\n- interview: Q&A format\n- roundup: Curated collection of resources"
+            },
+            "report_type": {
+              "type": "string",
+              "enum": [
+                "executive_summary",
+                "financial_report",
+                "performance_analysis",
+                "market_research",
+                "operations_report",
+                "sales_report",
+                "quarterly_review",
+                "annual_report"
+              ],
+              "description": "BUSINESS_REPORT ONLY: The type of business report to generate. Options:\n- executive_summary: High-level overview with key findings (default)\n- financial_report: Revenue, costs, profitability analysis\n- performance_analysis: KPIs, metrics, trends\n- market_research: Market trends, competitor analysis\n- operations_report: Process efficiency, resource utilization\n- sales_report: Sales performance, pipeline analysis\n- quarterly_review: Comprehensive quarterly performance\n- annual_report: Year-end comprehensive analysis"
+            },
+            "csv_source_ids": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "BUSINESS_REPORT ONLY: List of CSV source IDs to analyze for data and chart generation. The report agent will run data analysis on these sources."
+            },
+            "context_source_ids": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "BUSINESS_REPORT ONLY: List of non-CSV source IDs to use for additional context (documents, notes, etc.)."
+            },
+            "focus_areas": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "BUSINESS_REPORT ONLY: Optional list of specific focus areas or topics to prioritize in the report. Example: ['revenue trends', 'customer acquisition', 'cost optimization']"
             }
           },
           "required": ["studio_item", "direction", "sources"]

@@ -1,0 +1,22 @@
+{
+  "name": "analyze_csv_data",
+  "description": "Analyze CSV data and optionally generate charts. This tool internally uses the CSV analyzer agent which can run pandas code and generate matplotlib/seaborn visualizations. Call this tool for EACH separate analysis or chart you need. The tool returns analysis results and any generated chart filenames.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "csv_source_id": {
+        "type": "string",
+        "description": "The source_id of the CSV file to analyze (from the available csv_source_ids)"
+      },
+      "analysis_query": {
+        "type": "string",
+        "description": "Detailed description of what analysis to perform and what chart to generate. Be specific about:\n- What data to analyze (columns, filters, groupings)\n- What calculations to perform (sums, averages, percentages, trends)\n- What type of chart to create (bar, line, pie, scatter, heatmap)\n- Chart styling preferences (title, labels, colors)\n\nExamples:\n- 'Calculate total revenue by month and create a bar chart with blue bars, titled Monthly Revenue 2024'\n- 'Show the percentage distribution of sales by region as a pie chart'\n- 'Plot daily active users over time as a line chart with trend line'"
+      },
+      "section_context": {
+        "type": "string",
+        "description": "Which section of the report this analysis is for (helps with chart naming and context)"
+      }
+    },
+    "required": ["csv_source_id", "analysis_query"]
+  }
+}

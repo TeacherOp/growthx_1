@@ -1,0 +1,31 @@
+{
+  "name": "write_prd_section",
+  "description": "Write a section of the PRD to the markdown file. Use 'write' operation for the first section (creates file with title), 'append' for subsequent sections. Set is_last_section to true when you have written the final section.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "section_number": {
+        "type": "integer",
+        "description": "The sequential number of this section (1, 2, 3, etc.)"
+      },
+      "operation": {
+        "type": "string",
+        "enum": ["write", "append"],
+        "description": "Use 'write' for the first section (creates file), 'append' for subsequent sections"
+      },
+      "is_last_section": {
+        "type": "boolean",
+        "description": "Set to true when this is the final section and the PRD is complete"
+      },
+      "section_title": {
+        "type": "string",
+        "description": "The title of this section (e.g., 'Executive Summary', 'Functional Requirements')"
+      },
+      "markdown_content": {
+        "type": "string",
+        "description": "The markdown content for this section. Include proper heading (## or ###), formatted lists, tables if needed, and clear prose. Do NOT include the document title - only the section content."
+      }
+    },
+    "required": ["section_number", "operation", "is_last_section", "section_title", "markdown_content"]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "search_source_content",
+  "description": "Search for relevant content from non-CSV sources to add context to the report. Use this to find supporting information from documents, notes, or other text sources that can enrich the report with qualitative insights.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "source_id": {
+        "type": "string",
+        "description": "The source_id of the non-CSV source to search (from context_source_ids)"
+      },
+      "search_query": {
+        "type": "string",
+        "description": "What information to search for in this source. Be specific about the type of context needed."
+      },
+      "section_context": {
+        "type": "string",
+        "description": "Which section of the report this context is for"
+      }
+    },
+    "required": ["source_id", "search_query"]
+  }
+}

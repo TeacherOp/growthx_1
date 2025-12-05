@@ -50,3 +50,7 @@ export * from './websites';
 export * from './flow-diagrams';
 export * from './wireframes';
 export * from './presentations';
+export * from './prds';
+export * from './marketingStrategies';
+export * from './blogs';
+export * from './businessReports';

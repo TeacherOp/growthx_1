@@ -19,7 +19,11 @@ import { VideoProgressIndicator } from './video';
 import { FlowDiagramProgressIndicator } from './flow-diagrams';
 import { WireframeProgressIndicator } from './wireframes';
 import { PresentationProgressIndicator } from './presentations';
-import type { AudioJob, AdJob, FlashCardJob, MindMapJob, WebsiteJob, QuizJob, SocialPostJob, InfographicJob, EmailJob, ComponentJob, VideoJob, FlowDiagramJob, WireframeJob, PresentationJob } from '@/lib/api/studio';
+import { PRDProgressIndicator } from './prd';
+import { MarketingStrategyProgressIndicator } from './marketingStrategy';
+import { BlogProgressIndicator } from './blog';
+import { BusinessReportProgressIndicator } from './businessReport';
+import type { AudioJob, AdJob, FlashCardJob, MindMapJob, WebsiteJob, QuizJob, SocialPostJob, InfographicJob, EmailJob, ComponentJob, VideoJob, FlowDiagramJob, WireframeJob, PresentationJob, PRDJob, MarketingStrategyJob, BlogJob, BusinessReportJob } from '@/lib/api/studio';
 
 interface StudioProgressIndicatorsProps {
   // Audio
@@ -77,6 +81,22 @@ interface StudioProgressIndicatorsProps {
   // Presentation
   isGeneratingPresentation: boolean;
   currentPresentationJob: PresentationJob | null;
+
+  // PRD
+  isGeneratingPRD: boolean;
+  currentPRDJob: PRDJob | null;
+
+  // Marketing Strategy
+  isGeneratingMarketingStrategy: boolean;
+  currentMarketingStrategyJob: MarketingStrategyJob | null;
+
+  // Blog
+  isGeneratingBlog: boolean;
+  currentBlogJob: BlogJob | null;
+
+  // Business Report
+  isGeneratingBusinessReport: boolean;
+  currentBusinessReportJob: BusinessReportJob | null;
 }
 
 export const StudioProgressIndicators: React.FC<StudioProgressIndicatorsProps> = ({
@@ -108,6 +128,14 @@ export const StudioProgressIndicators: React.FC<StudioProgressIndicatorsProps> =
   currentWireframeJob,
   isGeneratingPresentation,
   currentPresentationJob,
+  isGeneratingPRD,
+  currentPRDJob,
+  isGeneratingMarketingStrategy,
+  currentMarketingStrategyJob,
+  isGeneratingBlog,
+  currentBlogJob,
+  isGeneratingBusinessReport,
+  currentBusinessReportJob,
 }) => {
   return (
     <>
@@ -179,6 +207,26 @@ export const StudioProgressIndicators: React.FC<StudioProgressIndicatorsProps> =
       {/* Presentation Generation Progress */}
       {isGeneratingPresentation && (
         <PresentationProgressIndicator currentPresentationJob={currentPresentationJob} />
+      )}
+
+      {/* PRD Generation Progress */}
+      {isGeneratingPRD && (
+        <PRDProgressIndicator currentPRDJob={currentPRDJob} />
+      )}
+
+      {/* Marketing Strategy Generation Progress */}
+      {isGeneratingMarketingStrategy && (
+        <MarketingStrategyProgressIndicator currentMarketingStrategyJob={currentMarketingStrategyJob} />
+      )}
+
+      {/* Blog Generation Progress */}
+      {isGeneratingBlog && (
+        <BlogProgressIndicator currentBlogJob={currentBlogJob} />
+      )}
+
+      {/* Business Report Generation Progress */}
+      {isGeneratingBusinessReport && (
+        <BusinessReportProgressIndicator currentBusinessReportJob={currentBusinessReportJob} />
       )}
     </>
   );

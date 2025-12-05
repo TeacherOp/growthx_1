@@ -1,0 +1,22 @@
+{
+  "name": "write_blog_post",
+  "description": "FINAL STEP: Write the complete blog post in Markdown format. YOU MUST provide the full blog content in the markdown_content parameter - this is not optional. The markdown_content parameter must contain the entire blog post (3000+ words). This is the termination tool - call this only when you have the complete blog post ready.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "markdown_content": {
+        "type": "string",
+        "description": "REQUIRED: The complete blog post in Markdown format. Must include: YAML frontmatter (title, meta_description, target_keyword, author, date), H1 title, all sections with H2/H3 headings, image placeholders as ![alt text](IMAGE_1), bullet points, bold/italic formatting, and a conclusion with call-to-action. Should be 3000+ words, comprehensive, and publish-ready. Reference generated images using IMAGE_1, IMAGE_2, etc. placeholders."
+      },
+      "word_count": {
+        "type": "integer",
+        "description": "Actual word count of the blog post (should be 3000+)"
+      },
+      "seo_notes": {
+        "type": "string",
+        "description": "Brief notes on SEO optimization applied (keyword placement, heading structure, etc.)"
+      }
+    },
+    "required": ["markdown_content", "word_count", "seo_notes"]
+  }
+}

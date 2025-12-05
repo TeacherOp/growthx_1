@@ -140,3 +140,47 @@ def get_default_prompt():
             'success': False,
             'error': str(e)
         }), 500
+
+
+@prompts_bp.route('/prompts/all', methods=['GET'])
+def list_all_prompts():
+    """
+    List all prompt configurations.
+
+    Educational Note: This dynamically reads all prompt files from
+    data/prompts/ directory. Adding new prompt files automatically
+    makes them visible in the UI.
+
+    Response:
+        {
+            "success": true,
+            "prompts": [
+                {
+                    "name": "default_chat_prompt",
+                    "description": "Default system prompt...",
+                    "model": "claude-sonnet-4-5-20250929",
+                    "max_tokens": 16000,
+                    "temperature": 0.5,
+                    "system_prompt": "...",
+                    "user_message": "..." (optional),
+                    "filename": "default_prompt.json"
+                },
+                ...
+            ]
+        }
+    """
+    try:
+        prompts = prompt_loader.list_all_prompts()
+
+        return jsonify({
+            'success': True,
+            'prompts': prompts,
+            'count': len(prompts)
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error listing prompts: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500

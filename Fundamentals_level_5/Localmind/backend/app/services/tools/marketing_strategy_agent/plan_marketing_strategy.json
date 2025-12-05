@@ -1,0 +1,55 @@
+{
+  "name": "plan_marketing_strategy",
+  "description": "Plan the marketing strategy document structure before writing. Analyze the source content and create a structured plan for the document sections.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "document_title": {
+        "type": "string",
+        "description": "The title of the marketing strategy document (e.g., 'Marketing Strategy: [Product Name]')"
+      },
+      "product_name": {
+        "type": "string",
+        "description": "The name of the product or service being marketed"
+      },
+      "target_market": {
+        "type": "string",
+        "description": "Brief description of the primary target market (e.g., 'B2B SaaS companies, SMB segment')"
+      },
+      "sections": {
+        "type": "array",
+        "description": "The sections to include in the marketing strategy, in order",
+        "items": {
+          "type": "object",
+          "properties": {
+            "section_id": {
+              "type": "string",
+              "description": "Unique identifier for the section (e.g., '1', '2', '2.1')"
+            },
+            "title": {
+              "type": "string",
+              "description": "Section title (e.g., 'Executive Summary', 'Target Audience')"
+            },
+            "description": {
+              "type": "string",
+              "description": "Brief description of what this section will cover"
+            },
+            "priority": {
+              "type": "string",
+              "enum": ["essential", "important", "optional"],
+              "description": "How critical this section is for the strategy"
+            }
+          },
+          "required": ["section_id", "title", "description"]
+        },
+        "minItems": 3,
+        "maxItems": 8
+      },
+      "planning_notes": {
+        "type": "string",
+        "description": "Any notes about the approach, assumptions, or special considerations for this marketing strategy"
+      }
+    },
+    "required": ["document_title", "product_name", "sections"]
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "name": "plan_prd",
+  "description": "Plan the PRD document structure before writing. Analyze the source content and create a structured plan for the document sections.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "document_title": {
+        "type": "string",
+        "description": "The title of the PRD document (e.g., 'Product Requirements Document: [Product Name]')"
+      },
+      "product_name": {
+        "type": "string",
+        "description": "The name of the product or feature being documented"
+      },
+      "target_audience": {
+        "type": "string",
+        "description": "Who this PRD is written for (e.g., 'Engineering team, Product stakeholders, Executive leadership')"
+      },
+      "sections": {
+        "type": "array",
+        "description": "The sections to include in the PRD, in order",
+        "items": {
+          "type": "object",
+          "properties": {
+            "section_id": {
+              "type": "string",
+              "description": "Unique identifier for the section (e.g., '1', '2', '2.1')"
+            },
+            "title": {
+              "type": "string",
+              "description": "Section title (e.g., 'Executive Summary', 'User Stories')"
+            },
+            "description": {
+              "type": "string",
+              "description": "Brief description of what this section will cover"
+            },
+            "priority": {
+              "type": "string",
+              "enum": ["essential", "important", "optional"],
+              "description": "How critical this section is for the PRD"
+            }
+          },
+          "required": ["section_id", "title", "description"]
+        },
+        "minItems": 3,
+        "maxItems": 15
+      },
+      "planning_notes": {
+        "type": "string",
+        "description": "Any notes about the approach, assumptions, or special considerations for this PRD"
+      }
+    },
+    "required": ["document_title", "product_name", "sections"]
+  }
+}

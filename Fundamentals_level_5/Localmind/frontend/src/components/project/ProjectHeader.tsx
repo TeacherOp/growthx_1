@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,8 +32,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
-import { ArrowLeft, DotsThreeVertical, Plus, Trash, FolderOpen, Gear, CircleNotch, CurrencyDollar, Brain } from '@phosphor-icons/react';
-import { chatsAPI } from '../../lib/api/chats';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '../ui/collapsible';
+import { ArrowLeft, DotsThreeVertical, Plus, Trash, FolderOpen, Gear, CircleNotch, CurrencyDollar, Brain, CaretDown, CaretRight } from '@phosphor-icons/react';
+import { chatsAPI, type PromptConfig } from '../../lib/api/chats';
 import { projectsAPI, type CostTracking, type MemoryData } from '../../lib/api';
 import { useToast, ToastContainer } from '../ui/toast';
 
@@ -66,14 +70,6 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = React.useState(false);
 
-  // System prompt state (dictation prompt removed - ElevenLabs doesn't support prompt parameter)
-  const [systemPrompt, setSystemPrompt] = React.useState('');
-  const [tempSystemPrompt, setTempSystemPrompt] = React.useState('');
-  const [defaultPrompt, setDefaultPrompt] = React.useState('');
-
-  const [loading, setLoading] = React.useState(false);
-  const [saving, setSaving] = React.useState(false);
-
   // Cost tracking state
   const [costs, setCosts] = React.useState<CostTracking | null>(null);
 
@@ -82,12 +78,15 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
   const [memory, setMemory] = React.useState<MemoryData | null>(null);
   const [loadingMemory, setLoadingMemory] = React.useState(false);
 
+  // All prompts state (view-only)
+  const [allPrompts, setAllPrompts] = React.useState<PromptConfig[]>([]);
+  const [loadingPrompts, setLoadingPrompts] = React.useState(false);
+  const [expandedPrompts, setExpandedPrompts] = React.useState<Set<string>>(new Set());
+
   /**
-   * Educational Note: Load the project's system prompt and costs when component mounts.
-   * This fetches either the custom prompt or the default prompt from the backend.
+   * Educational Note: Load costs when component mounts.
    */
   useEffect(() => {
-    loadPrompts();
     loadCosts();
   }, [project.id]);
 
@@ -146,6 +145,58 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
   };
 
   /**
+   * Load all prompt configurations
+   * Educational Note: Prompts are loaded when settings dialog opens.
+   */
+  const loadAllPrompts = async () => {
+    try {
+      setLoadingPrompts(true);
+      const prompts = await chatsAPI.getAllPrompts();
+      setAllPrompts(prompts);
+    } catch (err) {
+      console.error('Error loading prompts:', err);
+      error('Failed to load prompts');
+    } finally {
+      setLoadingPrompts(false);
+    }
+  };
+
+  /**
+   * Toggle expansion state of a prompt card
+   */
+  const togglePromptExpanded = (promptName: string) => {
+    setExpandedPrompts((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(promptName)) {
+        newSet.delete(promptName);
+      } else {
+        newSet.add(promptName);
+      }
+      return newSet;
+    });
+  };
+
+  /**
+   * Format prompt name for display
+   */
+  const formatPromptName = (name: string): string => {
+    return name
+      .replace(/_/g, ' ')
+      .replace(/prompt$/i, '')
+      .trim()
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  /**
+   * Get prompt identifier (name or derive from filename)
+   */
+  const getPromptId = (prompt: PromptConfig): string => {
+    return prompt.name || prompt.filename.replace('_prompt.json', '').replace('.json', '');
+  };
+
+  /**
    * Format currency for header display (without $ symbol - icon provides it)
    */
   const formatCost = (cost: number): string => {
@@ -175,31 +226,6 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
     return tokens.toString();
   };
 
-  /**
-   * Load system prompt for the project
-   * Educational Note: Dictation prompt removed - ElevenLabs doesn't support prompt parameter
-   */
-  const loadPrompts = async () => {
-    try {
-      setLoading(true);
-
-      // Load system prompts in parallel
-      const [projectPrompt, defaultPromptText] = await Promise.all([
-        chatsAPI.getProjectPrompt(project.id),
-        chatsAPI.getDefaultPrompt(),
-      ]);
-
-      // Set system prompt state
-      setSystemPrompt(projectPrompt);
-      setDefaultPrompt(defaultPromptText);
-    } catch (err) {
-      console.error('Error loading prompts:', err);
-      error('Failed to load settings');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleNewProject = () => {
     console.log('Creating new project...');
     // For now, just navigate back to project list
@@ -207,41 +233,8 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
   };
 
   const handleOpenSettings = () => {
-    setTempSystemPrompt(systemPrompt);
     setSettingsDialogOpen(true);
-  };
-
-  /**
-   * Educational Note: Save the system prompt to the backend.
-   * If prompt matches default, we save null to reset to default.
-   */
-  const handleSaveSettings = async () => {
-    try {
-      setSaving(true);
-
-      // Determine if prompt is custom or should reset to default
-      const systemPromptToSave = tempSystemPrompt === defaultPrompt ? null : tempSystemPrompt;
-
-      console.log('Saving settings for project:', project.id);
-
-      // Save system prompt
-      const systemResult = await chatsAPI.updateProjectPrompt(project.id, systemPromptToSave);
-
-      // Update local state
-      setSystemPrompt(systemResult.prompt);
-      setSettingsDialogOpen(false);
-
-      success('Settings saved successfully');
-    } catch (err) {
-      console.error('Error saving settings:', err);
-      error('Failed to save settings');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleResetSystemPrompt = () => {
-    setTempSystemPrompt(defaultPrompt);
+    loadAllPrompts();
   };
 
   return (
@@ -418,71 +411,115 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <CircleNotch size={24} className="animate-spin text-muted-foreground" />
-                <span className="ml-2 text-sm text-muted-foreground">Loading settings...</span>
+            {/* All Prompts Section (View Only) */}
+            <div className="space-y-3">
+              <div>
+                <Label>All System Prompts</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  View all prompt configurations used by the application (read-only)
+                </p>
               </div>
-            ) : (
-              <>
-                {/* System Prompt Section */}
-                <div className="space-y-2">
-                  <Label htmlFor="system-prompt">
-                    System Prompt (AI Chat)
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    This prompt defines how the AI assistant behaves when responding to queries about this project.
-                  </p>
-                  <Textarea
-                    id="system-prompt"
-                    value={tempSystemPrompt}
-                    onChange={(e) => setTempSystemPrompt(e.target.value)}
-                    className="h-48 font-mono resize-none"
-                    placeholder="Enter system prompt..."
-                    disabled={saving}
-                  />
-                  <div className="flex justify-between items-center">
-                    <p className="text-xs text-muted-foreground">
-                      {tempSystemPrompt.length} characters
+
+              {loadingPrompts ? (
+                    <div className="flex items-center justify-center py-4">
+                      <CircleNotch size={20} className="animate-spin text-muted-foreground" />
+                      <span className="ml-2 text-sm text-muted-foreground">Loading prompts...</span>
+                    </div>
+                  ) : allPrompts.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic py-4">
+                      No prompts found in the prompts folder.
                     </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleResetSystemPrompt}
-                      disabled={tempSystemPrompt === defaultPrompt || saving}
-                    >
-                      Reset to Default
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
+                  ) : (
+                    <div className="space-y-2">
+                      {allPrompts.map((prompt) => {
+                        const promptId = getPromptId(prompt);
+                        return (
+                        <Collapsible
+                          key={prompt.filename}
+                          open={expandedPrompts.has(promptId)}
+                          onOpenChange={() => togglePromptExpanded(promptId)}
+                        >
+                          <div className="border rounded-lg">
+                            <CollapsibleTrigger asChild>
+                              <button className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors text-left">
+                                <div className="flex items-center gap-3">
+                                  {expandedPrompts.has(promptId) ? (
+                                    <CaretDown size={16} className="text-muted-foreground" />
+                                  ) : (
+                                    <CaretRight size={16} className="text-muted-foreground" />
+                                  )}
+                                  <div>
+                                    <span className="font-medium">{formatPromptName(promptId)}</span>
+                                    <span className="text-xs text-muted-foreground ml-2">
+                                      ({prompt.filename})
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  {prompt.model && (
+                                    <span className="bg-muted px-2 py-0.5 rounded">{prompt.model}</span>
+                                  )}
+                                  {prompt.temperature !== undefined && (
+                                    <span>temp: {prompt.temperature}</span>
+                                  )}
+                                  {prompt.max_tokens !== undefined && (
+                                    <span>max: {prompt.max_tokens.toLocaleString()}</span>
+                                  )}
+                                </div>
+                              </button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="border-t p-3 space-y-4 bg-muted/30">
+                                {/* Description */}
+                                {prompt.description && (
+                                  <div>
+                                    <Label className="text-xs">Description</Label>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {prompt.description}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* System Prompt */}
+                                <div>
+                                  <Label className="text-xs">System Prompt</Label>
+                                  <div className="mt-1 p-2 bg-background rounded border max-h-48 overflow-y-auto">
+                                    <pre className="text-xs font-mono whitespace-pre-wrap">
+                                      {prompt.system_prompt}
+                                    </pre>
+                                  </div>
+                                </div>
+
+                                {/* User Message (if present) */}
+                                {(prompt.user_message || prompt.user_message_template) && (
+                                  <div>
+                                    <Label className="text-xs">
+                                      {prompt.user_message_template ? 'User Message Template' : 'User Message'}
+                                    </Label>
+                                    <div className="mt-1 p-2 bg-background rounded border max-h-32 overflow-y-auto">
+                                      <pre className="text-xs font-mono whitespace-pre-wrap">
+                                        {prompt.user_message || prompt.user_message_template}
+                                      </pre>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </CollapsibleContent>
+                          </div>
+                        </Collapsible>
+                      );
+                      })}
+                    </div>
+                  )}
+            </div>
           </div>
 
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setSettingsDialogOpen(false)}
-              disabled={saving}
             >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveSettings}
-              disabled={
-                tempSystemPrompt === systemPrompt ||
-                saving ||
-                loading
-              }
-            >
-              {saving ? (
-                <>
-                  <CircleNotch size={16} className="mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

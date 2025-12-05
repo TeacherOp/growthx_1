@@ -67,6 +67,26 @@ export interface SendMessageResponse {
   assistant_message: Message;
 }
 
+/**
+ * Educational Note: Prompt configuration from data/prompts/*.json files.
+ * Each prompt defines model settings and the actual prompt text.
+ * Note: Some prompts use user_message, others use user_message_template.
+ */
+export interface PromptConfig {
+  name: string;
+  description: string;
+  model: string;
+  max_tokens: number;
+  temperature: number;
+  system_prompt: string;
+  user_message?: string;
+  user_message_template?: string;
+  filename: string;
+  version?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 class ChatsAPI {
   /**
    * List all chats for a specific project
@@ -206,6 +226,21 @@ class ChatsAPI {
       return response.data.prompt;
     } catch (error) {
       console.error('Error fetching default prompt:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all prompt configurations
+   * Educational Note: Returns all prompts from the data/prompts/ directory.
+   * Each prompt includes model, temperature, max_tokens, system_prompt, and user_message.
+   */
+  async getAllPrompts(): Promise<PromptConfig[]> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/prompts/all`);
+      return response.data.prompts;
+    } catch (error) {
+      console.error('Error fetching all prompts:', error);
       throw error;
     }
   }

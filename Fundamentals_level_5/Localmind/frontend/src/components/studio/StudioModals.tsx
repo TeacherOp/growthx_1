@@ -18,6 +18,10 @@ import { VideoViewerModal } from './video';
 import { FlowDiagramViewerModal } from './flow-diagrams';
 import { WireframeViewerModal } from './wireframes';
 import { PresentationViewerModal } from './presentations';
+import { PRDViewerModal } from './prd';
+import { MarketingStrategyViewerModal } from './marketingStrategy';
+import { BlogViewerModal } from './blog';
+import { BusinessReportViewerModal } from './businessReport';
 import type {
   AdJob,
   FlashCardJob,
@@ -31,7 +35,11 @@ import type {
   VideoJob,
   FlowDiagramJob,
   WireframeJob,
-  PresentationJob
+  PresentationJob,
+  PRDJob,
+  MarketingStrategyJob,
+  BlogJob,
+  BusinessReportJob
 } from '@/lib/api/studio';
 
 interface StudioModalsProps {
@@ -90,6 +98,26 @@ interface StudioModalsProps {
   viewingPresentationJob: PresentationJob | null;
   setViewingPresentationJob: (job: PresentationJob | null) => void;
   downloadPresentation: (jobId: string) => void;
+
+  // PRD
+  viewingPRDJob: PRDJob | null;
+  setViewingPRDJob: (job: PRDJob | null) => void;
+  downloadPRD: (jobId: string) => void;
+
+  // Marketing Strategy
+  viewingMarketingStrategyJob: MarketingStrategyJob | null;
+  setViewingMarketingStrategyJob: (job: MarketingStrategyJob | null) => void;
+  downloadMarketingStrategy: (jobId: string) => void;
+
+  // Blog
+  viewingBlogJob: BlogJob | null;
+  setViewingBlogJob: (job: BlogJob | null) => void;
+  downloadBlog: (jobId: string) => void;
+
+  // Business Report
+  viewingBusinessReportJob: BusinessReportJob | null;
+  setViewingBusinessReportJob: (job: BusinessReportJob | null) => void;
+  downloadBusinessReport: (jobId: string) => void;
 }
 
 export const StudioModals: React.FC<StudioModalsProps> = ({
@@ -122,6 +150,18 @@ export const StudioModals: React.FC<StudioModalsProps> = ({
   viewingPresentationJob,
   setViewingPresentationJob,
   downloadPresentation,
+  viewingPRDJob,
+  setViewingPRDJob,
+  downloadPRD,
+  viewingMarketingStrategyJob,
+  setViewingMarketingStrategyJob,
+  downloadMarketingStrategy,
+  viewingBlogJob,
+  setViewingBlogJob,
+  downloadBlog,
+  viewingBusinessReportJob,
+  setViewingBusinessReportJob,
+  downloadBusinessReport,
 }) => {
   return (
     <>
@@ -212,6 +252,38 @@ export const StudioModals: React.FC<StudioModalsProps> = ({
         viewingPresentationJob={viewingPresentationJob}
         onClose={() => setViewingPresentationJob(null)}
         onDownloadPptx={downloadPresentation}
+      />
+
+      {/* PRD Viewer Modal */}
+      <PRDViewerModal
+        projectId={projectId}
+        viewingPRDJob={viewingPRDJob}
+        onClose={() => setViewingPRDJob(null)}
+        onDownload={downloadPRD}
+      />
+
+      {/* Marketing Strategy Viewer Modal */}
+      <MarketingStrategyViewerModal
+        projectId={projectId}
+        viewingMarketingStrategyJob={viewingMarketingStrategyJob}
+        onClose={() => setViewingMarketingStrategyJob(null)}
+        onDownload={downloadMarketingStrategy}
+      />
+
+      {/* Blog Viewer Modal */}
+      <BlogViewerModal
+        projectId={projectId}
+        viewingBlogJob={viewingBlogJob}
+        onClose={() => setViewingBlogJob(null)}
+        onDownload={downloadBlog}
+      />
+
+      {/* Business Report Viewer Modal */}
+      <BusinessReportViewerModal
+        projectId={projectId}
+        viewingBusinessReportJob={viewingBusinessReportJob}
+        onClose={() => setViewingBusinessReportJob(null)}
+        onDownload={downloadBusinessReport}
       />
     </>
   );
