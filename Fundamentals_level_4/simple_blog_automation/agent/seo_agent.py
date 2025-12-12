@@ -212,40 +212,48 @@ class SEOBlogAgent:
     Be creative with categories - choose what fits best for the content you're creating.
     The task is ONLY complete after successfully inserting the blog into Supabase."""
 
-    def generate_blog(self, topic: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Generate a complete blog post
+    def _build_existing_blogs_summary(self) -> str:
+        """Format existing blogs into a summary string"""
+        if not self.existing_blogs:
+            return "No existing blogs found."
+        return "\n".join([
+            f"- {blog['title']} (Category: {blog.get('category', 'N/A')})"
+            for blog in self.existing_blogs[:20]
+        ])
 
-        Args:
-            topic: Optional specific topic for the blog. If None, generates automatically.
+    def _build_topic_context(self, topic: Optional[str]) -> tuple[str, str]:
+        """
+        Build topic-specific instructions and context
 
         Returns:
-            Dictionary with blog generation results
+            Tuple of (topic_instruction, topic_context)
         """
-        try:
-            # Send starting progress
-            self.send_progress("start", {"message": "Starting blog generation..."})
-
-            # Format existing blogs summary
-            existing_blogs_summary = "\n".join([
-                f"- {blog['title']} (Category: {blog.get('category', 'N/A')})"
-                for blog in self.existing_blogs[:20]
-            ]) if self.existing_blogs else "No existing blogs found."
-
-            # Create dynamic instructions based on user input (exact from original)
-            if topic:
-                topic_instruction = f"""1. Analyze the brand and existing content
+        if topic:
+            topic_instruction = f"""1. Analyze the brand and existing content
 2. Create a comprehensive blog about: "{topic}" """
-                topic_context = f" specifically related to '{topic}'"
-                self.send_progress("topic", {"topic": topic, "auto_generated": False})
-            else:
-                topic_instruction = """1. Analyze the brand and existing content
+            topic_context = f" specifically related to '{topic}'"
+            self.send_progress("topic", {"topic": topic, "auto_generated": False})
+        else:
+            topic_instruction = """1. Analyze the brand and existing content
 2. Think of a NEW, unique blog idea that would be valuable for our audience"""
-                topic_context = ""
-                self.send_progress("topic", {"topic": "Auto-generating based on trends", "auto_generated": True})
+            topic_context = ""
+            self.send_progress("topic", {"topic": "Auto-generating based on trends", "auto_generated": True})
+        return topic_instruction, topic_context
 
-            # Use exact user message format from original
-            user_message = f"""You are an SEO expert Here's your task:
+    def _build_user_message(self, topic: Optional[str]) -> str:
+        """
+        Build the user message for the agent
+
+        Args:
+            topic: Optional specific topic for the blog
+
+        Returns:
+            Formatted user message string
+        """
+        existing_blogs_summary = self._build_existing_blogs_summary()
+        topic_instruction, topic_context = self._build_topic_context(topic)
+
+        return f"""You are an SEO expert Here's your task:
 
 BRAND CONTEXT:
 {self.brand_context}
@@ -295,100 +303,165 @@ Your content HTML must follow this exact structure:
    <li><a href="url2">Source Title 2</a></li>
    </ol>"""
 
+    def _get_tools_with_web_search(self) -> list:
+        """Get tool definitions including web search"""
+        tools = self.get_tool_definitions()
+        web_search_tool = {"type": "web_search_20250305", "name": "web_search", "max_uses": 10}
+        return [web_search_tool] + tools
+
+    def _execute_tool(self, tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute a single tool and return its result
+
+        Args:
+            tool_name: Name of the tool to execute
+            tool_input: Input parameters for the tool
+
+        Returns:
+            Tool execution result
+        """
+        self.send_progress("tool_use", {"tool": tool_name, "input": tool_input})
+
+        if tool_name in ("web_search", "web_search_20250305"):
+            # Web search is handled by Anthropic (server-side tool)
+            return {"status": "success", "message": "Web search completed by Anthropic"}
+
+        return self.tool_executor.execute(tool_name, tool_input)
+
+    def _handle_blog_published(self, result: Dict[str, Any]) -> None:
+        """Send progress notification when blog is successfully published"""
+        blog_url = result.get("url", "")
+        slug = blog_url.split("/")[-1] if blog_url else ""
+        self.send_progress("complete", {
+            "message": "Blog published successfully!",
+            "blog_url": blog_url,
+            "markdown_file": f"{slug}.md" if slug else None
+        })
+
+    def _process_tool_uses(self, response) -> tuple[list, bool]:
+        """
+        Process all tool use blocks in a response
+
+        Args:
+            response: The Claude API response
+
+        Returns:
+            Tuple of (tool_results list, blog_published boolean)
+        """
+        tool_results = []
+        blog_published = False
+
+        for content_block in response.content:
+            if not (hasattr(content_block, 'type') and content_block.type == 'tool_use'):
+                continue
+
+            result = self._execute_tool(content_block.name, content_block.input)
+
+            # Check if blog was successfully inserted
+            if content_block.name == "blog_inserter" and result.get("status") == "success":
+                blog_published = True
+                self._handle_blog_published(result)
+
+            tool_results.append({
+                "type": "tool_result",
+                "tool_use_id": content_block.id,
+                "content": json.dumps(result)
+            })
+
+        return tool_results, blog_published
+
+    def _send_text_response_progress(self, response) -> None:
+        """Send progress for text-only responses (no tool use)"""
+        for content_block in response.content:
+            if hasattr(content_block, 'type') and content_block.type == 'text':
+                self.send_progress("message", {"text": content_block.text[:200] + "..."})
+                break
+
+    def _call_claude(self, tools: list, topic: Optional[str]) -> Any:
+        """
+        Make a single Claude API call
+
+        Args:
+            tools: List of tool definitions
+            topic: Optional topic for system prompt selection
+
+        Returns:
+            Claude API response
+        """
+        self.send_progress("thinking", {"message": "AI is processing..."})
+        return self.anthropic.messages.create(
+            model=Config.MODEL_NAME,
+            max_tokens=16000,
+            temperature=0.7,
+            system=self.get_system_prompt(user_provided_topic=bool(topic)),
+            messages=self.messages,
+            tools=tools,
+            tool_choice={"type": "auto"}
+        )
+
+    def _run_agent_loop(self, tools: list, topic: Optional[str], max_iterations: int = 10) -> bool:
+        """
+        Run the main agent conversation loop
+
+        Args:
+            tools: List of tool definitions
+            topic: Optional topic for system prompt selection
+            max_iterations: Maximum number of iterations
+
+        Returns:
+            True if blog was published successfully, False otherwise
+        """
+        for iteration in range(max_iterations):
+            response = self._call_claude(tools, topic)
+
+            # Add assistant response to conversation
+            self.messages.append({"role": "assistant", "content": response.content})
+
+            # Process any tool uses
+            tool_results, blog_published = self._process_tool_uses(response)
+
+            if blog_published:
+                return True
+
+            if tool_results:
+                self.messages.append({"role": "user", "content": tool_results})
+            else:
+                self._send_text_response_progress(response)
+
+        return False
+
+    def generate_blog(self, topic: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Generate a complete blog post
+
+        This is the main entry point that orchestrates the blog generation process.
+
+        Args:
+            topic: Optional specific topic for the blog. If None, generates automatically.
+
+        Returns:
+            Dictionary with blog generation results
+        """
+        try:
+            self.send_progress("start", {"message": "Starting blog generation..."})
+
+            # Initialize conversation with user message
+            user_message = self._build_user_message(topic)
             self.messages = [{"role": "user", "content": user_message}]
 
-            # Get tools including web search
-            tools = self.get_tool_definitions()
-
-            # Add web search tool (using exact format from original)
-            tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 10}] + tools
-
-            # Main conversation loop
-            max_iterations = 10
-            iteration = 0
-            blog_published = False
-
-            while not blog_published and iteration < max_iterations:
-                iteration += 1
-
-                # Make API call
-                self.send_progress("thinking", {"message": "AI is processing..."})
-
-                response = self.anthropic.messages.create(
-                    model=Config.MODEL_NAME,
-                    max_tokens=16000,
-                    temperature=0.7,  # Higher temperature for creative content
-                    system=self.get_system_prompt(user_provided_topic=bool(topic)),
-                    messages=self.messages,
-                    tools=tools,
-                    tool_choice={"type": "auto"}
-                )
-
-                # Process response
-                assistant_message = {"role": "assistant", "content": response.content}
-                self.messages.append(assistant_message)
-
-                # Check for tool uses
-                tool_results = []
-                for content_block in response.content:
-                    if hasattr(content_block, 'type') and content_block.type == 'tool_use':
-                        tool_name = content_block.name
-                        tool_input = content_block.input
-                        tool_use_id = content_block.id
-
-                        self.send_progress("tool_use", {
-                            "tool": tool_name,
-                            "input": tool_input
-                        })
-
-                        # Execute tool
-                        if tool_name == "web_search" or tool_name == "web_search_20250305":
-                            # Web search is handled by Anthropic (server-side tool)
-                            result = {"status": "success", "message": "Web search completed by Anthropic"}
-                        else:
-                            # Execute our custom tools
-                            result = self.tool_executor.execute(tool_name, tool_input)
-
-                        # Track if blog was inserted
-                        if tool_name == "blog_inserter" and result.get("status") == "success":
-                            blog_published = True
-                            # Extract slug from URL to find markdown file
-                            blog_url = result.get("url", "")
-                            slug = blog_url.split("/")[-1] if blog_url else ""
-                            self.send_progress("complete", {
-                                "message": "Blog published successfully!",
-                                "blog_url": blog_url,
-                                "markdown_file": f"{slug}.md" if slug else None
-                            })
-
-                        tool_results.append({
-                            "type": "tool_result",
-                            "tool_use_id": tool_use_id,
-                            "content": json.dumps(result)
-                        })
-
-                # Add tool results to messages if any
-                if tool_results:
-                    self.messages.append({
-                        "role": "user",
-                        "content": tool_results
-                    })
-                else:
-                    # No tools used, check if there's text output
-                    for content_block in response.content:
-                        if hasattr(content_block, 'type') and content_block.type == 'text':
-                            self.send_progress("message", {"text": content_block.text[:200] + "..."})
+            # Get tools and run the agent loop
+            tools = self._get_tools_with_web_search()
+            blog_published = self._run_agent_loop(tools, topic)
 
             if blog_published:
                 return {
                     "status": "success",
                     "message": "Blog generated and published successfully"
                 }
-            else:
-                return {
-                    "status": "warning",
-                    "message": "Blog generation completed but not published to database"
-                }
+            return {
+                "status": "warning",
+                "message": "Blog generation completed but not published to database"
+            }
 
         except Exception as e:
             self.send_progress("error", {"message": str(e)})
