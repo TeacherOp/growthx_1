@@ -7,7 +7,23 @@
       "created_at": "2025-12-01T02:55:34.496855",
       "updated_at": "2025-12-01T02:55:34.496855",
       "last_accessed": "2025-12-01T02:55:34.496855"
+    },
+    {
+      "id": "ab1bfb02-8db7-4b04-b2c3-5c0f892e551f",
+      "name": "Youtube Demo",
+      "description": "Demo",
+      "created_at": "2025-12-10T12:20:24.499860",
+      "updated_at": "2025-12-10T12:20:24.499860",
+      "last_accessed": "2025-12-10T12:20:24.499860"
+    },
+    {
+      "id": "afd8a61a-7ff5-4ebb-a895-11cd6ca59103",
+      "name": "Claude Code Meetup",
+      "description": "Preparing for the Meetup",
+      "created_at": "2025-12-14T05:29:08.368181",
+      "updated_at": "2025-12-14T05:29:08.368181",
+      "last_accessed": "2025-12-14T05:29:08.368181"
     }
   ],
-  "last_updated": "2025-12-01T02:55:34.497551"
+  "last_updated": "2025-12-14T05:29:08.368814"
 }

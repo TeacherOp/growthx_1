@@ -20,6 +20,7 @@ interface SourcesListProps {
   onToggleActive: (sourceId: string, active: boolean) => void;
   onCancelProcessing: (sourceId: string) => void;
   onRetryProcessing: (sourceId: string) => void;
+  onViewProcessed: (sourceId: string) => void;
 }
 
 export const SourcesList: React.FC<SourcesListProps> = ({
@@ -32,6 +33,7 @@ export const SourcesList: React.FC<SourcesListProps> = ({
   onToggleActive,
   onCancelProcessing,
   onRetryProcessing,
+  onViewProcessed,
 }) => {
   // Filter sources based on search
   const filteredSources = sources.filter((source) =>
@@ -70,6 +72,7 @@ export const SourcesList: React.FC<SourcesListProps> = ({
                 onToggleActive={onToggleActive}
                 onCancelProcessing={onCancelProcessing}
                 onRetryProcessing={onRetryProcessing}
+                onViewProcessed={onViewProcessed}
               />
             ))}
           </div>

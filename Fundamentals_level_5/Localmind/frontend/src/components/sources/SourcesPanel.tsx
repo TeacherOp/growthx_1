@@ -15,6 +15,7 @@ import { SourcesHeader } from './SourcesHeader';
 import { SourcesList } from './SourcesList';
 import { SourcesFooter } from './SourcesFooter';
 import { AddSourcesSheet } from './AddSourcesSheet';
+import { ProcessedContentSheet } from './ProcessedContentSheet';
 import {
   Dialog,
   DialogContent,
@@ -92,6 +93,11 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId, isCollaps
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renameSourceId, setRenameSourceId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+
+  // Processed content viewer state
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerContent, setViewerContent] = useState('');
+  const [viewerSourceName, setViewerSourceName] = useState('');
 
   /**
    * Ref for error function to avoid infinite loop in useCallback
@@ -419,6 +425,23 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId, isCollaps
     }
   };
 
+  /**
+   * View processed content for a source
+   * Educational Note: Fetches the extracted text from the backend and displays
+   * it in a side sheet. Only available for text-based sources that are ready.
+   */
+  const handleViewProcessed = async (sourceId: string) => {
+    try {
+      const data = await sourcesAPI.getProcessedContent(projectId, sourceId);
+      setViewerContent(data.content);
+      setViewerSourceName(data.source_name);
+      setViewerOpen(true);
+    } catch (err) {
+      console.error('Error fetching processed content:', err);
+      error('Failed to load processed content');
+    }
+  };
+
   // Calculate totals
   const totalSize = sources.reduce((sum, s) => sum + s.file_size, 0);
   const sourcesCount = sources.length;
@@ -504,6 +527,7 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId, isCollaps
           onToggleActive={handleToggleActive}
           onCancelProcessing={handleCancelProcessing}
           onRetryProcessing={handleRetryProcessing}
+          onViewProcessed={handleViewProcessed}
         />
 
         <SourcesFooter sourcesCount={sourcesCount} totalSize={totalSize} />
@@ -557,6 +581,14 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({ projectId, isCollaps
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Processed Content Viewer */}
+      <ProcessedContentSheet
+        open={viewerOpen}
+        onOpenChange={setViewerOpen}
+        sourceName={viewerSourceName}
+        content={viewerContent}
+      />
 
       {/* Toast notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />

@@ -1,7 +1,8 @@
 """
-Content serving endpoints - citations and AI-generated images.
+Content serving endpoints - citations, AI-generated images, and processed source content.
 
-Educational Note: These endpoints serve content that appears in chat responses:
+Educational Note: These endpoints serve content that appears in chat responses
+and the sources panel:
 
 1. Citations:
    - Claude cites sources using [[cite:CHUNK_ID]] syntax
@@ -12,6 +13,11 @@ Educational Note: These endpoints serve content that appears in chat responses:
    - Some agents generate visualizations (e.g., CSV analyzer)
    - Images are referenced in chat as [[image:FILENAME]]
    - This endpoint serves the image files
+
+3. Processed Content:
+   - Users can view the extracted text from sources in the Sources panel
+   - This endpoint returns the processed content without metadata headers
+   - Only available for text-based sources (not audio, image, csv)
 
 Citation Flow:
 1. User asks: "What did the report say about Q3?"
@@ -38,11 +44,13 @@ Image Flow:
 Routes:
 - GET /projects/<id>/citations/<chunk_id> - Get chunk content
 - GET /projects/<id>/ai-images/<filename> - Serve AI image
+- GET /projects/<id>/sources/<source_id>/processed - Get processed text content
 """
 from flask import jsonify, current_app, send_file
 from app.api.sources import sources_bp
 from app.utils.citation_utils import get_chunk_content
-from app.utils.path_utils import get_ai_images_dir
+from app.utils.path_utils import get_ai_images_dir, get_processed_dir
+from app.services.source_services import source_service
 
 
 @sources_bp.route('/projects/<project_id>/citations/<chunk_id>', methods=['GET'])
@@ -163,6 +171,120 @@ def get_ai_image(project_id: str, filename: str):
 
     except Exception as e:
         current_app.logger.error(f"Error serving AI image: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+# File extensions that are NOT viewable (excluded from processed content viewer)
+NON_VIEWABLE_EXTENSIONS = {'.mp3', '.wav', '.m4a', '.aac', '.flac',  # Audio
+                           '.png', '.jpg', '.jpeg', '.gif', '.webp',  # Image
+                           '.csv'}  # Data
+
+
+@sources_bp.route('/projects/<project_id>/sources/<source_id>/processed', methods=['GET'])
+def get_processed_content(project_id: str, source_id: str):
+    """
+    Get the processed text content of a source for viewing in the Sources panel.
+
+    Educational Note: This endpoint enables users to view the extracted/processed
+    text from their sources. The processed files contain:
+    - A metadata header (which we strip out)
+    - Page markers like "=== PDF PAGE 1 of 5 ==="
+    - The actual extracted text content
+
+    We return only the content (after the header separator "# ---") so users
+    see clean, readable text.
+
+    Only text-based sources are viewable:
+    - PDF, DOCX, PPTX, TXT (documents)
+    - Link, YouTube, Research (web content)
+
+    Non-viewable sources (return 400):
+    - Audio files (mp3, wav, etc.) - transcriptions exist but excluded per requirements
+    - Image files (png, jpg, etc.) - descriptions exist but excluded per requirements
+    - CSV files - data files excluded per requirements
+
+    Args:
+        project_id: The project UUID
+        source_id: The source UUID
+
+    Returns:
+        {
+            "success": true,
+            "content": "=== PDF PAGE 1 of 5 ===\n\nExtracted text here...",
+            "source_name": "Document.pdf"
+        }
+
+    Errors:
+        - 404 if source not found or not processed
+        - 400 if source type is not viewable
+    """
+    try:
+        # Get source metadata to check type and status
+        source = source_service.get_source(project_id, source_id)
+        if not source:
+            return jsonify({
+                'success': False,
+                'error': 'Source not found'
+            }), 404
+
+        # Check if source is processed (ready status)
+        if source.get('status') != 'ready':
+            return jsonify({
+                'success': False,
+                'error': 'Source is not processed yet'
+            }), 400
+
+        # Check if source type is viewable
+        file_extension = source.get('file_extension', '').lower()
+        if file_extension in NON_VIEWABLE_EXTENSIONS:
+            return jsonify({
+                'success': False,
+                'error': f'Source type {file_extension} is not viewable'
+            }), 400
+
+        # Get the processed file path
+        processed_dir = get_processed_dir(project_id)
+        processed_file = processed_dir / f"{source_id}.txt"
+
+        if not processed_file.exists():
+            return jsonify({
+                'success': False,
+                'error': 'Processed file not found'
+            }), 404
+
+        # Read the processed file
+        with open(processed_file, 'r', encoding='utf-8') as f:
+            full_content = f.read()
+
+        # Strip the metadata header (everything before "# ---")
+        # The header format is:
+        # # Extracted from TYPE: filename
+        # # Type: TYPE
+        # # ... metadata ...
+        # # ---
+        #
+        # === TYPE PAGE 1 of N ===
+        # [content]
+        header_separator = '# ---'
+        if header_separator in full_content:
+            # Find the separator and get content after it
+            separator_index = full_content.index(header_separator)
+            content = full_content[separator_index + len(header_separator):].strip()
+        else:
+            # No header found, return full content
+            content = full_content.strip()
+
+        return jsonify({
+            'success': True,
+            'content': content,
+            'source_name': source.get('name', 'Unknown')
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error getting processed content: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
