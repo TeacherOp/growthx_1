@@ -32,7 +32,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Checkbox } from '../ui/checkbox';
-import { formatFileSize, type Source } from '../../lib/api/sources';
+import { formatFileSize, isSourceViewable, type Source } from '../../lib/api/sources';
 
 interface SourceItemProps {
   source: Source;
@@ -42,6 +42,7 @@ interface SourceItemProps {
   onToggleActive: (sourceId: string, active: boolean) => void;
   onCancelProcessing: (sourceId: string) => void;
   onRetryProcessing: (sourceId: string) => void;
+  onViewProcessed: (sourceId: string) => void;
 }
 
 /**
@@ -125,6 +126,7 @@ export const SourceItem: React.FC<SourceItemProps> = ({
   onToggleActive,
   onCancelProcessing,
   onRetryProcessing,
+  onViewProcessed,
 }) => {
   const Icon = getCategoryIconComponent(source.category);
   const statusDisplay = getStatusDisplay(source.status);
@@ -137,12 +139,33 @@ export const SourceItem: React.FC<SourceItemProps> = ({
   // Source can be toggled active/inactive only when it's ready
   // Educational Note: No partial status - sources are either fully ready or failed
   const canToggleActive = source.status === 'ready';
+  // Check if source can be viewed (ready + viewable type)
+  const canView = isSourceViewable(source);
+
+  /**
+   * Handle click on the source row to view processed content
+   * Educational Note: Only viewable sources (text-based, ready status) can be clicked.
+   * We check the target to avoid triggering when clicking on interactive elements.
+   */
+  const handleRowClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Don't trigger if clicking on interactive elements (handled by stopPropagation)
+    // This is a fallback check
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('[role="checkbox"]')) {
+      return;
+    }
+
+    if (canView) {
+      onViewProcessed(source.id);
+    }
+  };
 
   return (
     <div
+      onClick={handleRowClick}
       className={`grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 p-2 rounded-lg hover:bg-accent group transition-colors ${
         isActivelyWorking ? 'opacity-60' : ''
-      }`}
+      } ${canView ? 'cursor-pointer' : ''}`}
     >
       {/* Icon Area - Shows category icon, transforms to menu on hover */}
       <DropdownMenu>

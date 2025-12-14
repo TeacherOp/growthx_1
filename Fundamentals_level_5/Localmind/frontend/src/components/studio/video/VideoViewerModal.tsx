@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from '../../ui/dialog';
 import type { VideoJob } from '@/lib/api/studio';
+import { videosAPI } from '@/lib/api/studio';
 
 interface VideoViewerModalProps {
   projectId: string;
@@ -115,7 +116,7 @@ export const VideoViewerModal: React.FC<VideoViewerModalProps> = ({
             controls
             autoPlay
             className="max-w-full max-h-[60vh]"
-            src={currentVideo.preview_url}
+            src={videosAPI.getPreviewUrl(projectId, viewingVideoJob.id, currentVideo.filename)}
           >
             Your browser does not support the video tag.
           </video>

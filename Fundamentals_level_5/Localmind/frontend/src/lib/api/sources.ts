@@ -83,6 +83,42 @@ export interface ChunkContent {
   chunk_index: number;
 }
 
+/**
+ * Processed content returned from the processed content API
+ * Educational Note: This is used for viewing extracted text from sources
+ * in the Sources panel. Users can click on a processed source to see
+ * the full extracted text with page markers.
+ */
+export interface ProcessedContent {
+  content: string;
+  source_name: string;
+}
+
+/**
+ * File extensions that are viewable in the processed content viewer
+ * Educational Note: Only text-based sources can be viewed.
+ * Audio, image, and CSV files are excluded.
+ */
+export const VIEWABLE_EXTENSIONS = [
+  '.pdf', '.txt', '.docx', '.pptx',  // Documents
+  '.link', '.research',               // Web content
+];
+
+export const NON_VIEWABLE_EXTENSIONS = [
+  '.mp3', '.wav', '.m4a', '.aac', '.flac',  // Audio
+  '.png', '.jpg', '.jpeg', '.gif', '.webp',  // Image
+  '.csv',                                     // Data
+];
+
+/**
+ * Check if a source is viewable based on its file extension
+ */
+export function isSourceViewable(source: Source): boolean {
+  if (source.status !== 'ready') return false;
+  const ext = source.file_extension?.toLowerCase() || '';
+  return !NON_VIEWABLE_EXTENSIONS.includes(ext);
+}
+
 class SourcesAPI {
   /**
    * List all sources for a project
@@ -335,6 +371,30 @@ class SourcesAPI {
       return response.data.chunk;
     } catch (error) {
       console.error('Error fetching citation content:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the processed content of a source for viewing
+   * Educational Note: This enables users to view the extracted text from
+   * their sources. When a user clicks on a processed source in the Sources
+   * panel, we fetch and display the full extracted text with page markers.
+   */
+  async getProcessedContent(
+    projectId: string,
+    sourceId: string
+  ): Promise<ProcessedContent> {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/projects/${projectId}/sources/${sourceId}/processed`
+      );
+      return {
+        content: response.data.content,
+        source_name: response.data.source_name,
+      };
+    } catch (error) {
+      console.error('Error fetching processed content:', error);
       throw error;
     }
   }
