@@ -2,7 +2,6 @@
 # Environment & secrets
 ############################
 .env
-.env.*
 .env.local
 .env.*.local
 
@@ -35,7 +34,7 @@ htmlcov/
 ############################
 # Logs
 ############################
-*.log
+
 
 ############################
 # OS / Editors
@@ -49,19 +48,29 @@ Thumbs.db
 # Project specific
 ############################
 .claude
-CLAUDE.md
 Fundamentals_level_4/simple_presentation_builder/input_output_data/old_samples
 # Step outputs and generated artifacts
 Fundamentals_level_1/*.txt
 *_output_data/
 venv/
+myvenv/
 .env
 *.pyc
 .DS_Store
 .idea/
 .vscode/
-*.log
 *__pycache__/
+
+*.log
 .claude
 CLAUDE.md
-Fundamentals_level_4/simple_presentation_builder/input_output_data/old_samples
+Fundamentals_level_5/.claude/
+Fundamentals_level_5/docs/
+Fundamentals_level_5/Localmind/backend/data/projects
+Fundamentals_level_5/Localmind/backend/data/tasks
+Fundamentals_level_5/Localmind/backend/data/temp
+Fundamentals_level_5/Localmind/backend/data/user_memory.json
+Fundamentals_level_5/Localmind/backend/data/google_tokens.json
+Fundamentals_level_5/Localmind/backend/samples
+Fundamentals_level_5/Localmind/backend/.flaskenv
+Fundamentals_level_5/Localmind
