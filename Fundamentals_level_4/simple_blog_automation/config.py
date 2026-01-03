@@ -45,7 +45,7 @@ class Config:
     BRAND_CONTEXT_FILE = BASE_DIR / 'brand_context.txt'
 
     # Claude Model Configuration
-    MODEL_NAME = "claude-sonnet-4-5-20250929"
+    MODEL_NAME = os.getenv("CLAUDE_MODEL")
 
     @classmethod
     def validate(cls):

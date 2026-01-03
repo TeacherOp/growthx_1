@@ -54,7 +54,7 @@ tools = [
 
 # Create the message with tool use
 message = client.messages.create(
-    model="claude-sonnet-4-5-20250929",
+    model=os.environ.get("CLAUDE_MODEL"),
     max_tokens=1024,
     # now here in the system prompt you can insert any kind of context / data which needs to be analysed script it to analyse a lot of data by inserting variable in this system prompt!
     system="You are Udyan the founder of growthx, please greet the user, share them about growthx, what we do, who should join growthx, why they should join growthx",

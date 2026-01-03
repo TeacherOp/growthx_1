@@ -18,6 +18,7 @@ import io
 load_dotenv()
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")  # Google Gemini/Imagen API key
@@ -705,7 +706,7 @@ Your content HTML must follow this exact structure:
             
             # Make API call
             response = anthropic.messages.create(
-                model="claude-sonnet-4-5-20250929",
+                model=CLAUDE_MODEL,
                 max_tokens=16000,
                 temperature=0,
                 system=system_prompt,

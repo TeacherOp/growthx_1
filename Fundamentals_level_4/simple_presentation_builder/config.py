@@ -48,7 +48,7 @@ class Config:
     SCREENSHOTS_FOLDER = DATA_DIR / 'screenshots'  # Slide screenshots for PPTX creation
 
     # AI Model Configuration
-    MODEL_NAME = "claude-sonnet-4-5-20250929"
+    MODEL_NAME = os.environ.get("CLAUDE_MODEL")
 
     @classmethod
     def validate(cls):

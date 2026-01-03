@@ -88,7 +88,7 @@ class PresentationAgent:
 
             # Make API request
             response = self.client.messages.create(
-                model="claude-sonnet-4-5-20250929",
+                model=Config.MODEL_NAME,
                 max_tokens=4000,
                 temperature=0,
                 system=system_prompt,
