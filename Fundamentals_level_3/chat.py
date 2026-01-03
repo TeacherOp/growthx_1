@@ -15,7 +15,7 @@ client = anthropic.Anthropic(
 )
 
 # Model to use
-MODEL = os.environ.get("CLAUDE_MODEL")
+MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5")
 
 # Just for printing better logs in terminal
 def print_separator():

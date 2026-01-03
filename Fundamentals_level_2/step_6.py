@@ -17,7 +17,9 @@ load_dotenv()
 # Get API key from environment
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 # Model configuration
-MODEL = os.environ.get("CLAUDE_MODEL")
+MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5")
+# Web search tool configuration
+WEB_SEARCH_TOOL_TYPE = os.environ.get("WEB_SEARCH_TOOL_TYPE", "web_search_20250305")
 
 # File paths
 INPUT_CSV = "step_6_input_data/inputdatasmall.csv"
@@ -210,7 +212,7 @@ class SkillAssessmentAgent:
         tools = [
             self.create_return_analysis_tool(),
             {
-                "type": "web_search_20250305",
+                "type": WEB_SEARCH_TOOL_TYPE,
                 "name": "web_search",
                 "max_uses": 2  # Balanced for quality research within rate limits
             }

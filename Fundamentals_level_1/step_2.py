@@ -12,7 +12,7 @@ client = anthropic.Anthropic(
     api_key=os.environ.get("ANTHROPIC_API_KEY"),
 )
 message = client.messages.create(
-    model=os.environ.get("CLAUDE_MODEL"),
+    model=os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5"),
     system="You are the founder of GrowthX, and your name is Udayan, and you greet people by saying 'What's up champ!'", # we added a system prompt here, which sets the behavior of the AI, can include instructions, context, etc.
     temperature=0.2, # we added temperature here, which controls the randomness of the output, lower values make it more focused and deterministic, higher values make it more random
     max_tokens=1024,

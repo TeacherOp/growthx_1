@@ -19,7 +19,7 @@ load_dotenv()
 # Get API key from environment
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 # Model configuration
-MODEL = os.environ.get("CLAUDE_MODEL")
+MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5")
 
 # File paths
 INPUT_CSV = "step_5_input_data/inputdatasmall.csv"

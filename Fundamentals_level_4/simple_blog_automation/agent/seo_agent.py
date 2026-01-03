@@ -6,11 +6,15 @@ It handles the conversation with Claude, tool execution, and progress tracking.
 """
 
 import json
+import os
 from typing import Dict, Any, Optional, Callable
 from anthropic import Anthropic
 from config import Config
 from tools.tool_executor import ToolExecutor
 from tools.blog_tools import fetch_existing_blogs
+
+# Web search tool configuration
+WEB_SEARCH_TOOL_TYPE = os.getenv("WEB_SEARCH_TOOL_TYPE", "web_search_20250305")
 
 
 class SEOBlogAgent:
@@ -301,7 +305,7 @@ Your content HTML must follow this exact structure:
             tools = self.get_tool_definitions()
 
             # Add web search tool (using exact format from original)
-            tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 10}] + tools
+            tools = [{"type": WEB_SEARCH_TOOL_TYPE, "name": "web_search", "max_uses": 10}] + tools
 
             # Main conversation loop
             max_iterations = 10

@@ -2,11 +2,19 @@
 Tool definitions for Main AI Chat and PPT AI Agent
 """
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Web search tool configuration
+WEB_SEARCH_TOOL_TYPE = os.getenv("WEB_SEARCH_TOOL_TYPE", "web_search_20250305")
+
 # ===== MAIN AI CHAT TOOLS =====
 
 # Web Search - Server-side tool (Anthropic provides this)
 WEB_SEARCH_TOOL = {
-    "type": "web_search_20250305",
+    "type": WEB_SEARCH_TOOL_TYPE,
     "name": "web_search",
     "max_uses": 10
 }
