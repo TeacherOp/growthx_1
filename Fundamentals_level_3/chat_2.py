@@ -18,7 +18,7 @@ client = anthropic.Anthropic(
 )
 
 # Model to use
-MODEL = "claude-sonnet-4-5-20250929"
+MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5")
 
 # Directory to store conversations
 CONVERSATIONS_DIR = "conversations"

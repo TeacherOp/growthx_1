@@ -17,7 +17,9 @@ load_dotenv()
 # Get API key from environment
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 # Model configuration
-MODEL = "claude-sonnet-4-5-20250929"  # Using latest available model version
+MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5")
+# Web search tool configuration
+WEB_SEARCH_TOOL_TYPE = os.environ.get("WEB_SEARCH_TOOL_TYPE", "web_search_20250305")
 
 # File paths
 INPUT_CSV = "step_6_input_data/inputdatasmall.csv"
@@ -181,13 +183,38 @@ class SkillAssessmentAgent:
             micro_skill=micro_skill
         )
 
-        # Define tools (return_analysis_result tool + web search tool)
+        # ============================================================================
+        # RATE LIMIT CONFIGURATION: Web Search Tool
+        # ============================================================================
+        # Understanding token consumption per skill analysis:
+        #
+        # Token sources:
+        # 1. System prompt (SYSTEM_PROMPT above): ~1,500 tokens
+        # 2. User messages (lines 199, 227): ~500 tokens total
+        # 3. Web search results: ~2,500 tokens PER search
+        # 4. Conversation overhead (multi-turn, lines 204-238): ~1,000 tokens
+        #    - First API call (line 204)
+        #    - Assistant response added to messages (line 219-222)
+        #    - Second API call with accumulated context (line 231)
+        #
+        # Calculation with different max_uses values:
+        # - max_uses=5: (5 × 2,500) + 1,500 + 500 + 1,000 = ~15,500 tokens/skill
+        # - max_uses=2: (2 × 2,500) + 1,500 + 500 + 1,000 = ~8,500 tokens/skill
+        #
+        # API Rate Limit: 30,000 input tokens per minute
+        # With max_uses=2: Can process ~3.5 skills/minute (30,000 ÷ 8,500)
+        #
+        # HOW TO ADJUST: If you have higher rate limits or want faster processing:
+        # - Increase max_uses for more research depth (but uses more tokens)
+        # - Decrease max_uses for faster processing (but less research)
+        # - Recalculate delay below using: delay = 60 / (rate_limit ÷ tokens_per_skill)
+        # ============================================================================
         tools = [
             self.create_return_analysis_tool(),
             {
-                "type": "web_search_20250305",
+                "type": WEB_SEARCH_TOOL_TYPE,
                 "name": "web_search",
-                "max_uses": 5  # Allow up to 5 searches per skill analysis
+                "max_uses": 2  # Balanced for quality research within rate limits
             }
         ]
 
@@ -349,9 +376,34 @@ class SkillAssessmentAgent:
                     # Save result immediately
                     self.save_result_to_csv(result, output_csv)
 
-                    # Small delay to avoid rate limiting
+                    # ================================================================
+                    # RATE LIMIT CONFIGURATION: Delay Between Skills
+                    # ================================================================
+                    # Purpose: Prevent hitting API rate limits by pacing requests
+                    #
+                    # Current setup (from token calculation in analyze_skill method):
+                    # - API rate limit: 30,000 input tokens per minute
+                    # - Tokens per skill: ~8,500 tokens (see breakdown above at line 187-200)
+                    # - Theoretical max: 30,000 ÷ 8,500 = 3.5 skills per minute
+                    #
+                    # With 30-second delay:
+                    # - Skills per minute: 60 seconds ÷ 30 seconds = 2 skills/minute
+                    # - Token usage: 2 × 8,500 = 17,000 tokens/minute
+                    # - Safety buffer: 30,000 - 17,000 = 13,000 tokens (43% margin)
+                    #
+                    # HOW TO CALCULATE YOUR OWN DELAY:
+                    # Step 1: Determine your tokens per skill (see calculation above)
+                    # Step 2: Decide safety margin (e.g., 80% of limit = safe)
+                    # Step 3: Calculate: delay = 60 / (rate_limit × 0.8 / tokens_per_skill)
+                    # Example: delay = 60 / (30,000 × 0.8 / 8,500) = 60 / 2.82 ≈ 21 seconds
+                    #
+                    # Adjust this delay based on:
+                    # - Your organization's rate limit (check API dashboard)
+                    # - Your max_uses setting (more searches = more tokens)
+                    # - Desired safety margin (higher = slower but safer)
+                    # ================================================================
                     if idx < total_rows:
-                        time.sleep(2)
+                        time.sleep(30)
 
                 print(f"\n✨ Analysis complete! Results saved to {output_csv}")
 

@@ -18,6 +18,8 @@ import io
 load_dotenv()
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-5")
+WEB_SEARCH_TOOL_TYPE = os.getenv("WEB_SEARCH_TOOL_TYPE", "web_search_20250305")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")  # Google Gemini/Imagen API key
@@ -690,7 +692,7 @@ Your content HTML must follow this exact structure:
     try:
         print("🤖 AI is thinking and creating content...")
         # Add web search as a native tool alongside custom tools
-        all_tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 10}] + TOOLS
+        all_tools = [{"type": WEB_SEARCH_TOOL_TYPE, "name": "web_search", "max_uses": 10}] + TOOLS
         
         # Start the conversation
         messages = [{"role": "user", "content": user_message}]
@@ -705,7 +707,7 @@ Your content HTML must follow this exact structure:
             
             # Make API call
             response = anthropic.messages.create(
-                model="claude-sonnet-4-5-20250929",
+                model=CLAUDE_MODEL,
                 max_tokens=16000,
                 temperature=0,
                 system=system_prompt,

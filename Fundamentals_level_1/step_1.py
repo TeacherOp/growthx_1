@@ -10,7 +10,7 @@ client = anthropic.Anthropic(
     api_key=os.environ.get("ANTHROPIC_API_KEY"),
 )
 message = client.messages.create(
-    model="claude-sonnet-4-5-20250929",
+    model=os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5"),
     max_tokens=1024,
     messages=[
         {"role": "user", "content": "Hello, Claude"}

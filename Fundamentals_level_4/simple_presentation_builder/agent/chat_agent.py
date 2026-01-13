@@ -11,6 +11,7 @@ import base64
 from typing import Dict, List, Optional
 from .tools import MAIN_CHAT_TOOLS
 from .presentation_agent import PresentationAgent
+from config import Config
 
 
 class ChatAgent:
@@ -93,7 +94,7 @@ class ChatAgent:
 
             # Make API request
             response = self.client.messages.create(
-                model="claude-sonnet-4-5-20250929",
+                model=Config.MODEL_NAME,
                 max_tokens=16000,
                 temperature=0,
                 system=self._get_system_prompt(),

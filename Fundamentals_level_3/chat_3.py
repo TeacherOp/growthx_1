@@ -28,7 +28,7 @@ client = anthropic.Anthropic(
 VISUAL_CROSSING_API_KEY = os.environ.get("VISUAL_CROSSING_API_KEY")
 
 # Model to use
-MODEL = "claude-sonnet-4-5-20250929"
+MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5")
 
 # Directory to store conversations (separate from chat_2 which uses "conversations")
 CONVERSATIONS_DIR = "conversations_with_tool"

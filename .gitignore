@@ -51,6 +51,8 @@ Thumbs.db
 Fundamentals_level_4/simple_presentation_builder/input_output_data/old_samples
 # Step outputs and generated artifacts
 Fundamentals_level_1/*.txt
+Fundamentals_level_1/*.json
+Fundamentals_level_3/conversations*
 *_output_data/
 venv/
 myvenv/
